@@ -226,7 +226,7 @@
           </div>
 
           {/* сцена карт */}
-          <div className={`mt-2 rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur flip-scene ${phase==='choosing'?'cards-enter-active':'cards-enter'}`}>
+          <div className={`mt-2 rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur flip-scene ${phase==='choosing' ? 'cards-enter-active' : ''}`}>
             <div className="text-sm opacity-70">{phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}</div>
 
             <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-3 justify-items-center">
