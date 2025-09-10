@@ -153,32 +153,63 @@
       };
 
       // игрок кликает карту → запрос на сервер за призом → показываем его на выбранной карте → после паузы переворачиваем остальные
-      const onPick = async (idx) => {
-        if (phase !== 'choosing') return;
-        setPickedIndex(idx);
+ const onPick = async (idx) => {
+  if (phase !== 'choosing') return;
+  setPickedIndex(idx);
+  setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
-        // красивый "наезд" — отмечаем карту как выбранную
-        setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
+  // 1) пробуем сервер
+  let prize = null;
+  try {
+    const res = await fetch('/api/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId: data.id })
+    });
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      if (json && json.prize) prize = json.prize;
+    }
+  } catch (_) {
+    // ignore, пойдём в фолбэк
+  }
 
-        // серверный приз
-        let prize = null;
-        try {
-          const res = await fetch('/api/open', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caseId: data.id })
-          });
-          if (res.ok) {
-            const json = await res.json();
-            prize = json && json.prize;
-          }
-        } catch (e) {
-          // фолбэк — локальный выбор
-          const total = data.prizes.reduce((s,p)=>s+(p.weight||0),0);
-          let r = Math.random()*Math.max(1,total);
-          prize = data.prizes[data.prizes.length-1];
-          for (const p of data.prizes) { r -= (p.weight||0); if (r<=0) { prize=p; break; } }
-        }
+  // 2) надёжный фолбэк, если сервер не дал приз или формат странный
+  if (!prize || !prize.id) {
+    const total = data.prizes.reduce((s,p)=>s+(p.weight||0),0);
+    let r = Math.random()*Math.max(1,total);
+    prize = data.prizes[data.prizes.length-1];
+    for (const p of data.prizes) { r -= (p.weight||0); if (r<=0) { prize=p; break; } }
+  }
+
+  // 3) переворачиваем выбранную карту
+  audio.flip();
+  tg?.WebApp?.HapticFeedback?.selectionChanged?.();
+  setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
+  setPhase('revealed');
+  setLastPrize(prize);
+  addHistory(prize);
+
+  setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
+
+  // 4) безопасно переворачиваем остальные (без обращения к prize.id, если prize вдруг пустой)
+  setTimeout(() => {
+    setCards((cs) => {
+      const chosenId = prize?.id;
+      const remainingPool = chosenId
+        ? data.prizes.filter(p => p.id !== chosenId)
+        : data.prizes.slice();
+      const shuffled = remainingPool.sort(()=>Math.random()-0.5);
+      let ri = 0;
+      return cs.map((c, i) => {
+        if (i === idx) return c;
+        const alt = shuffled[ri++] || remainingPool[0] || prize;
+        return { ...c, prize: alt, flipped: true };
+      });
+    });
+  }, 500);
+};
+
 
         // переворот выбранной
         audio.flip();
