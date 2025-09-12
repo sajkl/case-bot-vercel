@@ -44,13 +44,22 @@
 
   <style>
     html, body, #root { height: 100%; }
-    /* ==== FLIP CARD ANIMATION ==== */
+
+    /* ==== Fade-in анимация ==== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
+
+    /* ==== FLIP CARD ==== */
     .flip-scene { perspective: 1000px; }
     .flip-card {
       width: 120px; height: 160px;
       position: relative;
       transform-style: preserve-3d;
       transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+      border-radius: 16px;
     }
     .flip-card.flipped { transform: rotateY(180deg); }
     .flip-face {
@@ -59,25 +68,32 @@
       display: flex; align-items: center; justify-content: center;
     }
     .flip-face.back { transform: rotateY(180deg); }
-    /* мягкое появление сцены */
+
+    /* Мягкое появление сцены */
     .cards-enter { opacity: 0; transform: translateY(16px) scale(0.98); }
     .cards-enter-active {
       opacity: 1; transform: translateY(0) scale(1);
       transition: all 300ms cubic-bezier(.2,.8,.2,1);
     }
+
+    /* ==== Glow по редкости ==== */
+    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.25); } /* zinc */
+    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.30); }  /* blue */
+    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.32); }  /* purple */
+    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.40); }   /* orange */
   </style>
 </head>
 
-<body class="bg-gradient-to-b from-white to-gray-50 text-gray-900">
+<body class="bg-gradient-to-b from-black to-zinc-900 text-white">
   <div id="root"></div>
-  <pre id="err" style="display:none; position:fixed; left:8px; bottom:8px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
+  <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
   <!-- Приложение. Babel соберёт JSX прямо в браузере -->
   <script type="text/babel">
-    const { useEffect, useRef, useState } = React;
+    const { useEffect, useState } = React;
     const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
 
-    // ===== демо-данные (совпадают с сервером) =====
+    // ===== демо-данные =====
     const START_STARS = 25;
     const DEFAULT_CASES = [
       { id:'lite', title:'Лайт-кейс', priceStars:3, bannerEmoji:'🎈', description:'Дешёвый вход, быстрые призы',
@@ -108,11 +124,17 @@
 
     const SELL_BY_RARITY = { common:1, rare:2, epic:6, legendary:20 };
     const rarityColor = (r) => ({
-      common: 'bg-gray-200 text-gray-800',
-      rare: 'bg-blue-200 text-blue-900',
-      epic: 'bg-purple-200 text-purple-900',
-      legendary: 'bg-amber-200 text-amber-900'
-    }[r] || 'bg-gray-200 text-gray-800');
+      common: 'bg-zinc-700 text-zinc-100',
+      rare: 'bg-blue-700 text-blue-100',
+      epic: 'bg-purple-700 text-purple-100',
+      legendary: 'bg-amber-600 text-amber-100'
+    }[r] || 'bg-zinc-700 text-zinc-100');
+    const glowClass = (r) => ({
+      common: 'glow-common',
+      rare: 'glow-rare',
+      epic: 'glow-epic',
+      legendary: 'glow-legendary'
+    }[r] || 'glow-common');
 
     // ===== звук/вибро =====
     class SpinAudio {
@@ -130,20 +152,13 @@
     }
     const audio = new SpinAudio();
 
-    // ===== Карточная анимация =====
-    function CardBack() {
-      return (
-        <div className="flip-face front bg-gradient-to-br from-zinc-900 to-zinc-700 text-white border border-black/20 shadow-lg">
-          <div className="text-4xl">?</div>
-        </div>
-      );
-    }
+    // ===== Карточная анимация (экран открытия) =====
     function CardFront({ prize }) {
       return (
-        <div className="flip-face back bg-white border border-black/10 shadow-md">
+        <div className="flip-face back bg-zinc-900 border border-zinc-700 shadow-md">
           <div className="flex flex-col items-center justify-center h-full p-3 text-center">
             <div className="text-4xl">{prize?.emoji ?? '🎁'}</div>
-            <div className="mt-2 text-sm font-semibold">{prize?.label ?? 'Приз'}</div>
+            <div className="mt-2 text-sm font-semibold text-zinc-100">{prize?.label ?? 'Приз'}</div>
             {prize ? (
               <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(prize.rarity)}`}>
                 {prize.rarity}
@@ -154,28 +169,27 @@
       );
     }
 
-    // ===== Детальная страница с режимом "5 карт" =====
-    function CaseDetailCards({ data, onBack, onOpenServer, opening, onSell, onClaim, setLastPrize, setToast, addHistory }) {
+    // ===== Детальная страница c «5 картами» =====
+    function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, setToast, onClaimPrize, onSellPrize }) {
       const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
-      const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped:boolean, picked:boolean}]
+      const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped, picked}]
       const [pickedIndex, setPickedIndex] = useState(null);
+      const [landedPrize, setLandedPrize] = useState(null);
 
-      // подготовка сцены карточек (после нажатия "Открыть")
       const prepareCards = () => {
         setPhase('choosing');
         setCards(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
+        setPickedIndex(null);
+        setLandedPrize(null);
       };
 
-      // игрок кликает карту → запрос на сервер за призом → показываем его на выбранной карте → после паузы переворачиваем остальные
       const onPick = async (idx) => {
         if (phase !== 'choosing') return;
 
-        // защита от двойных кликов
         setPhase('picking');
         setPickedIndex(idx);
         setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
-        // 1) пробуем получить приз с сервера
         let prize = null;
         try {
           const res = await fetch('/api/open', {
@@ -184,15 +198,11 @@
             body: JSON.stringify({ caseId: data.id })
           });
           if (res.ok) {
-            // защита от невалидного JSON
             const json = await res.json().catch(() => ({}));
             if (json && json.prize) prize = json.prize;
           }
-        } catch (_) {
-          // игнор — пойдём в фолбэк
-        }
+        } catch (_) {}
 
-        // 2) надёжный фолбэк, если сервера нет/ответ пустой
         if (!prize || !prize.id) {
           const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
           let r = Math.random()*Math.max(1,total);
@@ -200,23 +210,18 @@
           for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
         }
 
-        // 3) если по каким-то причинам даже фолбэк не дал приз — мягко выйдем
-        if (!prize) {
-          setPhase('choosing');
-          return;
-        }
+        if (!prize) { setPhase('choosing'); return; }
 
-        // 4) переворот выбранной карты
         audio.flip();
         tg?.WebApp?.HapticFeedback?.selectionChanged?.();
         setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
         setPhase('revealed');
         setLastPrize(prize);
+        setLandedPrize(prize);
         addHistory(prize);
 
         setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
 
-        // 5) безопасно переворачиваем остальные
         setTimeout(() => {
           setCards((cs) => {
             const chosenId = prize && prize.id;
@@ -233,73 +238,94 @@
         }, 500);
       };
 
-      // списываем звёзды и показываем сцену карт
       const onStart = async () => {
         if (opening) return;
         const ok = await onOpenServer(data);
         if (ok) prepareCards();
       };
 
-      const sellValue = (p)=>({common:1,rare:2,epic:6,legendary:20}[p.rarity]||1);
+      const glowFor = (card) => {
+        if (!card?.flipped || !card?.prize) return '';
+        return glowClass(card.prize.rarity);
+        };
 
       return (
-        <div>
+        <div className="fade-in">
           <div className="flex items-center gap-2 mb-4">
-            <button onClick={onBack} className="px-3 py-2 rounded-xl bg-white/70 border border-black/10">← Назад</button>
+            <button onClick={onBack} className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition">← Назад</button>
             <div className="text-xl font-semibold flex items-center gap-2">
               <span className="text-2xl">{data.bannerEmoji ?? '🎁'}</span> {data.title}
             </div>
-            <div className="ml-auto text-sm opacity-70">Цена: {data.priceStars} ⭐</div>
+            <div className="ml-auto text-sm text-zinc-300">Цена: {data.priceStars} ⭐</div>
           </div>
 
           {/* сцена карт */}
-          <div className={`mt-2 rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur flip-scene ${phase==='choosing' ? 'cards-enter-active' : ''}`}>
-            <div className="text-sm opacity-70">{phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}</div>
+          <div className={`mt-2 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur flip-scene ${phase==='choosing' ? 'cards-enter-active' : ''}`}>
+            <div className="text-sm text-zinc-400">
+              {phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}
+            </div>
 
-            <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-3 justify-items-center">
+            <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-4 justify-items-center">
               {cards.map((card, i) => (
-                <div key={i} className={`transition-transform ${card?.picked?'scale-105':''}`}>
-                  <div className={`flip-card ${card?.flipped?'flipped':''}`} onClick={() => (phase==='choosing') && onPick(i)}>
-                    <div className="flip-face front bg-gradient-to-br from-zinc-900 to-zinc-700 text-white border border-black/20 shadow-lg">
+                <div key={i} className={`transition-transform ${card?.picked?'scale-105':''} fade-in`} style={{ animationDelay: `${i*60}ms` }}>
+                  <div className={`flip-card ${card?.flipped?'flipped':''} ${glowFor(card)}`} onClick={() => (phase==='choosing') && onPick(i)}>
+                    <div className="flip-face front bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border border-zinc-600 shadow-lg">
                       <div className="text-4xl">?</div>
                     </div>
-                    <div className="flip-face back bg-white border border-black/10 shadow-md">
-                      <div className="flex flex-col items-center justify-center h-full p-3 text-center">
-                        <div className="text-4xl">{card?.prize?.emoji ?? '🎁'}</div>
-                        <div className="mt-2 text-sm font-semibold">{card?.prize?.label ?? 'Приз'}</div>
-                        {card?.prize ? (
-                          <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(card.prize.rarity)}`}>
-                            {card.prize.rarity}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
+                    <CardFront prize={card?.prize} />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* кнопка "Открыть" всегда снизу, списывает звёзды и запускает сцену */}
-            <div className="sticky bottom-3 mt-4 z-10">
+            {/* кнопка "Открыть" */}
+            <div className="sticky bottom-3 mt-5 z-10">
               <button
-                className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold shadow-sm transition transform active:scale-95 ${opening ? 'bg-gray-300 cursor-not-allowed' : 'bg-black text-white'}`}
+                className={`w-full px-4 py-3 rounded-xl font-semibold shadow-lg transition active:scale-[0.98] ${opening ? 'bg-zinc-700 cursor-not-allowed text-zinc-300' : 'bg-orange-500 hover:bg-orange-600 text-black'}`}
                 onClick={onStart}
                 disabled={opening}
               >
                 Открыть за {data.priceStars} ⭐
               </button>
             </div>
+
+            {/* панель действий, когда приз открыт */}
+            {phase === 'revealed' && landedPrize && (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border border-zinc-700 bg-zinc-900/70">
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">{landedPrize.emoji ?? '🎁'}</div>
+                  <div className="text-sm">
+                    <div className="font-semibold">{landedPrize.label}</div>
+                    <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(landedPrize.rarity)}`}>{landedPrize.rarity}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="px-3 py-2 rounded-xl font-semibold bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition"
+                    onClick={() => onSellPrize(landedPrize)}
+                  >
+                    Продать за {({common:1,rare:2,epic:6,legendary:20}[landedPrize.rarity]||1)} ⭐
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-xl font-semibold bg-orange-500 hover:bg-orange-600 text-black shadow"
+                    onClick={() => onClaimPrize(landedPrize)}
+                  >
+                    Забрать
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* список призов ниже */}
-          <div className="mt-5 rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur">
-            <div className="text-sm opacity-70 mb-3">Доступные призы</div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-5 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
+            <div className="text-sm text-zinc-400 mb-3">Доступные призы</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.prizes.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border border-black/5 bg-white/80">
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border border-zinc-700 bg-zinc-900">
                   <div className="text-xl">{p.emoji ?? '🎁'}</div>
                   <div className="text-sm">
-                    <div className="font-medium">{p.label}</div>
+                    <div className="font-medium text-zinc-100">{p.label}</div>
                     <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(p.rarity)}`}>{p.rarity}</div>
                   </div>
                 </div>
@@ -313,15 +339,15 @@
     // ===== Toast / Spinner =====
     const Toast = ({ text, onClose }) => {
       useEffect(()=>{ const t=setTimeout(onClose,2000); return ()=>clearTimeout(t); },[onClose]);
-      return <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-black text-white shadow-lg">{text}</div>;
+      return <div className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-orange-500 text-black shadow-xl z-[60]">{text}</div>;
     };
     const Spinner = ({ spinning }) => (
       <div className="relative h-24 my-4 flex items-center justify-center">
-        <div className={`w-20 h-20 rounded-full border-4 border-black/10 border-t-black/60 ${spinning?'animate-spin':''}`} />
+        <div className={`w-20 h-20 rounded-full border-4 border-zinc-700 border-t-orange-500 ${spinning?'animate-spin':''}`} />
       </div>
     );
 
-    // ===== Главный компонент =====
+    // ===== Главный компонент + таб-бар =====
     function App(){
       const [cases] = useState(DEFAULT_CASES);
       const [stars,setStars]=useState(START_STARS);
@@ -330,122 +356,193 @@
       const [lastPrize,setLastPrize]=useState(null);
       const [toast,setToast]=useState(null);
       const [history,setHistory]=useState([]);
+      const [inventory,setInventory]=useState([]); // {id,label,emoji,rarity,starsValue,ts}
+      const [tab,setTab]=useState('home'); // home | inventory | history
 
       useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
-      const addHistory = (p) => setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,20));
+      const addHistory = (p) => setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50));
 
-      const openDetails=(c)=>{ setSelectedCase(c); };
+      const openDetails=(c)=>{ setSelectedCase(c); setTab('home'); };
 
-      // списание стоимости и подготовка (без выбора приза)
+      // списание стоимости и подготовка
       const onOpenServerPrepare = async (c) => {
         if (opening) return false;
         if (stars < c.priceStars) { setToast('Недостаточно ⭐'); tg?.WebApp?.HapticFeedback?.notificationOccurred?.('warning'); return false; }
         setOpening(true);
         setLastPrize(null);
-        setStars(s=>s-c.priceStars);                 // списываем сразу (как ранее)
+        setStars(s=>s-c.priceStars);
         tg?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
-        // небольшая задержка для ощущения «появления» карт
         await new Promise(r=>setTimeout(r, 200));
         setOpening(false);
         return true;
       };
 
-      const onSell=(p)=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`); };
-      const onClaim=(p)=>{ if(p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен (демо)'); };
+      const onSellPrize = (p) => {
+        const v = SELL_BY_RARITY[p.rarity] || 1;
+        setStars(s=>s+v);
+        setToast(`Продано: +${v} ⭐`);
+      };
 
+      const onClaimPrize = (p) => {
+        setInventory((inv)=> [{...p, ts:Date.now()}, ...inv].slice(0,200));
+        if (p.starsValue) setStars(s=>s+p.starsValue);
+        setToast('Предмет добавлен в инвентарь');
+      };
+
+      // ===== UI =====
       return (
-        <div className="min-h-dvh px-4 py-5">
+        <div className="min-h-dvh pb-20 px-4 py-5">
           <div className="mx-auto max-w-md">
-            <header className="flex items-center justify-between">
+            <header className="flex items-center justify-between fade-in" style={{animationDelay:'20ms'}}>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Кейсы за ⭐</h1>
-                <p className="opacity-70 text-sm">Открывай кейсы и забирай призы</p>
+                <p className="text-zinc-400 text-sm">Открывай кейсы и забирай призы</p>
               </div>
-              <div className="px-3 py-2 rounded-xl bg-yellow-200 text-yellow-900 font-semibold shadow">{stars} ⭐</div>
+              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
             </header>
 
-            {!selectedCase && (
+            {/* Главный контент по табам */}
+            {tab === 'home' && !selectedCase && (
               <>
-                <section className="mt-5 grid gap-3">
-                  {cases.map((c)=>(
-                    <div key={c.id} className="rounded-2xl shadow-md p-4 bg-white/70 backdrop-blur border border-black/5">
-                      <div className="flex items-center gap-3">
+                {/* Сетка кейсов: 2 в ряд */}
+                <section className="mt-5 grid grid-cols-2 gap-4">
+                  {cases.map((c, i)=>(
+                    <div
+                      key={c.id}
+                      role="button"
+                      onClick={()=>openDetails(c)}
+                      className="rounded-2xl p-4 bg-zinc-900/70 border border-zinc-700 hover:border-orange-500 hover:shadow-[0_0_0_2px_rgba(234,88,12,.35)] transition transform hover:scale-[1.02] backdrop-blur cursor-pointer fade-in"
+                      style={{animationDelay: `${i*60+40}ms`}}
+                    >
+                      <div className="flex items-start gap-3">
                         <div className="text-3xl">{c.bannerEmoji ?? '🎁'}</div>
-                        <div>
-                          <div className="text-lg font-semibold">{c.title}</div>
-                          <div className="text-sm opacity-70">{c.description}</div>
+                        <div className="min-w-0">
+                          <div className="text-base font-semibold">{c.title}</div>
+                          <div className="text-xs text-zinc-400 line-clamp-2">{c.description}</div>
                         </div>
                       </div>
-                      <div className="mt-4 flex justify-between items-center">
-                        <div className="text-sm opacity-80">Цена: {c.priceStars} ⭐</div>
-                        <div className="flex gap-2">
-                          <button className="px-3 py-2 rounded-xl text-sm font-semibold shadow-sm bg-white/70 border border-black/10" onClick={()=>openDetails(c)}>Подробнее</button>
-                          <button className={`px-4 py-2 rounded-2xl text-sm font-semibold shadow-sm transition transform active:scale-95 ${opening?'bg-gray-300 cursor-not-allowed':'bg-black text-white'}`} onClick={()=>openDetails(c)} disabled={opening}>Открыть</button>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {c.prizes.map(p=><span key={p.id} className={`px-2 py-1 rounded-full text-xs ${rarityColor(p.rarity)}`}>{(p.emoji?p.emoji+' ':'')+p.label}</span>)}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
+                        <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-300 text-xs border border-orange-500/30">Подробнее</span>
                       </div>
                     </div>
                   ))}
                 </section>
 
-                <section className="mt-6">
-                  <div className="rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur">
-                    <div className="text-sm opacity-70">Результат</div>
+                {/* Результат (последний приз) */}
+                <section className="mt-6 fade-in" style={{animationDelay:'120ms'}}>
+                  <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
+                    <div className="text-sm text-zinc-400">Результат</div>
                     <Spinner spinning={opening} />
                     {!opening && lastPrize && (
                       <div className="text-center">
                         <div className="text-4xl mb-2">{lastPrize.emoji ?? '🎉'}</div>
                         <div className="text-lg font-semibold">{lastPrize.label}</div>
                         <div className={`mt-2 inline-block px-2 py-1 rounded-full text-xs ${rarityColor(lastPrize.rarity)}`}>{lastPrize.rarity}</div>
-                        {lastPrize.starsValue ? (<div className="mt-2 text-sm opacity-70">Возврат: +{lastPrize.starsValue} ⭐</div>) : null}
+                        {lastPrize.starsValue ? (<div className="text-sm text-zinc-400 mt-2">Возврат: +{lastPrize.starsValue} ⭐</div>) : null}
                       </div>
                     )}
-                    {!opening && !lastPrize && (<div className="text-center opacity-60 text-sm">Открой кейс, чтобы увидеть приз</div>)}
+                    {!opening && !lastPrize && (<div className="text-center text-zinc-500 text-sm">Открой кейс, чтобы увидеть приз</div>)}
                   </div>
                 </section>
-
-                {history.length>0 && (
-                  <section className="mt-6">
-                    <div className="rounded-2xl p-4 border border-black/5 bg-white/60 backdrop-blur">
-                      <div className="text-sm font-semibold mb-2">История</div>
-                      {history.map((h, i)=>(
-                        <div key={i} className="flex items-center justify-between py-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded-full text-xs ${rarityColor(h.prize.rarity)}`}>{h.prize.rarity}</span>
-                            <span className="text-base">{(h.prize.emoji ?? '🎁') + ' ' + h.prize.label}</span>
-                            <span className="opacity-60 text-sm">в {h.caseTitle}</span>
-                          </div>
-                          <span className="opacity-60 text-sm">{new Date(h.ts).toLocaleTimeString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
               </>
             )}
 
-            {selectedCase && (
+            {selectedCase && tab==='home' && (
               <section className="mt-5">
                 <CaseDetailCards
                   data={selectedCase}
                   onBack={()=>setSelectedCase(null)}
                   onOpenServer={onOpenServerPrepare}
                   opening={opening}
-                  onSell={onSell}
-                  onClaim={onClaim}
                   setLastPrize={setLastPrize}
+                  addHistory={(p)=>setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50))}
                   setToast={setToast}
-                  addHistory={addHistory}
+                  onClaimPrize={onClaimPrize}
+                  onSellPrize={onSellPrize}
                 />
               </section>
             )}
 
-            <footer className="mt-8 text-center opacity-60 text-xs">Деморежим. Сервер возвращает приз через /api/open.</footer>
+            {tab === 'inventory' && (
+              <section className="mt-5 fade-in">
+                <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
+                  <div className="text-sm text-zinc-400 mb-3">Инвентарь</div>
+                  {inventory.length === 0 ? (
+                    <div className="text-zinc-500 text-sm text-center py-6">Пусто. Открой кейс и нажми «Забрать».</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {inventory.map((p, i)=>(
+                        <div key={i} className="rounded-xl border border-zinc-700 bg-zinc-900 p-3">
+                          <div className="flex items-center gap-2">
+                            <div className="text-2xl">{p.emoji ?? '🎁'}</div>
+                            <div className="text-sm">
+                              <div className="font-medium">{p.label}</div>
+                              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(p.rarity)}`}>{p.rarity}</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex justify-between items-center">
+                            <span className="text-xs text-zinc-500">{new Date(p.ts).toLocaleTimeString()}</span>
+                            <button
+                              className="px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs hover:bg-zinc-700"
+                              onClick={()=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setInventory(inv=>inv.filter((_,idx)=>idx!==i)); setToast(`Продано из инвентаря: +${v} ⭐`); }}
+                            >
+                              Продать (+{SELL_BY_RARITY[p.rarity]||1}⭐)
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {tab === 'history' && (
+              <section className="mt-5 fade-in">
+                <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
+                  <div className="text-sm font-semibold mb-2">История</div>
+                  {history.length === 0 ? (
+                    <div className="text-zinc-500 text-sm text-center py-6">Пока пусто</div>
+                  ) : history.map((h, i)=>(
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs ${rarityColor(h.prize.rarity)}`}>{h.prize.rarity}</span>
+                        <span className="text-base">{(h.prize.emoji ?? '🎁') + ' ' + h.prize.label}</span>
+                        <span className="text-zinc-500 text-sm">в {h.caseTitle}</span>
+                      </div>
+                      <span className="text-zinc-500 text-sm">{new Date(h.ts).toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <footer className="mt-8 text-center text-zinc-500 text-xs fade-in" style={{animationDelay:'200ms'}}>
+              Деморежим. Сервер возвращает приз через <span className="text-orange-400">/api/open</span>.
+            </footer>
           </div>
 
           {toast && <Toast text={toast} onClose={()=>setToast(null)} />}
+
+          {/* Нижний таб-бар */}
+          <nav className="fixed bottom-0 left-0 right-0 z-50">
+            <div className="mx-auto max-w-md">
+              <div className="m-3 rounded-2xl border border-zinc-700 bg-zinc-900/90 backdrop-blur shadow-[0_0_0_1px_rgba(255,255,255,.02)]">
+                <div className="grid grid-cols-3">
+                  <button className={`py-3 text-sm font-medium ${tab==='home' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>{ setSelectedCase(null); setTab('home'); }}>
+                    Главная
+                  </button>
+                  <button className={`py-3 text-sm font-medium ${tab==='inventory' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>setTab('inventory')}>
+                    Инвентарь
+                  </button>
+                  <button className={`py-3 text-sm font-medium ${tab==='history' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>setTab('history')}>
+                    История
+                  </button>
+                </div>
+              </div>
+            </div>
+          </nav>
         </div>
       );
     }
