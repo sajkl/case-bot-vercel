@@ -1,35 +1,46 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<script>
-  (function () {
-    const show = (title, detail) => {
-      try {
-        const box = document.getElementById('err');
-        if (box) {
-          box.style.display = 'block';
-          box.textContent = title + '\n' + (detail || '');
-        }
-      } catch (_) {}
-    };
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Кейсы за ⭐ — Telegram Mini App</title>
 
-    window.onerror = function (message, source, lineno, colno, error) {
-      const detail = [
-        'source: ' + (source || '-'),
-        'line: ' + (lineno || '-') + ', col: ' + (colno || '-'),
-        'stack: ' + (error && error.stack ? error.stack : '-')
-      ].join('\n');
-      show('JS error: ' + message, detail);
-    };
+  <!-- Внешние скрипты с CORS, чтобы видеть нормальные стеки ошибок -->
+  <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
 
-    window.addEventListener('unhandledrejection', (e) => {
-      const reason = e && e.reason;
-      const detail = (reason && reason.stack) || JSON.stringify(reason);
-      show('Promise error', detail);
-    });
-  })();
-</script>
+  <!-- Глобальный ловец ошибок с подробностями -->
+  <script>
+    (function () {
+      const show = (title, detail) => {
+        try {
+          const box = document.getElementById('err');
+          if (box) {
+            box.style.display = 'block';
+            box.textContent = title + '\n' + (detail || '');
+          }
+        } catch (_) {}
+      };
 
+      window.onerror = function (message, source, lineno, colno, error) {
+        const detail = [
+          'source: ' + (source || '-'),
+          'line: ' + (lineno || '-') + ', col: ' + (colno || '-'),
+          'stack: ' + (error && error.stack ? error.stack : '-')
+        ].join('\n');
+        show('JS error: ' + message, detail);
+      };
+
+      window.addEventListener('unhandledrejection', (e) => {
+        const reason = e && e.reason;
+        const detail = (reason && reason.stack) || JSON.stringify(reason);
+        show('Promise error', detail);
+      });
+    })();
+  </script>
 
   <style>
     html, body, #root { height: 100%; }
@@ -55,25 +66,13 @@
       transition: all 300ms cubic-bezier(.2,.8,.2,1);
     }
   </style>
-
-  <!-- Поймаем ошибки, чтобы избегать "белого экрана" -->
-  <script>
-    window.addEventListener('error', (e) => {
-      const box = document.getElementById('err');
-      if (box) { box.style.display='block'; box.textContent = 'JS error: ' + e.message; }
-      console.error(e.error || e.message);
-    });
-    window.addEventListener('unhandledrejection', (e) => {
-      const box = document.getElementById('err');
-      if (box) { box.style.display='block'; box.textContent = 'Promise error: ' + (e.reason && e.reason.message || e.reason); }
-      console.error(e.reason);
-    });
-  </script>
 </head>
+
 <body class="bg-gradient-to-b from-white to-gray-50 text-gray-900">
   <div id="root"></div>
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:8px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
+  <!-- Приложение. Babel соберёт JSX прямо в браузере -->
   <script type="text/babel">
     const { useEffect, useRef, useState } = React;
     const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
@@ -157,7 +156,7 @@
 
     // ===== Детальная страница с режимом "5 карт" =====
     function CaseDetailCards({ data, onBack, onOpenServer, opening, onSell, onClaim, setLastPrize, setToast, addHistory }) {
-      const [phase, setPhase] = useState('idle'); // idle | choosing | revealed
+      const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
       const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped:boolean, picked:boolean}]
       const [pickedIndex, setPickedIndex] = useState(null);
 
@@ -168,72 +167,71 @@
       };
 
       // игрок кликает карту → запрос на сервер за призом → показываем его на выбранной карте → после паузы переворачиваем остальные
- const onPick = async (idx) => {
-  if (phase !== 'choosing') return;
+      const onPick = async (idx) => {
+        if (phase !== 'choosing') return;
 
-  // защита от двойных кликов
-  setPhase('picking');
-  setPickedIndex(idx);
-  setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
+        // защита от двойных кликов
+        setPhase('picking');
+        setPickedIndex(idx);
+        setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
-  // 1) пробуем получить приз с сервера
-  let prize = null;
-  try {
-    const res = await fetch('/api/open', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseId: data.id })
-    });
-    if (res.ok) {
-      // защита от невалидного JSON
-      const json = await res.json().catch(() => ({}));
-      if (json && json.prize) prize = json.prize;
-    }
-  } catch (_) {
-    // игнор — пойдём в фолбэк
-  }
+        // 1) пробуем получить приз с сервера
+        let prize = null;
+        try {
+          const res = await fetch('/api/open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caseId: data.id })
+          });
+          if (res.ok) {
+            // защита от невалидного JSON
+            const json = await res.json().catch(() => ({}));
+            if (json && json.prize) prize = json.prize;
+          }
+        } catch (_) {
+          // игнор — пойдём в фолбэк
+        }
 
-  // 2) надёжный фолбэк, если сервера нет/ответ пустой
-  if (!prize || !prize.id) {
-    const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
-    let r = Math.random()*Math.max(1,total);
-    prize = data.prizes?.[data.prizes.length-1] || null;
-    for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
-  }
+        // 2) надёжный фолбэк, если сервера нет/ответ пустой
+        if (!prize || !prize.id) {
+          const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
+          let r = Math.random()*Math.max(1,total);
+          prize = data.prizes?.[data.prizes.length-1] || null;
+          for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
+        }
 
-  // 3) если по каким-то причинам даже фолбэк не дал приз — мягко выйдем
-  if (!prize) {
-    setPhase('choosing');
-    return;
-  }
+        // 3) если по каким-то причинам даже фолбэк не дал приз — мягко выйдем
+        if (!prize) {
+          setPhase('choosing');
+          return;
+        }
 
-  // 4) переворот выбранной карты
-  audio.flip();
-  tg?.WebApp?.HapticFeedback?.selectionChanged?.();
-  setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
-  setPhase('revealed');
-  setLastPrize(prize);
-  addHistory(prize);
+        // 4) переворот выбранной карты
+        audio.flip();
+        tg?.WebApp?.HapticFeedback?.selectionChanged?.();
+        setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
+        setPhase('revealed');
+        setLastPrize(prize);
+        addHistory(prize);
 
-  setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
+        setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
 
-  // 5) безопасно переворачиваем остальные
-  setTimeout(() => {
-    setCards((cs) => {
-      const chosenId = prize && prize.id;
-      const pool = Array.isArray(data.prizes) ? data.prizes.slice() : [];
-      const remainingPool = chosenId ? pool.filter(p => p.id !== chosenId) : pool;
-      const shuffled = remainingPool.slice().sort(()=>Math.random()-0.5);
-      let ri = 0;
-      return cs.map((c, i) => {
-        if (i === idx) return c;
-        const alt = shuffled[ri++] || remainingPool[0] || prize;
-        return { ...c, prize: alt, flipped: true };
-      });
-    });
-  }, 500);
-};
-
+        // 5) безопасно переворачиваем остальные
+        setTimeout(() => {
+          setCards((cs) => {
+            const chosenId = prize && prize.id;
+            const pool = Array.isArray(data.prizes) ? data.prizes.slice() : [];
+            const remainingPool = chosenId ? pool.filter(p => p.id !== chosenId) : pool;
+            const shuffled = remainingPool.slice().sort(()=>Math.random()-0.5);
+            let ri = 0;
+            return cs.map((c, i) => {
+              if (i === idx) return c;
+              const alt = shuffled[ri++] || remainingPool[0] || prize;
+              return { ...c, prize: alt, flipped: true };
+            });
+          });
+        }, 500);
+      };
 
       // списываем звёзды и показываем сцену карт
       const onStart = async () => {
@@ -457,3 +455,4 @@
   </script>
 </body>
 </html>
+
