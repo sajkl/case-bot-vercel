@@ -1,20 +1,35 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Кейсы за ⭐ — Telegram Mini App</title>
+<script>
+  (function () {
+    const show = (title, detail) => {
+      try {
+        const box = document.getElementById('err');
+        if (box) {
+          box.style.display = 'block';
+          box.textContent = title + '\n' + (detail || '');
+        }
+      } catch (_) {}
+    };
 
-  <!-- Telegram WebApp API -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    window.onerror = function (message, source, lineno, colno, error) {
+      const detail = [
+        'source: ' + (source || '-'),
+        'line: ' + (lineno || '-') + ', col: ' + (colno || '-'),
+        'stack: ' + (error && error.stack ? error.stack : '-')
+      ].join('\n');
+      show('JS error: ' + message, detail);
+    };
 
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+    window.addEventListener('unhandledrejection', (e) => {
+      const reason = e && e.reason;
+      const detail = (reason && reason.stack) || JSON.stringify(reason);
+      show('Promise error', detail);
+    });
+  })();
+</script>
 
-  <!-- React / ReactDOM UMD + Babel (для JSX) -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
     html, body, #root { height: 100%; }
