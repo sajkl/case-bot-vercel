@@ -170,10 +170,13 @@
       // игрок кликает карту → запрос на сервер за призом → показываем его на выбранной карте → после паузы переворачиваем остальные
  const onPick = async (idx) => {
   if (phase !== 'choosing') return;
+
+  // защита от двойных кликов
+  setPhase('picking');
   setPickedIndex(idx);
   setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
-  // 1) пробуем сервер
+  // 1) пробуем получить приз с сервера
   let prize = null;
   try {
     const res = await fetch('/api/open', {
@@ -182,22 +185,29 @@
       body: JSON.stringify({ caseId: data.id })
     });
     if (res.ok) {
+      // защита от невалидного JSON
       const json = await res.json().catch(() => ({}));
       if (json && json.prize) prize = json.prize;
     }
   } catch (_) {
-    // ignore, пойдём в фолбэк
+    // игнор — пойдём в фолбэк
   }
 
-  // 2) надёжный фолбэк, если сервер не дал приз или формат странный
+  // 2) надёжный фолбэк, если сервера нет/ответ пустой
   if (!prize || !prize.id) {
-    const total = data.prizes.reduce((s,p)=>s+(p.weight||0),0);
+    const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
     let r = Math.random()*Math.max(1,total);
-    prize = data.prizes[data.prizes.length-1];
-    for (const p of data.prizes) { r -= (p.weight||0); if (r<=0) { prize=p; break; } }
+    prize = data.prizes?.[data.prizes.length-1] || null;
+    for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
   }
 
-  // 3) переворачиваем выбранную карту
+  // 3) если по каким-то причинам даже фолбэк не дал приз — мягко выйдем
+  if (!prize) {
+    setPhase('choosing');
+    return;
+  }
+
+  // 4) переворот выбранной карты
   audio.flip();
   tg?.WebApp?.HapticFeedback?.selectionChanged?.();
   setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
@@ -207,14 +217,13 @@
 
   setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
 
-  // 4) безопасно переворачиваем остальные (без обращения к prize.id, если prize вдруг пустой)
+  // 5) безопасно переворачиваем остальные
   setTimeout(() => {
     setCards((cs) => {
-      const chosenId = prize?.id;
-      const remainingPool = chosenId
-        ? data.prizes.filter(p => p.id !== chosenId)
-        : data.prizes.slice();
-      const shuffled = remainingPool.sort(()=>Math.random()-0.5);
+      const chosenId = prize && prize.id;
+      const pool = Array.isArray(data.prizes) ? data.prizes.slice() : [];
+      const remainingPool = chosenId ? pool.filter(p => p.id !== chosenId) : pool;
+      const shuffled = remainingPool.slice().sort(()=>Math.random()-0.5);
       let ri = 0;
       return cs.map((c, i) => {
         if (i === idx) return c;
@@ -225,32 +234,6 @@
   }, 500);
 };
 
-
-        // переворот выбранной
-        audio.flip();
-        tg?.WebApp?.HapticFeedback?.selectionChanged?.();
-        setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
-        setPhase('revealed');
-        setLastPrize(prize);
-        addHistory(prize);
-
-        // эффект победы
-        setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
-
-        // через мгновение открываем остальные — подставим псевдо-призы
-        setTimeout(() => {
-          setCards((cs) => {
-            const remaining = data.prizes.filter(p => p.id !== prize.id);
-            const shuffled = remaining.sort(()=>Math.random()-0.5);
-            let ri = 0;
-            return cs.map((c, i) => {
-              if (i === idx) return c;
-              const alt = shuffled[ri++] || remaining[0];
-              return { ...c, prize: alt, flipped: true };
-            });
-          });
-        }, 500);
-      };
 
       // списываем звёзды и показываем сцену карт
       const onStart = async () => {
