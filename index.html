@@ -76,6 +76,50 @@
     .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.30); }
     .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.32); }
     .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.40); }
+
+    /* Fan layout (веер) */
+    .hand {
+      position: relative;
+      height: 190px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+    .hand-card {
+      position: relative;
+      pointer-events: auto;
+      margin-left: -48px;
+      transition: transform .25s ease, filter .2s ease;
+    }
+    .hand-card:first-child { margin-left: 0; }
+    .hand-card:hover { transform: translateY(-6px) scale(1.02); filter: brightness(1.06); }
+
+    /* Большие скруглённые кнопки */
+    .btn-orange {
+      background: linear-gradient(180deg,#f97316,#ea580c);
+      color:#111; border:none; border-radius:18px;
+      padding:.9rem 1.1rem; font-weight:700;
+      box-shadow: 0 6px 20px rgba(234,88,12,.35), 0 0 0 1px rgba(234,88,12,.35) inset;
+      transition: transform .06s ease, box-shadow .15s ease, filter .15s ease;
+    }
+    .btn-orange:hover { filter: brightness(1.05); }
+    .btn-orange:active { transform: scale(.98); }
+
+    .btn-secondary {
+      background: #18181b; color:#e4e4e7;
+      border:1px solid #3f3f46; border-radius:16px;
+      padding:.8rem 1rem; font-weight:600;
+      transition: transform .06s ease, background .15s ease;
+    }
+    .btn-secondary:hover { background:#27272a; }
+    .btn-secondary:active { transform: scale(.98); }
+
+    /* Подсветка эмодзи кейсов */
+    .case-emoji-glow {
+      filter: drop-shadow(0 0 10px rgba(234,88,12,.45))
+              drop-shadow(0 0 24px rgba(234,88,12,.25));
+    }
   </style>
 </head>
 
@@ -84,7 +128,7 @@
   <div id="root"></div>
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
-  <!-- Приложение (Babel компилирует JSX в браузере) -->
+  <!-- Приложение -->
   <script type="text/babel">
     const { useEffect, useState } = React;
     const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
@@ -132,7 +176,7 @@
       legendary: 'glow-legendary'
     }[r] || 'glow-common');
 
-    // ===== звук/вибро =====
+    // звук/вибро
     class SpinAudio {
       constructor(){ this.ctx=null; this.gain=null; }
       ensure(){ if(!this.ctx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
@@ -148,7 +192,6 @@
     }
     const audio = new SpinAudio();
 
-    /* ===== Компоненты ===== */
     function CardFront({ prize }) {
       return (
         <div className="flip-face back bg-zinc-900 border border-zinc-700 shadow-md">
@@ -165,16 +208,15 @@
       );
     }
 
-    function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, setToast, onClaimPrize, onSellPrize }) {
+    // Детальная страница с «5 картами» (веер)
+    function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, onClaimPrize, onSellPrize }) {
       const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
       const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped, picked}]
-      const [pickedIndex, setPickedIndex] = useState(null);
       const [landedPrize, setLandedPrize] = useState(null);
 
       const prepareCards = () => {
         setPhase('choosing');
         setCards(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
-        setPickedIndex(null);
         setLandedPrize(null);
       };
 
@@ -182,7 +224,6 @@
         if (phase !== 'choosing') return;
 
         setPhase('picking');
-        setPickedIndex(idx);
         setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
         let prize = null;
@@ -204,7 +245,6 @@
           prize = data.prizes?.[data.prizes.length-1] || null;
           for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
         }
-
         if (!prize) { setPhase('choosing'); return; }
 
         audio.flip();
@@ -239,13 +279,17 @@
         if (ok) prepareCards();
       };
 
-      const glowFor = (card) => (!card?.flipped || !card?.prize) ? '' : glowClass(card.prize.rarity);
+      const cardTransform = (i, n) => {
+        const angle = -12 + i * (24 / Math.max(1, n - 1));
+        const y = Math.abs(i - (n - 1) / 2) * 3;
+        return `rotate(${angle}deg) translateY(${y}px)`;
+      };
 
       return (
         <div className="fade-in">
           <div className="flex items-center gap-2 mb-4">
             <button onClick={onBack}
-              className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition">
+              className="btn-secondary">
               ← Назад
             </button>
             <div className="text-xl font-semibold flex items-center gap-2">
@@ -254,16 +298,23 @@
             <div className="ml-auto text-sm text-zinc-300">Цена: {data.priceStars} ⭐</div>
           </div>
 
-          {/* сцена карт */}
           <div className={`mt-2 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur flip-scene ${phase==='choosing' ? 'cards-enter-active' : ''}`}>
             <div className="text-sm text-zinc-400">
               {phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}
             </div>
 
-            <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-4 justify-items-center">
+            {/* FAN layout */}
+            <div className="mt-6 hand">
               {cards.map((card, i) => (
-                <div key={i} className={`transition-transform ${card?.picked?'scale-105':''} fade-in`} style={{ animationDelay: `${i*60}ms` }}>
-                  <div className={`flip-card ${card?.flipped?'flipped':''} ${glowFor(card)}`} onClick={() => (phase==='choosing') && onPick(i)}>
+                <div
+                  key={i}
+                  className={`hand-card ${card?.picked ? 'scale-105' : ''} fade-in`}
+                  style={{ animationDelay: `${i*60}ms`, transform: cardTransform(i, cards.length) }}
+                >
+                  <div
+                    className={`flip-card ${card?.flipped ? 'flipped' : ''} ${(!card?.flipped || !card?.prize) ? '' : glowClass(card.prize.rarity)}`}
+                    onClick={() => (phase==='choosing') && onPick(i)}
+                  >
                     <div className="flip-face front bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border border-zinc-600 shadow-lg">
                       <div className="text-4xl">?</div>
                     </div>
@@ -273,19 +324,17 @@
               ))}
             </div>
 
-            {/* кнопка "Открыть" — с inline-фолбэком цвета */}
             <div className="sticky bottom-3 mt-5 z-10">
               <button
-                className="w-full px-4 py-3 rounded-xl font-semibold shadow-lg transition active:scale-[0.98]"
-                style={{ background:'#f97316', color:'#111' }}
+                className="btn-orange w-full"
                 onClick={onStart}
                 disabled={opening}
+                style={opening ? { filter:'grayscale(0.2) opacity(.7)' } : undefined}
               >
                 Открыть за {data.priceStars} ⭐
               </button>
             </div>
 
-            {/* панель действий при раскрытом призе */}
             {phase === 'revealed' && landedPrize && (
               <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border border-zinc-700 bg-zinc-900/70">
                 <div className="flex items-center gap-2">
@@ -296,17 +345,10 @@
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    className="px-3 py-2 rounded-xl font-semibold bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition"
-                    onClick={() => onSellPrize(landedPrize)}
-                  >
+                  <button className="btn-secondary" onClick={() => onSellPrize(landedPrize)}>
                     Продать за {({common:1,rare:2,epic:6,legendary:20}[landedPrize.rarity]||1)} ⭐
                   </button>
-                  <button
-                    className="px-4 py-2 rounded-xl font-semibold shadow"
-                    style={{ background:'#f97316', color:'#111' }}
-                    onClick={() => onClaimPrize(landedPrize)}
-                  >
+                  <button className="btn-orange" onClick={() => onClaimPrize(landedPrize)}>
                     Забрать
                   </button>
                 </div>
@@ -314,7 +356,6 @@
             )}
           </div>
 
-          {/* список призов ниже */}
           <div className="mt-5 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
             <div className="text-sm text-zinc-400 mb-3">Доступные призы</div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -351,6 +392,7 @@
 
       useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
       const addHistory = (p) => setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50));
+
       const openDetails=(c)=>{ setSelectedCase(c); setTab('home'); };
 
       const onOpenServerPrepare = async (c) => {
@@ -389,7 +431,6 @@
 
             {tab === 'home' && !selectedCase && (
               <>
-                {/* Сетка 2×N */}
                 <section
                   className="mt-5 grid grid-cols-2 gap-4"
                   style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:'16px' }}
@@ -403,7 +444,7 @@
                       style={{animationDelay: `${i*60+40}ms`}}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="text-3xl">{c.bannerEmoji ?? '🎁'}</div>
+                        <div className="text-4xl case-emoji-glow">{c.bannerEmoji ?? '🎁'}</div>
                         <div className="min-w-0">
                           <div className="text-base font-semibold">{c.title}</div>
                           <div className="text-xs text-zinc-400 line-clamp-2">{c.description}</div>
@@ -411,16 +452,12 @@
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
-                        <span
-                          className="px-2 py-1 rounded-lg border border-orange-500/30"
-                          style={{ background:'rgba(249,115,22,.20)', color:'#fdba74' }}
-                        >Подробнее</span>
+                        <button className="btn-secondary text-sm" onClick={()=>openDetails(c)}>Подробнее</button>
                       </div>
                     </div>
                   ))}
                 </section>
 
-                {/* Результат (плейсхолдер) */}
                 <section className="mt-6 fade-in" style={{animationDelay:'120ms'}}>
                   <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
                     <div className="text-sm text-zinc-400">Результат</div>
@@ -445,7 +482,6 @@
                   opening={opening}
                   setLastPrize={setLastPrize}
                   addHistory={(p)=>setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50))}
-                  setToast={setToast}
                   onClaimPrize={onClaimPrize}
                   onSellPrize={onSellPrize}
                 />
@@ -472,8 +508,8 @@
                           <div className="mt-3 flex justify-between items-center">
                             <span className="text-xs text-zinc-500">{new Date(p.ts).toLocaleTimeString()}</span>
                             <button
-                              className="px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs hover:bg-zinc-700"
-                              onClick={()=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setInventory(inv=>inv.filter((_,idx)=>idx!==i)); setToast(`Продано из инвентаря: +${v} ⭐`); }}
+                              className="btn-secondary text-xs"
+                              onClick={()=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setInventory(inv=>inv.filter((_,idx)=>idx!==i)); }}
                             >
                               Продать (+{SELL_BY_RARITY[p.rarity]||1}⭐)
                             </button>
@@ -532,8 +568,6 @@
               </div>
             </div>
           </nav>
-
-          {toast && <Toast text={toast} onClose={()=>setToast(null)} />}
         </div>
       );
     }
