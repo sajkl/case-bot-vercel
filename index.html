@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Кейсы за ⭐ — Telegram Mini App</title>
 
-  <!-- Внешние скрипты с CORS -->
+  <!-- внешние скрипты -->
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
   <script>
-    // Явный конфиг для CDN Tailwind
     window.tailwind = window.tailwind || {};
     tailwind.config = { darkMode: 'class', theme: { extend: {} } };
   </script>
@@ -17,17 +16,14 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
 
-  <!-- Ловец ошибок -->
+  <!-- ловец ошибок -->
   <script>
     (function () {
       const show = (title, detail) => {
         try {
           const box = document.getElementById('err');
-          if (box) {
-            box.style.display = 'block';
-            box.textContent = title + '\n' + (detail || '');
-          }
-        } catch (_) {}
+          if (box) { box.style.display='block'; box.textContent = title + '\n' + (detail || ''); }
+        } catch(_) {}
       };
       window.onerror = function (message, source, lineno, colno, error) {
         const detail = [
@@ -55,7 +51,7 @@
     /* Flip cards */
     .flip-scene { perspective: 1000px; }
     .flip-card {
-      width: 120px; height: 160px;
+      width: 118px; height: 156px;            /* чуть компактнее */
       position: relative; transform-style: preserve-3d;
       transition: transform 700ms cubic-bezier(.2,.8,.2,1);
       border-radius: 16px;
@@ -72,15 +68,15 @@
     .cards-enter-active { opacity:1; transform: translateY(0) scale(1); transition: all 300ms cubic-bezier(.2,.8,.2,1); }
 
     /* Glow по редкости */
-    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.25); }
-    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.30); }
-    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.32); }
-    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.40); }
+    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.22); }
+    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.28); }
+    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.30); }
+    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.36); }
 
-    /* Fan layout (веер) */
+    /* Fan layout (веер) - компактнее + плотнее перекрытие */
     .hand {
       position: relative;
-      height: 190px;
+      height: 168px;                 /* было 190 — экономим место */
       display: flex;
       justify-content: center;
       align-items: flex-end;
@@ -89,13 +85,13 @@
     .hand-card {
       position: relative;
       pointer-events: auto;
-      margin-left: -48px;
-      transition: transform .25s ease, filter .2s ease;
+      margin-left: -44px;            /* плотнее друг к другу */
+      transition: transform .35s ease, filter .2s ease, opacity .2s ease;
     }
     .hand-card:first-child { margin-left: 0; }
     .hand-card:hover { transform: translateY(-6px) scale(1.02); filter: brightness(1.06); }
 
-    /* Большие скруглённые кнопки */
+    /* Кнопки большие и скруглённые */
     .btn-orange {
       background: linear-gradient(180deg,#f97316,#ea580c);
       color:#111; border:none; border-radius:18px;
@@ -110,9 +106,9 @@
       background: #18181b; color:#e4e4e7;
       border:1px solid #3f3f46; border-radius:16px;
       padding:.8rem 1rem; font-weight:600;
-      transition: transform .06s ease, background .15s ease;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
     }
-    .btn-secondary:hover { background:#27272a; }
+    .btn-secondary:hover { background:#27272a; border-color:#52525b; }
     .btn-secondary:active { transform: scale(.98); }
 
     /* Подсветка эмодзи кейсов */
@@ -128,12 +124,11 @@
   <div id="root"></div>
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
-  <!-- Приложение -->
   <script type="text/babel">
     const { useEffect, useState } = React;
     const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
 
-    // ===== демо-данные =====
+    /* ===== демо-данные ===== */
     const START_STARS = 25;
     const DEFAULT_CASES = [
       { id:'lite', title:'Лайт-кейс', priceStars:3, bannerEmoji:'🎈', description:'Дешёвый вход, быстрые призы',
@@ -176,7 +171,7 @@
       legendary: 'glow-legendary'
     }[r] || 'glow-common');
 
-    // звук/вибро
+    /* звук/вибро */
     class SpinAudio {
       constructor(){ this.ctx=null; this.gain=null; }
       ensure(){ if(!this.ctx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
@@ -208,15 +203,17 @@
       );
     }
 
-    // Детальная страница с «5 картами» (веер)
+    /* Детальная страница с «веером» */
     function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, onClaimPrize, onSellPrize }) {
       const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
       const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped, picked}]
+      const [pickedIndex, setPickedIndex] = useState(null);
       const [landedPrize, setLandedPrize] = useState(null);
 
       const prepareCards = () => {
         setPhase('choosing');
         setCards(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
+        setPickedIndex(null);
         setLandedPrize(null);
       };
 
@@ -224,6 +221,7 @@
         if (phase !== 'choosing') return;
 
         setPhase('picking');
+        setPickedIndex(idx);
         setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
 
         let prize = null;
@@ -251,12 +249,14 @@
         tg?.WebApp?.HapticFeedback?.selectionChanged?.();
         setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
         setPhase('revealed');
+        setPickedIndex(idx);
         setLastPrize(prize);
         setLandedPrize(prize);
         addHistory(prize);
 
         setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
 
+        // раскрываем оставшиеся карты
         setTimeout(() => {
           setCards((cs) => {
             const chosenId = prize && prize.id;
@@ -270,7 +270,7 @@
               return { ...c, prize: alt, flipped: true };
             });
           });
-        }, 500);
+        }, 450);
       };
 
       const onStart = async () => {
@@ -279,19 +279,29 @@
         if (ok) prepareCards();
       };
 
-      const cardTransform = (i, n) => {
+      // базовая трансформация веера
+      const baseTransform = (i, n) => {
         const angle = -12 + i * (24 / Math.max(1, n - 1));
         const y = Math.abs(i - (n - 1) / 2) * 3;
-        return `rotate(${angle}deg) translateY(${y}px)`;
+        return { angle, y };
+      };
+
+      // при revealed — «раздвигаем» остальные карты в стороны
+      const displacedStyle = (i, n, picked) => {
+        const { angle, y } = baseTransform(i, n);
+        if (picked == null) return { transform: `rotate(${angle}deg) translateY(${y}px)` };
+        if (i === picked) return { transform: `rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)` };
+        const dir = i < picked ? -1 : 1;                     // влево / вправо
+        const shift = 56 + (dir < 0 ? (picked - i) * 6 : (i - picked) * 6); // расстояние
+        const lift  = 4 + Math.max(0, 8 - Math.abs(i - picked)*2);          // лёгкий подъем
+        const ang   = angle * 0.85;                          // немного выпрямим угол
+        return { transform: `rotate(${ang}deg) translate(${dir*shift}px, ${y + lift}px)` };
       };
 
       return (
         <div className="fade-in">
           <div className="flex items-center gap-2 mb-4">
-            <button onClick={onBack}
-              className="btn-secondary">
-              ← Назад
-            </button>
+            <button onClick={onBack} className="btn-secondary">← Назад</button>
             <div className="text-xl font-semibold flex items-center gap-2">
               <span className="text-2xl">{data.bannerEmoji ?? '🎁'}</span> {data.title}
             </div>
@@ -303,19 +313,29 @@
               {phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}
             </div>
 
-            {/* FAN layout */}
-            <div className="mt-6 hand">
+            {/* Веер + разъезд карт после выбора */}
+            <div className="mt-4 hand">
               {cards.map((card, i) => (
                 <div
                   key={i}
                   className={`hand-card ${card?.picked ? 'scale-105' : ''} fade-in`}
-                  style={{ animationDelay: `${i*60}ms`, transform: cardTransform(i, cards.length) }}
+                  style={{
+                    animationDelay: `${i*60}ms`,
+                    ...(
+                      phase === 'revealed'
+                        ? displacedStyle(i, cards.length, pickedIndex)
+                        : (()=>{
+                            const {angle,y}=baseTransform(i,cards.length);
+                            return { transform:`rotate(${angle}deg) translateY(${y}px)` };
+                          })()
+                    )
+                  }}
                 >
                   <div
                     className={`flip-card ${card?.flipped ? 'flipped' : ''} ${(!card?.flipped || !card?.prize) ? '' : glowClass(card.prize.rarity)}`}
                     onClick={() => (phase==='choosing') && onPick(i)}
                   >
-                    <div className="flip-face front bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border border-zinc-600 shadow-lg">
+                    <div className="flip-face front bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border border-zinc-700 shadow-lg">
                       <div className="text-4xl">?</div>
                     </div>
                     <CardFront prize={card?.prize} />
@@ -356,9 +376,10 @@
             )}
           </div>
 
-          <div className="mt-5 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
+          <div className="mt-4 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
             <div className="text-sm text-zinc-400 mb-3">Доступные призы</div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <!-- 3 в ряд на всех экранах -->
+            <div className="grid grid-cols-3 gap-3">
               {data.prizes.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border border-zinc-700 bg-zinc-900">
                   <div className="text-xl">{p.emoji ?? '🎁'}</div>
@@ -388,11 +409,10 @@
       const [toast,setToast]=useState(null);
       const [history,setHistory]=useState([]);
       const [inventory,setInventory]=useState([]);
-      const [tab,setTab]=useState('home'); // home | inventory | history
+      const [tab,setTab]=useState('home');
 
       useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
       const addHistory = (p) => setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50));
-
       const openDetails=(c)=>{ setSelectedCase(c); setTab('home'); };
 
       const onOpenServerPrepare = async (c) => {
@@ -407,16 +427,8 @@
         return true;
       };
 
-      const onSellPrize = (p) => {
-        const v = SELL_BY_RARITY[p.rarity] || 1;
-        setStars(s=>s+v);
-        setToast(`Продано: +${v} ⭐`);
-      };
-      const onClaimPrize = (p) => {
-        setInventory((inv)=> [{...p, ts:Date.now()}, ...inv].slice(0,200));
-        if (p.starsValue) setStars(s=>s+p.starsValue);
-        setToast('Предмет добавлен в инвентарь');
-      };
+      const onSellPrize = (p) => { const v = SELL_BY_RARITY[p.rarity] || 1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`); };
+      const onClaimPrize = (p) => { setInventory((inv)=> [{...p, ts:Date.now()}, ...inv].slice(0,200)); if (p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен в инвентарь'); };
 
       return (
         <div className="min-h-dvh pb-20 px-4 py-5">
@@ -429,7 +441,7 @@
               <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
             </header>
 
-            {tab === 'home' && !selectedCase && (
+            {!selectedCase && (
               <>
                 <section
                   className="mt-5 grid grid-cols-2 gap-4"
@@ -473,14 +485,14 @@
               </>
             )}
 
-            {selectedCase && tab==='home' && (
+            {selectedCase && (
               <section className="mt-5">
                 <CaseDetailCards
                   data={selectedCase}
                   onBack={()=>setSelectedCase(null)}
                   onOpenServer={onOpenServerPrepare}
                   opening={opening}
-                  setLastPrize={setLastPrize}
+                  setLastPrize={(p)=>p}
                   addHistory={(p)=>setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50))}
                   onClaimPrize={onClaimPrize}
                   onSellPrize={onSellPrize}
@@ -488,86 +500,10 @@
               </section>
             )}
 
-            {tab === 'inventory' && (
-              <section className="mt-5 fade-in">
-                <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
-                  <div className="text-sm text-zinc-400 mb-3">Инвентарь</div>
-                  {inventory.length === 0 ? (
-                    <div className="text-zinc-500 text-sm text-center py-6">Пусто. Открой кейс и нажми «Забрать».</div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {inventory.map((p, i)=>(
-                        <div key={i} className="rounded-xl border border-zinc-700 bg-zinc-900 p-3">
-                          <div className="flex items-center gap-2">
-                            <div className="text-2xl">{p.emoji ?? '🎁'}</div>
-                            <div className="text-sm">
-                              <div className="font-medium">{p.label}</div>
-                              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(p.rarity)}`}>{p.rarity}</div>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex justify-between items-center">
-                            <span className="text-xs text-zinc-500">{new Date(p.ts).toLocaleTimeString()}</span>
-                            <button
-                              className="btn-secondary text-xs"
-                              onClick={()=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setInventory(inv=>inv.filter((_,idx)=>idx!==i)); }}
-                            >
-                              Продать (+{SELL_BY_RARITY[p.rarity]||1}⭐)
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {tab === 'history' && (
-              <section className="mt-5 fade-in">
-                <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
-                  <div className="text-sm font-semibold mb-2">История</div>
-                  {history.length === 0 ? (
-                    <div className="text-zinc-500 text-sm text-center py-6">Пока пусто</div>
-                  ) : history.map((h, i)=>(
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${rarityColor(h.prize.rarity)}`}>{h.prize.rarity}</span>
-                        <span className="text-base">{(h.prize.emoji ?? '🎁') + ' ' + h.prize.label}</span>
-                        <span className="text-zinc-500 text-sm">в {h.caseTitle}</span>
-                      </div>
-                      <span className="text-zinc-500 text-sm">{new Date(h.ts).toLocaleTimeString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
             <footer className="mt-8 text-center text-zinc-500 text-xs fade-in" style={{animationDelay:'200ms'}}>
               Деморежим. Сервер возвращает приз через <span className="text-orange-400">/api/open</span>.
             </footer>
           </div>
-
-          {/* Нижний таб-бар */}
-          <nav className="fixed bottom-0 left-0 right-0 z-50">
-            <div className="mx-auto max-w-md">
-              <div className="m-3 rounded-2xl border border-zinc-700 bg-zinc-900/90 backdrop-blur shadow-[0_0_0_1px_rgba(255,255,255,.02)]">
-                <div className="grid grid-cols-3">
-                  <button
-                    className={`py-3 text-sm font-medium ${tab==='home' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`}
-                    onClick={()=>{ setSelectedCase(null); setTab('home'); }}
-                  >Главная</button>
-                  <button
-                    className={`py-3 text-sm font-medium ${tab==='inventory' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`}
-                    onClick={()=>setTab('inventory')}
-                  >Инвентарь</button>
-                  <button
-                    className={`py-3 text-sm font-medium ${tab==='history' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`}
-                    onClick={()=>setTab('history')}
-                  >История</button>
-                </div>
-              </div>
-            </div>
-          </nav>
         </div>
       );
     }
