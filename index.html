@@ -51,7 +51,7 @@
     /* Flip cards */
     .flip-scene { perspective: 1000px; }
     .flip-card {
-      width: 118px; height: 156px;            /* чуть компактнее */
+      width: 118px; height: 156px;
       position: relative; transform-style: preserve-3d;
       transition: transform 700ms cubic-bezier(.2,.8,.2,1);
       border-radius: 16px;
@@ -73,10 +73,10 @@
     .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.30); }
     .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.36); }
 
-    /* Fan layout (веер) - компактнее + плотнее перекрытие */
+    /* Fan layout (веер) */
     .hand {
       position: relative;
-      height: 168px;                 /* было 190 — экономим место */
+      height: 168px;
       display: flex;
       justify-content: center;
       align-items: flex-end;
@@ -85,13 +85,13 @@
     .hand-card {
       position: relative;
       pointer-events: auto;
-      margin-left: -44px;            /* плотнее друг к другу */
+      margin-left: -44px;
       transition: transform .35s ease, filter .2s ease, opacity .2s ease;
     }
     .hand-card:first-child { margin-left: 0; }
     .hand-card:hover { transform: translateY(-6px) scale(1.02); filter: brightness(1.06); }
 
-    /* Кнопки большие и скруглённые */
+    /* Кнопки */
     .btn-orange {
       background: linear-gradient(180deg,#f97316,#ea580c);
       color:#111; border:none; border-radius:18px;
@@ -203,7 +203,7 @@
       );
     }
 
-    /* Детальная страница с «веером» */
+    /* Детальная страница */
     function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, onClaimPrize, onSellPrize }) {
       const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
       const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped, picked}]
@@ -249,14 +249,12 @@
         tg?.WebApp?.HapticFeedback?.selectionChanged?.();
         setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
         setPhase('revealed');
-        setPickedIndex(idx);
         setLastPrize(prize);
         setLandedPrize(prize);
         addHistory(prize);
 
         setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
 
-        // раскрываем оставшиеся карты
         setTimeout(() => {
           setCards((cs) => {
             const chosenId = prize && prize.id;
@@ -279,22 +277,20 @@
         if (ok) prepareCards();
       };
 
-      // базовая трансформация веера
       const baseTransform = (i, n) => {
         const angle = -12 + i * (24 / Math.max(1, n - 1));
         const y = Math.abs(i - (n - 1) / 2) * 3;
         return { angle, y };
       };
 
-      // при revealed — «раздвигаем» остальные карты в стороны
       const displacedStyle = (i, n, picked) => {
         const { angle, y } = baseTransform(i, n);
         if (picked == null) return { transform: `rotate(${angle}deg) translateY(${y}px)` };
         if (i === picked) return { transform: `rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)` };
-        const dir = i < picked ? -1 : 1;                     // влево / вправо
-        const shift = 56 + (dir < 0 ? (picked - i) * 6 : (i - picked) * 6); // расстояние
-        const lift  = 4 + Math.max(0, 8 - Math.abs(i - picked)*2);          // лёгкий подъем
-        const ang   = angle * 0.85;                          // немного выпрямим угол
+        const dir = i < picked ? -1 : 1;
+        const shift = 56 + (dir < 0 ? (picked - i) * 6 : (i - picked) * 6);
+        const lift  = 4 + Math.max(0, 8 - Math.abs(i - picked)*2);
+        const ang   = angle * 0.85;
         return { transform: `rotate(${ang}deg) translate(${dir*shift}px, ${y + lift}px)` };
       };
 
@@ -321,14 +317,9 @@
                   className={`hand-card ${card?.picked ? 'scale-105' : ''} fade-in`}
                   style={{
                     animationDelay: `${i*60}ms`,
-                    ...(
-                      phase === 'revealed'
+                    ...(phase === 'revealed'
                         ? displacedStyle(i, cards.length, pickedIndex)
-                        : (()=>{
-                            const {angle,y}=baseTransform(i,cards.length);
-                            return { transform:`rotate(${angle}deg) translateY(${y}px)` };
-                          })()
-                    )
+                        : (()=>{const {angle,y}=baseTransform(i,cards.length); return { transform:`rotate(${angle}deg) translateY(${y}px)` };})())
                   }}
                 >
                   <div
@@ -378,7 +369,7 @@
 
           <div className="mt-4 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
             <div className="text-sm text-zinc-400 mb-3">Доступные призы</div>
-            <!-- 3 в ряд на всех экранах -->
+            {/* 3 в ряд на всех экранах */}
             <div className="grid grid-cols-3 gap-3">
               {data.prizes.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border border-zinc-700 bg-zinc-900">
