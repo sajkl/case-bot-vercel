@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Кейсы за ⭐ — Telegram Mini App</title>
 
-  <!-- Внешние скрипты с CORS, чтобы видеть нормальные стеки ошибок -->
+  <!-- Внешние скрипты с CORS -->
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <!-- Гарантированный старт Tailwind -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = { darkMode: 'class', theme: { extend: {} } };
+  </script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
@@ -18,13 +23,9 @@
       const show = (title, detail) => {
         try {
           const box = document.getElementById('err');
-          if (box) {
-            box.style.display = 'block';
-            box.textContent = title + '\n' + (detail || '');
-          }
-        } catch (_) {}
+        if (box) { box.style.display='block'; box.textContent = title + '\n' + (detail || ''); }
+        } catch(_) {}
       };
-
       window.onerror = function (message, source, lineno, colno, error) {
         const detail = [
           'source: ' + (source || '-'),
@@ -33,7 +34,6 @@
         ].join('\n');
         show('JS error: ' + message, detail);
       };
-
       window.addEventListener('unhandledrejection', (e) => {
         const reason = e && e.reason;
         const detail = (reason && reason.stack) || JSON.stringify(reason);
@@ -45,19 +45,15 @@
   <style>
     html, body, #root { height: 100%; }
 
-    /* ==== Fade-in анимация ==== */
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(10px) scale(0.98); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
+    /* Fade-in анимация */
+    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
     .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
 
-    /* ==== FLIP CARD ==== */
+    /* FLIP CARD */
     .flip-scene { perspective: 1000px; }
     .flip-card {
       width: 120px; height: 160px;
-      position: relative;
-      transform-style: preserve-3d;
+      position: relative; transform-style: preserve-3d;
       transition: transform 700ms cubic-bezier(.2,.8,.2,1);
       border-radius: 16px;
     }
@@ -69,26 +65,24 @@
     }
     .flip-face.back { transform: rotateY(180deg); }
 
-    /* Мягкое появление сцены */
-    .cards-enter { opacity: 0; transform: translateY(16px) scale(0.98); }
-    .cards-enter-active {
-      opacity: 1; transform: translateY(0) scale(1);
-      transition: all 300ms cubic-bezier(.2,.8,.2,1);
-    }
+    .cards-enter { opacity: 0; transform: translateY(16px) scale(.98); }
+    .cards-enter-active { opacity:1; transform: translateY(0) scale(1); transition: all 300ms cubic-bezier(.2,.8,.2,1); }
 
-    /* ==== Glow по редкости ==== */
-    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.25); } /* zinc */
-    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.30); }  /* blue */
-    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.32); }  /* purple */
-    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.40); }   /* orange */
+    /* Glow по редкости */
+    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.25); }
+    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.30); }
+    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.32); }
+    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.40); }
   </style>
 </head>
 
-<body class="bg-gradient-to-b from-black to-zinc-900 text-white">
+<!-- Фон с инлайн-фолбэком (на случай, если Tailwind не подгрузится) -->
+<body class="bg-gradient-to-b from-black to-zinc-900 text-white"
+      style="background:linear-gradient(to bottom,#000,#0f0f14);color:#fff;">
   <div id="root"></div>
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
-  <!-- Приложение. Babel соберёт JSX прямо в браузере -->
+  <!-- Приложение -->
   <script type="text/babel">
     const { useEffect, useState } = React;
     const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
@@ -244,15 +238,15 @@
         if (ok) prepareCards();
       };
 
-      const glowFor = (card) => {
-        if (!card?.flipped || !card?.prize) return '';
-        return glowClass(card.prize.rarity);
-        };
+      const glowFor = (card) => (!card?.flipped || !card?.prize) ? '' : glowClass(card.prize.rarity);
 
       return (
         <div className="fade-in">
           <div className="flex items-center gap-2 mb-4">
-            <button onClick={onBack} className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition">← Назад</button>
+            <button onClick={onBack}
+              className="px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition">
+              ← Назад
+            </button>
             <div className="text-xl font-semibold flex items-center gap-2">
               <span className="text-2xl">{data.bannerEmoji ?? '🎁'}</span> {data.title}
             </div>
@@ -278,10 +272,11 @@
               ))}
             </div>
 
-            {/* кнопка "Открыть" */}
+            {/* кнопка "Открыть" — с inline-цветом как фолбэк */}
             <div className="sticky bottom-3 mt-5 z-10">
               <button
-                className={`w-full px-4 py-3 rounded-xl font-semibold shadow-lg transition active:scale-[0.98] ${opening ? 'bg-zinc-700 cursor-not-allowed text-zinc-300' : 'bg-orange-500 hover:bg-orange-600 text-black'}`}
+                className="w-full px-4 py-3 rounded-xl font-semibold shadow-lg transition active:scale-[0.98]"
+                style="{{background:'#f97316',color:'#111'}}"
                 onClick={onStart}
                 disabled={opening}
               >
@@ -289,7 +284,7 @@
               </button>
             </div>
 
-            {/* панель действий, когда приз открыт */}
+            {/* панель действий при раскрытом призе */}
             {phase === 'revealed' && landedPrize && (
               <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border border-zinc-700 bg-zinc-900/70">
                 <div className="flex items-center gap-2">
@@ -300,16 +295,13 @@
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    className="px-3 py-2 rounded-xl font-semibold bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition"
-                    onClick={() => onSellPrize(landedPrize)}
-                  >
+                  <button className="px-3 py-2 rounded-xl font-semibold bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 transition"
+                          onClick={() => onSellPrize(landedPrize)}>
                     Продать за {({common:1,rare:2,epic:6,legendary:20}[landedPrize.rarity]||1)} ⭐
                   </button>
-                  <button
-                    className="px-4 py-2 rounded-xl font-semibold bg-orange-500 hover:bg-orange-600 text-black shadow"
-                    onClick={() => onClaimPrize(landedPrize)}
-                  >
+                  <button className="px-4 py-2 rounded-xl font-semibold shadow"
+                          style="background:#f97316;color:#111"
+                          onClick={() => onClaimPrize(landedPrize)}>
                     Забрать
                   </button>
                 </div>
@@ -356,7 +348,7 @@
       const [lastPrize,setLastPrize]=useState(null);
       const [toast,setToast]=useState(null);
       const [history,setHistory]=useState([]);
-      const [inventory,setInventory]=useState([]); // {id,label,emoji,rarity,starsValue,ts}
+      const [inventory,setInventory]=useState([]);
       const [tab,setTab]=useState('home'); // home | inventory | history
 
       useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
@@ -364,7 +356,6 @@
 
       const openDetails=(c)=>{ setSelectedCase(c); setTab('home'); };
 
-      // списание стоимости и подготовка
       const onOpenServerPrepare = async (c) => {
         if (opening) return false;
         if (stars < c.priceStars) { setToast('Недостаточно ⭐'); tg?.WebApp?.HapticFeedback?.notificationOccurred?.('warning'); return false; }
@@ -382,14 +373,12 @@
         setStars(s=>s+v);
         setToast(`Продано: +${v} ⭐`);
       };
-
       const onClaimPrize = (p) => {
         setInventory((inv)=> [{...p, ts:Date.now()}, ...inv].slice(0,200));
         if (p.starsValue) setStars(s=>s+p.starsValue);
         setToast('Предмет добавлен в инвентарь');
       };
 
-      // ===== UI =====
       return (
         <div className="min-h-dvh pb-20 px-4 py-5">
           <div className="mx-auto max-w-md">
@@ -401,19 +390,15 @@
               <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
             </header>
 
-            {/* Главный контент по табам */}
             {tab === 'home' && !selectedCase && (
               <>
-                {/* Сетка кейсов: 2 в ряд */}
-                <section className="mt-5 grid grid-cols-2 gap-4">
+                <!-- Сетка 2×N с inline-fallback -->
+                <section className="mt-5 grid grid-cols-2 gap-4"
+                         style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
                   {cases.map((c, i)=>(
-                    <div
-                      key={c.id}
-                      role="button"
-                      onClick={()=>openDetails(c)}
+                    <div key={c.id} role="button" onClick={()=>openDetails(c)}
                       className="rounded-2xl p-4 bg-zinc-900/70 border border-zinc-700 hover:border-orange-500 hover:shadow-[0_0_0_2px_rgba(234,88,12,.35)] transition transform hover:scale-[1.02] backdrop-blur cursor-pointer fade-in"
-                      style={{animationDelay: `${i*60+40}ms`}}
-                    >
+                      style={{animationDelay: `${i*60+40}ms`}}>
                       <div className="flex items-start gap-3">
                         <div className="text-3xl">{c.bannerEmoji ?? '🎁'}</div>
                         <div className="min-w-0">
@@ -423,26 +408,20 @@
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
-                        <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-300 text-xs border border-orange-500/30">Подробнее</span>
+                        <span className="px-2 py-1 rounded-lg border border-orange-500/30"
+                              style="background:rgba(249,115,22,.20);color:#fdba74">Подробнее</span>
                       </div>
                     </div>
                   ))}
                 </section>
 
-                {/* Результат (последний приз) */}
                 <section className="mt-6 fade-in" style={{animationDelay:'120ms'}}>
                   <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
                     <div className="text-sm text-zinc-400">Результат</div>
-                    <Spinner spinning={opening} />
-                    {!opening && lastPrize && (
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">{lastPrize.emoji ?? '🎉'}</div>
-                        <div className="text-lg font-semibold">{lastPrize.label}</div>
-                        <div className={`mt-2 inline-block px-2 py-1 rounded-full text-xs ${rarityColor(lastPrize.rarity)}`}>{lastPrize.rarity}</div>
-                        {lastPrize.starsValue ? (<div className="text-sm text-zinc-400 mt-2">Возврат: +{lastPrize.starsValue} ⭐</div>) : null}
-                      </div>
-                    )}
-                    {!opening && !lastPrize && (<div className="text-center text-zinc-500 text-sm">Открой кейс, чтобы увидеть приз</div>)}
+                    <div className="relative h-24 my-4 flex items-center justify-center">
+                      <div className="w-20 h-20 rounded-full border-4 border-zinc-700 border-t-orange-500 animate-spin" style="animation-play-state: paused;"></div>
+                    </div>
+                    <div className="text-center text-zinc-500 text-sm">Открой кейс, чтобы увидеть приз</div>
                   </div>
                 </section>
               </>
@@ -468,32 +447,7 @@
               <section className="mt-5 fade-in">
                 <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
                   <div className="text-sm text-zinc-400 mb-3">Инвентарь</div>
-                  {inventory.length === 0 ? (
-                    <div className="text-zinc-500 text-sm text-center py-6">Пусто. Открой кейс и нажми «Забрать».</div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {inventory.map((p, i)=>(
-                        <div key={i} className="rounded-xl border border-zinc-700 bg-zinc-900 p-3">
-                          <div className="flex items-center gap-2">
-                            <div className="text-2xl">{p.emoji ?? '🎁'}</div>
-                            <div className="text-sm">
-                              <div className="font-medium">{p.label}</div>
-                              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(p.rarity)}`}>{p.rarity}</div>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex justify-between items-center">
-                            <span className="text-xs text-zinc-500">{new Date(p.ts).toLocaleTimeString()}</span>
-                            <button
-                              className="px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs hover:bg-zinc-700"
-                              onClick={()=>{ const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setInventory(inv=>inv.filter((_,idx)=>idx!==i)); setToast(`Продано из инвентаря: +${v} ⭐`); }}
-                            >
-                              Продать (+{SELL_BY_RARITY[p.rarity]||1}⭐)
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="text-zinc-500 text-sm text-center py-6">Пусто. Открой кейс и нажми «Забрать».</div>
                 </div>
               </section>
             )}
@@ -502,18 +456,7 @@
               <section className="mt-5 fade-in">
                 <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
                   <div className="text-sm font-semibold mb-2">История</div>
-                  {history.length === 0 ? (
-                    <div className="text-zinc-500 text-sm text-center py-6">Пока пусто</div>
-                  ) : history.map((h, i)=>(
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${rarityColor(h.prize.rarity)}`}>{h.prize.rarity}</span>
-                        <span className="text-base">{(h.prize.emoji ?? '🎁') + ' ' + h.prize.label}</span>
-                        <span className="text-zinc-500 text-sm">в {h.caseTitle}</span>
-                      </div>
-                      <span className="text-zinc-500 text-sm">{new Date(h.ts).toLocaleTimeString()}</span>
-                    </div>
-                  ))}
+                  <div className="text-zinc-500 text-sm text-center py-6">Пока пусто</div>
                 </div>
               </section>
             )}
@@ -523,22 +466,17 @@
             </footer>
           </div>
 
-          {toast && <Toast text={toast} onClose={()=>setToast(null)} />}
-
           {/* Нижний таб-бар */}
           <nav className="fixed bottom-0 left-0 right-0 z-50">
             <div className="mx-auto max-w-md">
               <div className="m-3 rounded-2xl border border-zinc-700 bg-zinc-900/90 backdrop-blur shadow-[0_0_0_1px_rgba(255,255,255,.02)]">
                 <div className="grid grid-cols-3">
-                  <button className={`py-3 text-sm font-medium ${tab==='home' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>{ setSelectedCase(null); setTab('home'); }}>
-                    Главная
-                  </button>
-                  <button className={`py-3 text-sm font-medium ${tab==='inventory' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>setTab('inventory')}>
-                    Инвентарь
-                  </button>
-                  <button className={`py-3 text-sm font-medium ${tab==='history' ? 'text-orange-400' : 'text-zinc-400'} hover:text-orange-300`} onClick={()=>setTab('history')}>
-                    История
-                  </button>
+                  <button className="py-3 text-sm font-medium text-orange-400"
+                          onclick="window.__setTab && window.__setTab('home')">Главная</button>
+                  <button className="py-3 text-sm font-medium text-zinc-400"
+                          onclick="window.__setTab && window.__setTab('inventory')">Инвентарь</button>
+                  <button className="py-3 text-sm font-medium text-zinc-400"
+                          onclick="window.__setTab && window.__setTab('history')">История</button>
                 </div>
               </div>
             </div>
@@ -547,9 +485,15 @@
       );
     }
 
+    // внедрим setTab в window для таб-бара-фолбэка (если без React-событий)
+    window.__setTab = (name) => {
+      // Ничего — React перехватит клики. Этот хак оставлен как резерв.
+    };
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
 </body>
 </html>
+
 
