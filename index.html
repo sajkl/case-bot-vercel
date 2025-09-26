@@ -9,12 +9,12 @@
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
   <script>
-    window.tailwind = window.tailwind || {};
     tailwind.config = { darkMode: 'class', theme: { extend: {} } };
   </script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <!-- ловец ошибок -->
   <script>
@@ -22,485 +22,164 @@
       const show = (title, detail) => {
         try {
           const box = document.getElementById('err');
-          if (box) { box.style.display='block'; box.textContent = title + '\n' + (detail || ''); }
+          if (box) { box.style.display='block'; box.textContent = `${title}\n${detail || ''}`; }
         } catch(_) {}
       };
-      window.onerror = function (message, source, lineno, colno, error) {
+      window.onerror = function (msg, src, line, col, err) {
         const detail = [
-          'source: ' + (source || '-'),
-          'line: ' + (lineno || '-') + ', col: ' + (colno || '-'),
-          'stack: ' + (error && error.stack ? error.stack : '-')
+          `source: ${src || '-'}`,
+          `line: ${line || '-'}, col: ${col || '-'}`,
+          `stack: ${(err && err.stack) || '-'}`
         ].join('\n');
-        show('JS error: ' + message, detail);
+        show(`JS error: ${msg}`, detail);
       };
       window.addEventListener('unhandledrejection', (e) => {
-        const reason = e && e.reason;
-        const detail = (reason && reason.stack) || JSON.stringify(reason);
+        const detail = (e.reason && e.reason.stack) || String(e.reason);
         show('Promise error', detail);
       });
     })();
   </script>
 
   <style>
-    html, body, #root { height: 100%; }
-
-    /* Fade-in */
-    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+    html, body, #root { height:100%; }
+    body {
+      background:
+        radial-gradient(1200px 800px at 20% -10%, #1a2334 0%, transparent 60%),
+        radial-gradient(1400px 900px at 110% 20%, #221632 0%, transparent 55%),
+        linear-gradient(180deg, #070b10 0%, #0b0f14 100%);
+      color:#e7f1ff;
+      font-family:'Manrope', Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(10px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
     .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
 
-    /* Flip cards */
-    .flip-scene { perspective: 1000px; }
-    .flip-card {
-      width: 118px; height: 156px;
-      position: relative; transform-style: preserve-3d;
-      transition: transform 700ms cubic-bezier(.2,.8,.2,1);
-      border-radius: 16px;
-    }
-    .flip-card.flipped { transform: rotateY(180deg); }
-    .flip-face {
-      position: absolute; inset: 0; border-radius: 16px;
-      backface-visibility: hidden; -webkit-backface-visibility: hidden;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .flip-face.back { transform: rotateY(180deg); }
+    /* мини карты */
+    .mini-fan{ position:relative; height:70px; display:flex; align-items:flex-end; justify-content:center; }
+    .mini-card{ width:58px; height:74px; border-radius:12px; background:#0f172a; border:1px solid #334155; display:flex; align-items:center; justify-content:center; position:relative; }
+    .glow-common{ box-shadow:0 0 0 2px rgba(122,138,160,.55), 0 0 22px rgba(122,138,160,.35) inset; }
+    .glow-rare{ box-shadow:0 0 0 2px rgba(108,240,255,.65), 0 0 26px rgba(108,240,255,.35) inset; }
+    .glow-epic{ box-shadow:0 0 0 2px rgba(183,108,255,.65), 0 0 28px rgba(183,108,255,.40) inset; }
+    .glow-legendary{ box-shadow:0 0 0 2px rgba(255,108,196,.70), 0 0 30px rgba(255,108,196,.45) inset; }
 
-    .cards-enter { opacity: 0; transform: translateY(16px) scale(.98); }
-    .cards-enter-active { opacity:1; transform: translateY(0) scale(1); transition: all 300ms cubic-bezier(.2,.8,.2,1); }
+    /* лайв-лента */
+    .hfeed-wrap{ margin-top:12px; margin-bottom:14px; }
+    .hfeed{ display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .hfeed::-webkit-scrollbar{ display:none; }
+    .hfeed-item{ min-width:220px; border-radius:16px; border:1px solid #334155; background:linear-gradient(135deg,#1e293b,#111827); padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
 
-    /* Glow по редкости */
-    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.22); }
-    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.28); }
-    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.30); }
-    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.36); }
+    /* сетка кейсов */
+    .cases-grid{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 
-    /* Fan layout (веер) */
-    .hand {
-      position: relative;
-      height: 168px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      pointer-events: none;
-    }
-    .hand-card {
-      position: relative;
-      pointer-events: auto;
-      margin-left: -44px;
-      transition: transform .35s ease, filter .2s ease, opacity .2s ease;
-    }
-    .hand-card:first-child { margin-left: 0; }
-    .hand-card:hover { transform: translateY(-6px) scale(1.02); filter: brightness(1.06); }
+    /* флип-карты */
+    .flip-card{ width:120px; height:160px; position:relative; transform-style:preserve-3d; transition:transform .6s; border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,.4); }
+    .flip-card.flipped{ transform:rotateY(180deg); }
+    .flip-face{ position:absolute; inset:0; border-radius:16px; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; }
+    .flip-face.front{ background:#1e293b; color:#fff; }
+    .flip-face.back{ background:#0f172a; transform:rotateY(180deg); }
 
-    /* Кнопки */
-    .btn-orange {
-      background: linear-gradient(180deg,#f97316,#ea580c);
-      color:#111; border:none; border-radius:18px;
-      padding:.9rem 1.1rem; font-weight:700;
-      box-shadow: 0 6px 20px rgba(234,88,12,.35), 0 0 0 1px rgba(234,88,12,.35) inset;
-      transition: transform .06s ease, box-shadow .15s ease, filter .15s ease;
-    }
-    .btn-orange:hover { filter: brightness(1.05); }
-    .btn-orange:active { transform: scale(.98); }
-
-    .btn-secondary {
-      background: #18181b; color:#e4e4e7;
-      border:1px solid #3f3f46; border-radius:16px;
-      padding:.8rem 1rem; font-weight:600;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
-    }
-    .btn-secondary:hover { background:#27272a; border-color:#52525b; }
-    .btn-secondary:active { transform: scale(.98); }
-
-    /* Подсветка эмодзи кейсов */
-    .case-emoji-glow {
-      filter: drop-shadow(0 0 10px rgba(234,88,12,.45))
-              drop-shadow(0 0 24px rgba(234,88,12,.25));
-    }
+    /* таббар */
+    .tabbar{ display:flex; gap:12px; }
+    .tab-btn{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 6px; border-radius:14px; border:1px solid #334155; background:#0f172a; font-weight:700; transition:transform .12s; }
+    .tab-btn:hover{ filter:brightness(1.06) }
+    .tab-btn:active{ transform:scale(.96) }
+    .tab-btn.active{ border-color:rgba(108,240,255,.7); }
   </style>
 </head>
 
-<body class="bg-gradient-to-b from-black to-zinc-900 text-white"
-      style="background:linear-gradient(to bottom,#000,#0f0f14);color:#fff;">
+<body>
   <div id="root"></div>
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
   <script type="text/babel">
-    const { useEffect, useState } = React;
-    const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
+    const { useState } = React;
+    const tg = window.Telegram?.WebApp;
 
-    /* ===== демо-данные ===== */
-    const START_STARS = 25;
-    const DEFAULT_CASES = [
-      { id:'lite', title:'Лайт-кейс', priceStars:3, bannerEmoji:'🎈', description:'Дешёвый вход, быстрые призы',
-        prizes:[ {id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
-                 {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,starsValue:1},
-                 {id:'l3',label:'Малый буст профиля',emoji:'🔹',rarity:'rare',weight:12},
-                 {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,starsValue:5} ]},
-      { id:'starter', title:'Стартовый кейс', priceStars:6, bannerEmoji:'🎁', description:'Открывай и лови удачу!',
-        prizes:[ {id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
-                 {id:'s2',label:'2⭐ назад',emoji:'⭐',rarity:'common',weight:28,starsValue:2},
-                 {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
-                 {id:'s4',label:'Аватар-рамка',emoji:'🖼️',rarity:'epic',weight:8},
-                 {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,starsValue:20} ]},
-      { id:'pro', title:'Про-кейс', priceStars:12, bannerEmoji:'⚡', description:'Больше риск — круче призы',
-        prizes:[ {id:'p1',label:'3⭐ назад',emoji:'⭐',rarity:'common',weight:32,starsValue:3},
-                 {id:'p2',label:'Скин для профиля',emoji:'🎨',rarity:'rare',weight:28},
-                 {id:'p3',label:'Анимация имени',emoji:'✨',rarity:'rare',weight:20},
-                 {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,starsValue:10},
-                 {id:'p5',label:'Суперприз: 60⭐',emoji:'🚀',rarity:'legendary',weight:5,starsValue:60} ]},
-      { id:'ultra', title:'Ультра-кейс', priceStars:30, bannerEmoji:'👑', description:'Высокая ставка — королевские награды',
-        prizes:[ {id:'u1',label:'7⭐ назад',emoji:'⭐',rarity:'rare',weight:30,starsValue:7},
-                 {id:'u2',label:'Редкий скин + эффект',emoji:'🧿',rarity:'epic',weight:28},
-                 {id:'u3',label:'15⭐ назад',emoji:'🌟',rarity:'epic',weight:20,starsValue:15},
-                 {id:'u4',label:'Легенда: 120⭐',emoji:'🏆',rarity:'legendary',weight:6,starsValue:120},
-                 {id:'u5',label:'Легендарный сет предметов',emoji:'🎖️',rarity:'legendary',weight:4},
-                 {id:'u6',label:'Мифический: 300⭐',emoji:'🦄',rarity:'legendary',weight:2,starsValue:300} ]},
-    ];
+    const rarityOrder={legendary:4,epic:3,rare:2,common:1};
+    const glowClass=(r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'');
 
-    const SELL_BY_RARITY = { common:1, rare:2, epic:6, legendary:20 };
-    const rarityColor = (r) => ({
-      common: 'bg-zinc-700 text-zinc-100',
-      rare: 'bg-blue-700 text-blue-100',
-      epic: 'bg-purple-700 text-purple-100',
-      legendary: 'bg-amber-600 text-amber-100'
-    }[r] || 'bg-zinc-700 text-zinc-100');
-    const glowClass = (r) => ({
-      common: 'glow-common',
-      rare: 'glow-rare',
-      epic: 'glow-epic',
-      legendary: 'glow-legendary'
-    }[r] || 'glow-common');
+    const top3Prizes=(list=[])=>list.slice().sort((a,b)=>{
+      const ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
+      if(rb!==ra) return rb-ra;
+      const sa=a.starsValue||0, sb=b.starsValue||0;
+      if(sb!==sa) return sb-sa;
+      return (a.weight||0)-(b.weight||0);
+    }).slice(0,3);
 
-    /* звук/вибро */
-    class SpinAudio {
-      constructor(){ this.ctx=null; this.gain=null; }
-      ensure(){ if(!this.ctx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
-        this.ctx=new AC(); this.gain=this.ctx.createGain(); this.gain.gain.value=0.06; this.gain.connect(this.ctx.destination);} }
-      flip(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
-        o.type='triangle'; o.frequency.value=520; o.connect(g).connect(this.gain);
-        const t=this.ctx.currentTime; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);
-        o.start(t); o.stop(t+0.16); }
-      win(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
-        o.type='sine'; o.frequency.value=880; o.connect(g).connect(this.gain);
-        const t=this.ctx.currentTime; g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);
-        o.frequency.exponentialRampToValueAtTime(1320, t+0.35); o.start(t); o.stop(t+0.4); }
-    }
-    const audio = new SpinAudio();
+    const MiniCards=({prizes})=>{
+      const picks=top3Prizes(prizes);
+      const fan=[{rot:-14,x:-18,z:10},{rot:0,x:0,z:30},{rot:14,x:18,z:20}];
+      return <div className="mini-fan mt-2">{picks.map((p,i)=><div key={i} className={`mini-card ${glowClass(p.rarity)}`} style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg)`,zIndex:fan[i].z}}>{p.emoji}</div>)}</div>;
+    };
 
-    function CardFront({ prize }) {
-      return (
-        <div className="flip-face back bg-zinc-900 border border-zinc-700 shadow-md">
-          <div className="flex flex-col items-center justify-center h-full p-3 text-center">
-            <div className="text-4xl">{prize?.emoji ?? '🎁'}</div>
-            <div className="mt-2 text-sm font-semibold text-zinc-100">{prize?.label ?? 'Приз'}</div>
-            {prize ? (
-              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(prize.rarity)}`}>
-                {prize.rarity}
-              </div>
-            ) : null}
-          </div>
+    const HomeCaseCard=({c,onClick})=>(
+      <div onClick={onClick} className="rounded-2xl p-4 bg-[#0b0f14] border border-slate-700 hover:border-cyan-400 transition cursor-pointer">
+        <MiniCards prizes={c.prizes}/>
+        <div className="mt-3 flex flex-col items-center text-center fade-in">
+          <div className="text-base font-semibold">{c.title}</div>
+          <div className="text-xs text-zinc-400">{c.description}</div>
+          <div className="mt-2 text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
         </div>
-      );
-    }
+      </div>
+    );
 
-    /* Детальная страница */
-    function CaseDetailCards({ data, onBack, onOpenServer, opening, setLastPrize, addHistory, onClaimPrize, onSellPrize }) {
-      const [phase, setPhase] = useState('idle'); // idle | choosing | revealed | picking
-      const [cards, setCards] = useState(Array(5).fill(null)); // [{prize, flipped, picked}]
-      const [pickedIndex, setPickedIndex] = useState(null);
-      const [landedPrize, setLandedPrize] = useState(null);
-
-      const prepareCards = () => {
-        setPhase('choosing');
-        setCards(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
-        setPickedIndex(null);
-        setLandedPrize(null);
-      };
-
-      const onPick = async (idx) => {
-        if (phase !== 'choosing') return;
-
-        setPhase('picking');
-        setPickedIndex(idx);
-        setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
-
-        let prize = null;
-        try {
-          const res = await fetch('/api/open', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caseId: data.id })
-          });
-          if (res.ok) {
-            const json = await res.json().catch(() => ({}));
-            if (json && json.prize) prize = json.prize;
-          }
-        } catch (_) {}
-
-        if (!prize || !prize.id) {
-          const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
-          let r = Math.random()*Math.max(1,total);
-          prize = data.prizes?.[data.prizes.length-1] || null;
-          for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
-        }
-        if (!prize) { setPhase('choosing'); return; }
-
-        audio.flip();
-        tg?.WebApp?.HapticFeedback?.selectionChanged?.();
-        setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
-        setPhase('revealed');
-        setLastPrize(prize);
-        setLandedPrize(prize);
-        addHistory(prize);
-
-        setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
-
-        setTimeout(() => {
-          setCards((cs) => {
-            const chosenId = prize && prize.id;
-            const pool = Array.isArray(data.prizes) ? data.prizes.slice() : [];
-            const remainingPool = chosenId ? pool.filter(p => p.id !== chosenId) : pool;
-            const shuffled = remainingPool.slice().sort(()=>Math.random()-0.5);
-            let ri = 0;
-            return cs.map((c, i) => {
-              if (i === idx) return c;
-              const alt = shuffled[ri++] || remainingPool[0] || prize;
-              return { ...c, prize: alt, flipped: true };
-            });
-          });
-        }, 450);
-      };
-
-      const onStart = async () => {
-        if (opening) return;
-        const ok = await onOpenServer(data);
-        if (ok) prepareCards();
-      };
-
-      const baseTransform = (i, n) => {
-        const angle = -12 + i * (24 / Math.max(1, n - 1));
-        const y = Math.abs(i - (n - 1) / 2) * 3;
-        return { angle, y };
-      };
-
-      const displacedStyle = (i, n, picked) => {
-        const { angle, y } = baseTransform(i, n);
-        if (picked == null) return { transform: `rotate(${angle}deg) translateY(${y}px)` };
-        if (i === picked) return { transform: `rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)` };
-        const dir = i < picked ? -1 : 1;
-        const shift = 56 + (dir < 0 ? (picked - i) * 6 : (i - picked) * 6);
-        const lift  = 4 + Math.max(0, 8 - Math.abs(i - picked)*2);
-        const ang   = angle * 0.85;
-        return { transform: `rotate(${ang}deg) translate(${dir*shift}px, ${y + lift}px)` };
-      };
-
-      return (
-        <div className="fade-in">
-          <div className="flex items-center gap-2 mb-4">
-            <button onClick={onBack} className="btn-secondary">← Назад</button>
-            <div className="text-xl font-semibold flex items-center gap-2">
-              <span className="text-2xl">{data.bannerEmoji ?? '🎁'}</span> {data.title}
-            </div>
-            <div className="ml-auto text-sm text-zinc-300">Цена: {data.priceStars} ⭐</div>
-          </div>
-
-          <div className={`mt-2 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur flip-scene ${phase==='choosing' ? 'cards-enter-active' : ''}`}>
-            <div className="text-sm text-zinc-400">
-              {phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}
-            </div>
-
-            {/* Веер + разъезд карт после выбора */}
-            <div className="mt-4 hand">
-              {cards.map((card, i) => (
-                <div
-                  key={i}
-                  className={`hand-card ${card?.picked ? 'scale-105' : ''} fade-in`}
-                  style={{
-                    animationDelay: `${i*60}ms`,
-                    ...(phase === 'revealed'
-                        ? displacedStyle(i, cards.length, pickedIndex)
-                        : (()=>{const {angle,y}=baseTransform(i,cards.length); return { transform:`rotate(${angle}deg) translateY(${y}px)` };})())
-                  }}
-                >
-                  <div
-                    className={`flip-card ${card?.flipped ? 'flipped' : ''} ${(!card?.flipped || !card?.prize) ? '' : glowClass(card.prize.rarity)}`}
-                    onClick={() => (phase==='choosing') && onPick(i)}
-                  >
-                    <div className="flip-face front bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border border-zinc-700 shadow-lg">
-                      <div className="text-4xl">?</div>
-                    </div>
-                    <CardFront prize={card?.prize} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="sticky bottom-3 mt-5 z-10">
-              <button
-                className="btn-orange w-full"
-                onClick={onStart}
-                disabled={opening}
-                style={opening ? { filter:'grayscale(0.2) opacity(.7)' } : undefined}
-              >
-                Открыть за {data.priceStars} ⭐
-              </button>
-            </div>
-
-            {phase === 'revealed' && landedPrize && (
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border border-zinc-700 bg-zinc-900/70">
-                <div className="flex items-center gap-2">
-                  <div className="text-2xl">{landedPrize.emoji ?? '🎁'}</div>
-                  <div className="text-sm">
-                    <div className="font-semibold">{landedPrize.label}</div>
-                    <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(landedPrize.rarity)}`}>{landedPrize.rarity}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="btn-secondary" onClick={() => onSellPrize(landedPrize)}>
-                    Продать за {({common:1,rare:2,epic:6,legendary:20}[landedPrize.rarity]||1)} ⭐
-                  </button>
-                  <button className="btn-orange" onClick={() => onClaimPrize(landedPrize)}>
-                    Забрать
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur fade-in">
-            <div className="text-sm text-zinc-400 mb-3">Доступные призы</div>
-            {/* 3 в ряд на всех экранах */}
-            <div className="grid grid-cols-3 gap-3">
-              {data.prizes.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border border-zinc-700 bg-zinc-900">
-                  <div className="text-xl">{p.emoji ?? '🎁'}</div>
-                  <div className="text-sm">
-                    <div className="font-medium text-zinc-100">{p.label}</div>
-                    <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityColor(p.rarity)}`}>{p.rarity}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+    const LiveFeed=({events})=>(
+      <div className="hfeed-wrap">
+        <div className="text-sm text-zinc-400 mb-2">Лайв: последние выигрыши</div>
+        <div className="hfeed">
+          {events.map((e,i)=><div key={i} className="hfeed-item"><div className="flex items-center gap-2 min-w-0"><div className="text-xl">{e.emoji}</div><div className="truncate text-sm"><span className="text-zinc-300">{e.user}</span> получил <span className="font-semibold">{e.label}</span></div></div><div className="text-[11px] text-zinc-400">{e.time}</div></div>)}
         </div>
-      );
-    }
+      </div>
+    );
 
-    const Toast = ({ text, onClose }) => {
-      useEffect(()=>{ const t=setTimeout(onClose,2000); return ()=>clearTimeout(t); },[onClose]);
-      return <div className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-orange-500 text-black shadow-xl z-[60]">{text}</div>;
+    const CaseDetail=({data,onBack,onSell,onClaim})=>{
+      const [cards,setCards]=useState(Array(5).fill({flipped:false,prize:null}));
+      const [picked,setPicked]=useState(null);
+      const onPick=(i)=>{
+        if(picked!=null) return;
+        const prize=data.prizes[Math.floor(Math.random()*data.prizes.length)];
+        setPicked(i);
+        setCards(cs=>cs.map((c,j)=> j===i?{flipped:true,prize}:{flipped:true,prize:data.prizes[j%data.prizes.length]}));
+        tg?.HapticFeedback?.selectionChanged?.();
+      };
+      return <div>
+        <button onClick={onBack} className="btn-secondary mb-3">← Назад</button>
+        <div className="hand">{cards.map((c,i)=><div key={i} className="hand-card"><div className={`flip-card ${c.flipped?'flipped':''} ${c.prize?glowClass(c.prize.rarity):''}`} onClick={()=>onPick(i)}><div className="flip-face front">?</div><div className="flip-face back">{c.prize?c.prize.emoji:'🎁'}</div></div></div>)}</div>
+        {picked!=null && <div className="mt-4 flex gap-2"><button className="btn-secondary" onClick={()=>onSell(cards[picked].prize)}>Продать</button><button className="btn-primary" onClick={()=>onClaim(cards[picked].prize)}>Забрать</button></div>}
+      </div>;
     };
 
     function App(){
-      const [cases] = useState(DEFAULT_CASES);
-      const [stars,setStars]=useState(START_STARS);
-      const [opening,setOpening]=useState(false);
-      const [selectedCase,setSelectedCase]=useState(null);
-      const [lastPrize,setLastPrize]=useState(null);
-      const [toast,setToast]=useState(null);
-      const [history,setHistory]=useState([]);
-      const [inventory,setInventory]=useState([]);
-      const [tab,setTab]=useState('home');
+      const [cases]=useState([
+        {id:'lite',title:'Лайт-кейс',priceStars:3,description:'Дешёвый вход',prizes:[{emoji:'⭐',rarity:'common',weight:50,starsValue:1},{emoji:'💥',rarity:'epic',weight:5,starsValue:10},{emoji:'🚀',rarity:'legendary',weight:1,starsValue:30}]},
+        {id:'pro',title:'Про-кейс',priceStars:12,description:'Большой риск',prizes:[{emoji:'🌟',rarity:'rare',weight:20,starsValue:5},{emoji:'🎨',rarity:'epic',weight:8},{emoji:'🏆',rarity:'legendary',weight:2,starsValue:60}]}
+      ]);
+      const [stars,setStars]=useState(20);
+      const [selected,setSelected]=useState(null);
+      const [events]=useState([{user:'Иван',emoji:'💥',label:'Эпик',time:'только что'}]);
+      const [inv,setInv]=useState([]);
+      const [tab,setTab]=useState('profile');
+      const onSell=(p)=>setStars(s=>s+1);
+      const onClaim=(p)=>setInv([...inv,p]);
 
-      useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
-      const addHistory = (p) => setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50));
-      const openDetails=(c)=>{ setSelectedCase(c); setTab('home'); };
-
-      const onOpenServerPrepare = async (c) => {
-        if (opening) return false;
-        if (stars < c.priceStars) { setToast('Недостаточно ⭐'); tg?.WebApp?.HapticFeedback?.notificationOccurred?.('warning'); return false; }
-        setOpening(true);
-        setLastPrize(null);
-        setStars(s=>s-c.priceStars);
-        tg?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
-        await new Promise(r=>setTimeout(r, 200));
-        setOpening(false);
-        return true;
-      };
-
-      const onSellPrize = (p) => { const v = SELL_BY_RARITY[p.rarity] || 1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`); };
-      const onClaimPrize = (p) => { setInventory((inv)=> [{...p, ts:Date.now()}, ...inv].slice(0,200)); if (p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен в инвентарь'); };
-
-      return (
-        <div className="min-h-dvh pb-20 px-4 py-5">
-          <div className="mx-auto max-w-md">
-            <header className="flex items-center justify-between fade-in" style={{animationDelay:'20ms'}}>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Кейсы за ⭐</h1>
-                <p className="text-zinc-400 text-sm">Открывай кейсы и забирай призы</p>
-              </div>
-              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
-            </header>
-
-            {!selectedCase && (
-              <>
-                <section
-                  className="mt-5 grid grid-cols-2 gap-4"
-                  style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:'16px' }}
-                >
-                  {cases.map((c, i)=>(
-                    <div
-                      key={c.id}
-                      role="button"
-                      onClick={()=>openDetails(c)}
-                      className="rounded-2xl p-4 bg-zinc-900/70 border border-zinc-700 hover:border-orange-500 hover:shadow-[0_0_0_2px_rgba(234,88,12,.35)] transition transform hover:scale-[1.02] backdrop-blur cursor-pointer fade-in"
-                      style={{animationDelay: `${i*60+40}ms`}}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="text-4xl case-emoji-glow">{c.bannerEmoji ?? '🎁'}</div>
-                        <div className="min-w-0">
-                          <div className="text-base font-semibold">{c.title}</div>
-                          <div className="text-xs text-zinc-400 line-clamp-2">{c.description}</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
-                        <button className="btn-secondary text-sm" onClick={()=>openDetails(c)}>Подробнее</button>
-                      </div>
-                    </div>
-                  ))}
-                </section>
-
-                <section className="mt-6 fade-in" style={{animationDelay:'120ms'}}>
-                  <div className="rounded-2xl p-4 border border-zinc-700 bg-zinc-900/70 backdrop-blur">
-                    <div className="text-sm text-zinc-400">Результат</div>
-                    <div className="relative h-24 my-4 flex items-center justify-center">
-                      <div
-                        className="w-20 h-20 rounded-full border-4 border-zinc-700 border-t-orange-500"
-                        style={{ animation: 'spin 1s linear infinite', animationPlayState: 'paused' }}
-                      />
-                    </div>
-                    <div className="text-center text-zinc-500 text-sm">Открой кейс, чтобы увидеть приз</div>
-                  </div>
-                </section>
-              </>
-            )}
-
-            {selectedCase && (
-              <section className="mt-5">
-                <CaseDetailCards
-                  data={selectedCase}
-                  onBack={()=>setSelectedCase(null)}
-                  onOpenServer={onOpenServerPrepare}
-                  opening={opening}
-                  setLastPrize={(p)=>p}
-                  addHistory={(p)=>setHistory((h)=> [{prize:p, ts:Date.now(), caseTitle:selectedCase?.title||'Кейс'}, ...h].slice(0,50))}
-                  onClaimPrize={onClaimPrize}
-                  onSellPrize={onSellPrize}
-                />
-              </section>
-            )}
-
-            <footer className="mt-8 text-center text-zinc-500 text-xs fade-in" style={{animationDelay:'200ms'}}>
-              Деморежим. Сервер возвращает приз через <span className="text-orange-400">/api/open</span>.
-            </footer>
+      return <div className="min-h-dvh pb-20 px-4 py-5">
+        <div className="mx-auto max-w-md">
+          {!selected && <>
+            <LiveFeed events={events}/>
+            <section className="mt-4 cases-grid">{cases.map(c=><HomeCaseCard key={c.id} c={c} onClick={()=>setSelected(c)}/>)}</section>
+          </>}
+          {selected && <CaseDetail data={selected} onBack={()=>setSelected(null)} onSell={onSell} onClaim={onClaim}/>}
+        </div>
+        <div className="fixed bottom-0 left-0 right-0 px-4 py-3 bg-black/70 backdrop-blur border-t border-slate-800">
+          <div className="mx-auto max-w-md tabbar">
+            <button className={`tab-btn ${tab==='profile'?'active':''}`} onClick={()=>setTab('profile')}><span>👤</span><span className="text-xs">Профиль</span></button>
+            <button className={`tab-btn ${tab==='voting'?'active':''}`} onClick={()=>setTab('voting')}><span>🗳️</span><span className="text-xs">Голосование</span></button>
+            <button className={`tab-btn ${tab==='inventory'?'active':''}`} onClick={()=>setTab('inventory')}><span>🎒</span><span className="text-xs">Инвентарь</span></button>
           </div>
         </div>
-      );
+      </div>;
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
 </html>
