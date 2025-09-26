@@ -5,84 +5,110 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Кейсы за ⭐ — Telegram Mini App</title>
 
-  <!-- внешние скрипты -->
+  <!-- libs -->
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
-  <script>
-    tailwind.config = { darkMode: 'class', theme: { extend: {} } };
-  </script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{}}};</script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- ловец ошибок -->
+  <!-- error catcher -->
   <script>
-    (function () {
-      const show = (title, detail) => {
-        try {
-          const box = document.getElementById('err');
-          if (box) { box.style.display='block'; box.textContent = `${title}\n${detail || ''}`; }
-        } catch(_) {}
+    (function(){
+      const show=(title,detail)=>{
+        try{const box=document.getElementById('err');
+        if(box){box.style.display='block';box.textContent=`${title}\n${detail||''}`;}}catch(_){}
       };
-      window.onerror = function (msg, src, line, col, err) {
-        const detail = [
-          `source: ${src || '-'}`,
-          `line: ${line || '-'}, col: ${col || '-'}`,
-          `stack: ${(err && err.stack) || '-'}`
-        ].join('\n');
-        show(`JS error: ${msg}`, detail);
+      window.onerror=(m,src,line,col,err)=>{
+        show(`JS error: ${m}`,[`source: ${src||'-'}`,`line: ${line||'-'}, col: ${col||'-'}`,`stack: ${(err&&err.stack)||'-'}`].join('\n'));
       };
-      window.addEventListener('unhandledrejection', (e) => {
-        const detail = (e.reason && e.reason.stack) || String(e.reason);
-        show('Promise error', detail);
+      window.addEventListener('unhandledrejection',e=>{
+        show('Promise error',(e.reason&&e.reason.stack)||String(e.reason));
       });
     })();
   </script>
 
   <style>
-    html, body, #root { height:100%; }
-    body {
-      background:
-        radial-gradient(1200px 800px at 20% -10%, #1a2334 0%, transparent 60%),
-        radial-gradient(1400px 900px at 110% 20%, #221632 0%, transparent 55%),
-        linear-gradient(180deg, #070b10 0%, #0b0f14 100%);
-      color:#e7f1ff;
-      font-family:'Manrope', Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    :root{
+      --black:#0A0B0C;
+      --white:#FFFFFF;
+      --nardo:#8E9492; /* Nardo Grey */
+      --orange:#FF7A1A;
+      --bg-1:#0c0e11;
+      --border:#272a2e;
     }
-    @keyframes fadeInUp { from{opacity:0;transform:translateY(10px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
-    .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
+    html,body,#root{height:100%;}
+    body{
+      background:
+        radial-gradient(1200px 800px at 15% -10%, #14181e 0%, transparent 60%),
+        radial-gradient(1000px 700px at 120% 0%, #191a1f 0%, transparent 55%),
+        linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
+      color:var(--white);
+      font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
 
-    /* мини карты */
-    .mini-fan{ position:relative; height:70px; display:flex; align-items:flex-end; justify-content:center; }
-    .mini-card{ width:58px; height:74px; border-radius:12px; background:#0f172a; border:1px solid #334155; display:flex; align-items:center; justify-content:center; position:relative; }
-    .glow-common{ box-shadow:0 0 0 2px rgba(122,138,160,.55), 0 0 22px rgba(122,138,160,.35) inset; }
-    .glow-rare{ box-shadow:0 0 0 2px rgba(108,240,255,.65), 0 0 26px rgba(108,240,255,.35) inset; }
-    .glow-epic{ box-shadow:0 0 0 2px rgba(183,108,255,.65), 0 0 28px rgba(183,108,255,.40) inset; }
-    .glow-legendary{ box-shadow:0 0 0 2px rgba(255,108,196,.70), 0 0 30px rgba(255,108,196,.45) inset; }
+    /* subtle dino-like motion */
+    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+    @keyframes softGlow { from { box-shadow:0 0 0 2px rgba(255,122,26,.25) inset, 0 0 12px rgba(255,122,26,.12); }
+                          to   { box-shadow:0 0 0 2px rgba(255,122,26,.38) inset, 0 0 26px rgba(255,122,26,.22);} }
+    .fade-in{ animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
 
-    /* лайв-лента */
-    .hfeed-wrap{ margin-top:12px; margin-bottom:14px; }
-    .hfeed{ display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    /* live feed */
+    .hfeed-wrap{ margin-top:10px; margin-bottom:12px;}
+    .hfeed{ display:flex; gap:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
     .hfeed::-webkit-scrollbar{ display:none; }
-    .hfeed-item{ min-width:220px; border-radius:16px; border:1px solid #334155; background:linear-gradient(135deg,#1e293b,#111827); padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
+    .hfeed-item{ min-width:220px; border-radius:14px; border:1px solid var(--border);
+      background:linear-gradient(135deg,#14171b,#0d0f12); padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between; }
 
-    /* сетка кейсов */
-    .cases-grid{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    /* grid 2 per row */
+    .cases-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 
-    /* флип-карты */
-    .flip-card{ width:120px; height:160px; position:relative; transform-style:preserve-3d; transition:transform .6s; border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,.4); }
+    /* mini fan preview */
+    .mini-fan{ position:relative; height:70px; display:flex; align-items:flex-end; justify-content:center; }
+    .mini-card{ width:58px; height:74px; border-radius:12px; background:#111418; border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; position:relative; box-shadow:0 12px 28px rgba(0,0,0,.35); }
+    .glow-common{ box-shadow:0 0 0 2px rgba(142,148,146,.45) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-rare{ box-shadow:0 0 0 2px rgba(120,180,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-epic{ box-shadow:0 0 0 2px rgba(180,120,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-legendary{ box-shadow:0 0 0 2px rgba(255,122,26,.70) inset, 0 12px 26px rgba(0,0,0,.35);}
+
+    /* detail fan (horizontal) */
+    .hand{ position:relative; height:186px; display:flex; justify-content:center; align-items:flex-end; pointer-events:none; }
+    .hand-card{ position:relative; pointer-events:auto; margin-left:-44px; transition:
+      transform .35s cubic-bezier(.2,.8,.2,1), filter .2s ease, opacity .2s ease; }
+    .hand-card:first-child{ margin-left:0; }
+
+    .flip-card{ width:120px; height:160px; position:relative; transform-style:preserve-3d; transition:transform 680ms cubic-bezier(.2,.8,.2,1);
+      border-radius:16px; box-shadow:0 16px 34px rgba(0,0,0,.42); }
     .flip-card.flipped{ transform:rotateY(180deg); }
-    .flip-face{ position:absolute; inset:0; border-radius:16px; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; }
-    .flip-face.front{ background:#1e293b; color:#fff; }
-    .flip-face.back{ background:#0f172a; transform:rotateY(180deg); }
+    .flip-face{ position:absolute; inset:0; border-radius:16px; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+      display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
+    .flip-face.front{ background:linear-gradient(135deg,#151920,#0f1216); color:#eaeef2; }
+    .flip-face.back{ background:#0f1114; transform:rotateY(180deg); }
 
-    /* таббар */
-    .tabbar{ display:flex; gap:12px; }
-    .tab-btn{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 6px; border-radius:14px; border:1px solid #334155; background:#0f172a; font-weight:700; transition:transform .12s; }
+    /* rarity glows */
+    .glow-common-b{ box-shadow:0 0 0 2px rgba(142,148,146,.45), 0 0 18px rgba(142,148,146,.22); }
+    .glow-rare-b{ box-shadow:0 0 0 2px rgba(120,180,255,.55), 0 0 20px rgba(120,180,255,.28); }
+    .glow-epic-b{ box-shadow:0 0 0 2px rgba(180,120,255,.60), 0 0 22px rgba(180,120,255,.30); }
+    .glow-legendary-b{ box-shadow:0 0 0 2px rgba(255,122,26,.70), 0 0 24px rgba(255,122,26,.35); }
+
+    /* buttons */
+    .btn-primary{ background:linear-gradient(180deg,var(--orange),#ea6f0c);
+      color:#111; border:none; border-radius:16px; padding:.9rem 1.05rem; font-weight:800;
+      box-shadow:0 8px 24px rgba(255,122,26,.28), 0 0 0 1px rgba(255,122,26,.35) inset; }
+    .btn-secondary{ background:#101317; color:#e4e4e7; border:1px solid var(--border); border-radius:14px; padding:.75rem .95rem; font-weight:700; }
+
+    /* bottom nav */
+    .tabbar{ display:flex; gap:10px;}
+    .tab-btn{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      padding:10px 6px; border-radius:14px; border:1px solid var(--border); background:#0f1216; font-weight:800;
+      transition: transform .12s ease, filter .15s ease, box-shadow .25s ease, border-color .25s ease; }
     .tab-btn:hover{ filter:brightness(1.06) }
-    .tab-btn:active{ transform:scale(.96) }
-    .tab-btn.active{ border-color:rgba(108,240,255,.7); }
+    .tab-btn:active{ transform: scale(.96) }
+    .tab-btn.active{ border-color:rgba(255,122,26,.65); animation: softGlow 2.1s ease-in-out infinite alternate; }
   </style>
 </head>
 
@@ -91,92 +117,374 @@
   <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
   <script type="text/babel">
-    const { useState } = React;
+    const {useState,useEffect,useMemo} = React;
     const tg = window.Telegram?.WebApp;
 
-    const rarityOrder={legendary:4,epic:3,rare:2,common:1};
-    const glowClass=(r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'');
+    /* ===== data ===== */
+    const START_STARS = 40;
+    const DEFAULT_CASES = [
+      { id:'lite', title:'Лайт-кейс', priceStars:3, description:'Дешёвый вход, быстрые призы',
+        prizes:[ {id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
+                 {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,starsValue:1},
+                 {id:'l3',label:'Малый буст профиля',emoji:'🔹',rarity:'rare',weight:12},
+                 {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,starsValue:5} ]},
+      { id:'starter', title:'Стартовый кейс', priceStars:6, description:'Открывай и лови удачу!',
+        prizes:[ {id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
+                 {id:'s2',label:'2⭐ назад',emoji:'⭐',rarity:'common',weight:28,starsValue:2},
+                 {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
+                 {id:'s4',label:'Аватар-рамка',emoji:'🖼️',rarity:'epic',weight:8},
+                 {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,starsValue:20} ]},
+      { id:'pro', title:'Про-кейс', priceStars:12, description:'Больше риск — круче призы',
+        prizes:[ {id:'p1',label:'3⭐ назад',emoji:'⭐',rarity:'common',weight:32,starsValue:3},
+                 {id:'p2',label:'Скин для профиля',emoji:'🎨',rarity:'rare',weight:28},
+                 {id:'p3',label:'Анимация имени',emoji:'✨',rarity:'rare',weight:20},
+                 {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,starsValue:10},
+                 {id:'p5',label:'Суперприз: 60⭐',emoji:'🚀',rarity:'legendary',weight:5,starsValue:60} ]},
+      { id:'ultra', title:'Ультра-кейс', priceStars:30, description:'Высокая ставка — королевские награды',
+        prizes:[ {id:'u1',label:'7⭐ назад',emoji:'⭐',rarity:'rare',weight:30,starsValue:7},
+                 {id:'u2',label:'Редкий скин + эффект',emoji:'🧿',rarity:'epic',weight:28},
+                 {id:'u3',label:'15⭐ назад',emoji:'🌟',rarity:'epic',weight:20,starsValue:15},
+                 {id:'u4',label:'Легенда: 120⭐',emoji:'🏆',rarity:'legendary',weight:6,starsValue:120},
+                 {id:'u5',label:'Легендарный сет предметов',emoji:'🎖️',rarity:'legendary',weight:4},
+                 {id:'u6',label:'Мифический: 300⭐',emoji:'🦄',rarity:'legendary',weight:2,starsValue:300} ]}
+    ];
+    const SELL_BY_RARITY = { common:1, rare:2, epic:6, legendary:20 };
+    const rarityOrder = { legendary:4, epic:3, rare:2, common:1 };
+    const glowMini = (r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'glow-common');
+    const glowBig  = (r)=>({common:'glow-common-b',rare:'glow-rare-b',epic:'glow-epic-b',legendary:'glow-legendary-b'}[r]||'glow-common-b');
 
-    const top3Prizes=(list=[])=>list.slice().sort((a,b)=>{
+    /* ===== utils ===== */
+    const top3Prizes = (list=[]) => list.slice().sort((a,b)=>{
       const ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
-      if(rb!==ra) return rb-ra;
-      const sa=a.starsValue||0, sb=b.starsValue||0;
-      if(sb!==sa) return sb-sa;
-      return (a.weight||0)-(b.weight||0);
+      if (rb!==ra) return rb-ra;
+      const sa=a.starsValue||0, sb=b.starsValue||0; if (sb!==sa) return sb-sa;
+      const wa=a.weight||0, wb=b.weight||0; return wa-wb;
     }).slice(0,3);
 
-    const MiniCards=({prizes})=>{
-      const picks=top3Prizes(prizes);
-      const fan=[{rot:-14,x:-18,z:10},{rot:0,x:0,z:30},{rot:14,x:18,z:20}];
-      return <div className="mini-fan mt-2">{picks.map((p,i)=><div key={i} className={`mini-card ${glowClass(p.rarity)}`} style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg)`,zIndex:fan[i].z}}>{p.emoji}</div>)}</div>;
+    /* ===== mini fan preview ===== */
+    const MiniCards = ({ prizes }) => {
+      const picks = top3Prizes(prizes);
+      const fan = [
+        {rot:-14, x:-16, z:10, s:0.98, ml:0},
+        {rot:0,   x:  0, z:30, s:1.06, ml:-24}, /* центральная сверху */
+        {rot: 14, x: 16, z:20, s:0.98, ml:-24}
+      ];
+      return (
+        <div className="mini-fan mt-2">
+          {picks.map((p,i)=>(
+            <div key={p.id||i}
+                 className={`mini-card ${glowMini(p.rarity)}`}
+                 style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,
+                         zIndex:fan[i].z, marginLeft:i===0?0:fan[i].ml}}>
+              <div className="text-lg leading-none">{p.emoji || '🎁'}</div>
+            </div>
+          ))}
+        </div>
+      );
     };
 
-    const HomeCaseCard=({c,onClick})=>(
-      <div onClick={onClick} className="rounded-2xl p-4 bg-[#0b0f14] border border-slate-700 hover:border-cyan-400 transition cursor-pointer">
-        <MiniCards prizes={c.prizes}/>
-        <div className="mt-3 flex flex-col items-center text-center fade-in">
-          <div className="text-base font-semibold">{c.title}</div>
-          <div className="text-xs text-zinc-400">{c.description}</div>
-          <div className="mt-2 text-xs text-zinc-400">Цена: <span className="text-zinc-200">{c.priceStars} ⭐</span></div>
-        </div>
-      </div>
-    );
-
-    const LiveFeed=({events})=>(
+    /* ===== live feed ===== */
+    const LiveFeed = ({ events }) => (
       <div className="hfeed-wrap">
-        <div className="text-sm text-zinc-400 mb-2">Лайв: последние выигрыши</div>
+        <div className="text-sm" style="color:var(--nardo)">Лайв: последние выигрыши</div>
         <div className="hfeed">
-          {events.map((e,i)=><div key={i} className="hfeed-item"><div className="flex items-center gap-2 min-w-0"><div className="text-xl">{e.emoji}</div><div className="truncate text-sm"><span className="text-zinc-300">{e.user}</span> получил <span className="font-semibold">{e.label}</span></div></div><div className="text-[11px] text-zinc-400">{e.time}</div></div>)}
+          {events.map((e,i)=>(
+            <div key={i} className="hfeed-item">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="text-xl">{e.emoji}</div>
+                <div className="truncate text-sm">
+                  <span style={{color:'var(--nardo)'}}>{e.user}</span> получил <span className="font-semibold">{e.label}</span>
+                </div>
+              </div>
+              <div className="text-[11px]" style={{color:'var(--nardo)'}}>{e.time}</div>
+            </div>
+          ))}
         </div>
       </div>
     );
 
-    const CaseDetail=({data,onBack,onSell,onClaim})=>{
-      const [cards,setCards]=useState(Array(5).fill({flipped:false,prize:null}));
-      const [picked,setPicked]=useState(null);
-      const onPick=(i)=>{
-        if(picked!=null) return;
-        const prize=data.prizes[Math.floor(Math.random()*data.prizes.length)];
-        setPicked(i);
-        setCards(cs=>cs.map((c,j)=> j===i?{flipped:true,prize}:{flipped:true,prize:data.prizes[j%data.prizes.length]}));
-        tg?.HapticFeedback?.selectionChanged?.();
-      };
-      return <div>
-        <button onClick={onBack} className="btn-secondary mb-3">← Назад</button>
-        <div className="hand">{cards.map((c,i)=><div key={i} className="hand-card"><div className={`flip-card ${c.flipped?'flipped':''} ${c.prize?glowClass(c.prize.rarity):''}`} onClick={()=>onPick(i)}><div className="flip-face front">?</div><div className="flip-face back">{c.prize?c.prize.emoji:'🎁'}</div></div></div>)}</div>
-        {picked!=null && <div className="mt-4 flex gap-2"><button className="btn-secondary" onClick={()=>onSell(cards[picked].prize)}>Продать</button><button className="btn-primary" onClick={()=>onClaim(cards[picked].prize)}>Забрать</button></div>}
-      </div>;
-    };
-
-    function App(){
-      const [cases]=useState([
-        {id:'lite',title:'Лайт-кейс',priceStars:3,description:'Дешёвый вход',prizes:[{emoji:'⭐',rarity:'common',weight:50,starsValue:1},{emoji:'💥',rarity:'epic',weight:5,starsValue:10},{emoji:'🚀',rarity:'legendary',weight:1,starsValue:30}]},
-        {id:'pro',title:'Про-кейс',priceStars:12,description:'Большой риск',prizes:[{emoji:'🌟',rarity:'rare',weight:20,starsValue:5},{emoji:'🎨',rarity:'epic',weight:8},{emoji:'🏆',rarity:'legendary',weight:2,starsValue:60}]}
-      ]);
-      const [stars,setStars]=useState(20);
-      const [selected,setSelected]=useState(null);
-      const [events]=useState([{user:'Иван',emoji:'💥',label:'Эпик',time:'только что'}]);
-      const [inv,setInv]=useState([]);
-      const [tab,setTab]=useState('profile');
-      const onSell=(p)=>setStars(s=>s+1);
-      const onClaim=(p)=>setInv([...inv,p]);
-
-      return <div className="min-h-dvh pb-20 px-4 py-5">
-        <div className="mx-auto max-w-md">
-          {!selected && <>
-            <LiveFeed events={events}/>
-            <section className="mt-4 cases-grid">{cases.map(c=><HomeCaseCard key={c.id} c={c} onClick={()=>setSelected(c)}/>)}</section>
-          </>}
-          {selected && <CaseDetail data={selected} onBack={()=>setSelected(null)} onSell={onSell} onClaim={onClaim}/>}
-        </div>
-        <div className="fixed bottom-0 left-0 right-0 px-4 py-3 bg-black/70 backdrop-blur border-t border-slate-800">
-          <div className="mx-auto max-w-md tabbar">
-            <button className={`tab-btn ${tab==='profile'?'active':''}`} onClick={()=>setTab('profile')}><span>👤</span><span className="text-xs">Профиль</span></button>
-            <button className={`tab-btn ${tab==='voting'?'active':''}`} onClick={()=>setTab('voting')}><span>🗳️</span><span className="text-xs">Голосование</span></button>
-            <button className={`tab-btn ${tab==='inventory'?'active':''}`} onClick={()=>setTab('inventory')}><span>🎒</span><span className="text-xs">Инвентарь</span></button>
+    /* ===== detail view ===== */
+    function CardFace({ prize }) {
+      return (
+        <div className="flip-face back">
+          <div className="flex flex-col items-center justify-center h-full p-3 text-center">
+            <div className="text-4xl">{prize?.emoji ?? '🎁'}</div>
+            <div className="mt-2 text-sm font-semibold">{prize?.label ?? 'Приз'}</div>
+            {prize && (
+              <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]"
+                   style={{background:'var(--nardo)',color:'#111'}}>{prize.rarity}</div>
+            )}
           </div>
         </div>
-      </div>;
+      );
+    }
+
+    function CaseDetail({ data, onBack, onOpenServer, opening, onClaimPrize, onSellPrize, pushFeed }) {
+      const [phase, setPhase] = useState('idle');
+      const [cards, setCards] = useState(Array(5).fill(null).map(()=>({ prize:null, flipped:false, picked:false })));
+      const [pickedIndex, setPickedIndex] = useState(null);
+      const [landedPrize, setLandedPrize] = useState(null);
+
+      const audio = useMemo(()=>new (class {
+        constructor(){ this.ctx=null; this.gain=null; }
+        ensure(){ if(!this.ctx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+            this.ctx=new AC(); this.gain=this.ctx.createGain(); this.gain.gain.value=0.06; this.gain.connect(this.ctx.destination);} }
+        flip(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+          o.type='triangle'; o.frequency.value=520; o.connect(g).connect(this.gain);
+          const t=this.ctx.currentTime; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);
+          o.start(t); o.stop(t+0.16); }
+        win(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+          o.type='sine'; o.frequency.value=880; o.connect(g).connect(this.gain);
+          const t=this.ctx.currentTime; g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);
+          o.frequency.exponentialRampToValueAtTime(1320, t+0.35); o.start(t); o.stop(t+0.4); }
+      })(),[]);
+
+      const prepare = ()=>{ setPhase('choosing'); setCards(Array(5).fill(null).map(()=>({prize:null, flipped:false, picked:false}))); setPickedIndex(null); setLandedPrize(null); };
+
+      const baseTransform = (i,n)=>{ const angle=-12 + i*(24/Math.max(1,n-1)); const y=Math.abs(i-(n-1)/2)*3; return {angle,y}; };
+      const displacedStyle = (i,n,picked)=>{ const {angle,y}=baseTransform(i,n); if(picked==null) return {transform:`rotate(${angle}deg) translateY(${y}px)`, zIndex:5};
+        if(i===picked) return {transform:`rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)`, zIndex:50};
+        const dir=i<picked?-1:1; const distance=80+Math.abs(i-picked)*12; const lift=10; const ang=angle*0.8;
+        return {transform:`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(.96)`, zIndex:5-Math.abs(i-picked)}; };
+
+      const onPick = async (idx)=>{
+        if(phase!=='choosing') return;
+        setPhase('picking'); setPickedIndex(idx);
+        setCards(cs=>cs.map((c,i)=> i===idx?{...c,picked:true}:c));
+
+        // получаем приз
+        let prize=null;
+        try{
+          const res=await fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId:data.id})});
+          if(res.ok){ const json=await res.json().catch(()=>({})); if(json&&json.prize) prize=json.prize; }
+        }catch(_){}
+        if(!prize||!prize.id){
+          const total=(data.prizes||[]).reduce((s,p)=>s+(p?.weight||0),0);
+          let r=Math.random()*Math.max(1,total);
+          prize=data.prizes?.[0]||null;
+          for(const p of (data.prizes||[])){ r-=(p?.weight||0); if(r<=0){ prize=p; break; } }
+        }
+        if(!prize){ setPhase('choosing'); return; }
+
+        audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
+        setCards(cs=>cs.map((c,i)=> i===idx?{...c,prize,flipped:true}:c)); setPhase('revealed'); setLandedPrize(prize);
+
+        // открыть остальные с красивым горизонтальным веером
+        setTimeout(()=>{
+          setCards(cs=>{
+            const chosenId=prize&&prize.id;
+            const pool=Array.isArray(data.prizes)?data.prizes.slice():[];
+            const rest=chosenId?pool.filter(p=>p.id!==chosenId):pool;
+            const shuffled=rest.slice().sort(()=>Math.random()-0.5);
+            let ri=0;
+            return cs.map((c,i)=> i===idx?c:{...c, prize:(shuffled[ri++]||rest[0]||prize), flipped:true});
+          });
+        },380);
+
+        setTimeout(()=>{ audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy'); },150);
+      };
+
+      const onStart = async () => {
+        const ok = await onOpenServer(data);
+        if(ok) prepare();
+      };
+
+      return (
+        <div className="fade-in">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={onBack} className="btn-secondary">← Назад</button>
+            <div className="text-xl font-semibold">{data.title}</div>
+            <div className="ml-auto text-sm" style={{color:'var(--nardo)'}}>Цена: {data.priceStars} ⭐</div>
+          </div>
+
+          <div className="rounded-2xl p-4 border" style="border-color:var(--border); background:#0b0f14">
+            <div className="text-sm" style="color:var(--nardo)">{phase==='idle'?'Нажми «Открыть», чтобы начать':(phase==='choosing'?'Выбери одну карту':'Ваш результат')}</div>
+
+            {/* горизонтальный веер карточек */}
+            <div className="mt-3 hand">
+              {cards.map((card,i)=>(
+                <div key={i}
+                     className="hand-card"
+                     style={{ ...(phase==='revealed'
+                       ? displacedStyle(i,cards.length,pickedIndex)
+                       : (()=>{ const {angle,y}=baseTransform(i,cards.length); return { transform:`rotate(${angle}deg) translateY(${y}px)`, zIndex:5 }; })()
+                     )}}>
+                  <div className={`flip-card ${card?.flipped?'flipped':''} ${(!card?.flipped||!card?.prize)?'':glowBig(card.prize.rarity)}`}
+                       onClick={()=> phase==='choosing' && onPick(i)}>
+                    <div className="flip-face front"><div className="text-3xl">?</div></div>
+                    <CardFace prize={card?.prize}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <button className="btn-primary w-full" onClick={onStart}>Открыть за {data.priceStars} ⭐</button>
+            </div>
+
+            {phase==='revealed' && landedPrize && (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border"
+                   style="border-color:var(--border); background:#0b0f14">
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">{landedPrize.emoji||'🎁'}</div>
+                  <div className="text-sm">
+                    <div className="font-semibold">{landedPrize.label}</div>
+                    <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]"
+                         style="background:var(--nardo);color:#111">{landedPrize.rarity}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn-secondary" onClick={() => onSellPrize(landedPrize)}>
+                    Продать за {(SELL_BY_RARITY[landedPrize.rarity]||1)} ⭐
+                  </button>
+                  <button className="btn-primary" onClick={() => { onClaimPrize(landedPrize); pushFeed(landedPrize); }}>
+                    Забрать
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== home card ===== */
+    const HomeCaseCard = ({ c, onClick }) => (
+      <div onClick={onClick} role="button"
+           className="rounded-2xl p-4 border transition cursor-pointer fade-in"
+           style="background:#0b0f14; border-color:var(--border)">
+        <MiniCards prizes={c.prizes}/>
+        <div className="mt-3 flex flex-col items-center justify-center text-center fade-in" style={{animationDelay:'20ms'}}>
+          <div className="text-base font-extrabold fade-in" style={{animationDelay:'60ms'}}>{c.title}</div>
+          <div className="text-xs fade-in" style={{animationDelay:'110ms', color:'var(--nardo)'}}>{c.description}</div>
+          <div className="mt-2 text-xs fade-in" style={{animationDelay:'160ms', color:'var(--nardo)'}}>Цена: <span style="color:#fff">{c.priceStars} ⭐</span></div>
+        </div>
+      </div>
+    );
+
+    /* ===== app ===== */
+    function App(){
+      const [cases] = useState(DEFAULT_CASES);
+      const [stars, setStars] = useState(START_STARS);
+      const [selectedCase, setSelectedCase] = useState(null);
+      const [opening, setOpening] = useState(false);
+      const [tab, setTab] = useState('profile');
+      const [claimed, setClaimed] = useState([]);
+      const [feed, setFeed] = useState([
+        {user:'@dino',emoji:'💥',label:'Эпик приз',time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+      ]);
+
+      useEffect(()=>{try{window.Telegram?.WebApp?.ready?.();window.Telegram?.WebApp?.expand?.();}catch(_){}} ,[]);
+
+      const pushFeed = (p, user='@you')=>{
+        setFeed(f=>[...f.slice(-30), {user, emoji:p.emoji||'🎁', label:p.label, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}]);
+      };
+
+      const onOpenServerPrepare = async (c) => {
+        if (opening) return false;
+        if (stars < c.priceStars) { alert('Недостаточно ⭐'); return false; }
+        setOpening(true); setStars(s=>s-c.priceStars);
+        await new Promise(r=>setTimeout(r,180));
+        setOpening(false);
+        return true;
+      };
+
+      const onSellPrize = (p) => {
+        const v = SELL_BY_RARITY[p.rarity] || 1;
+        setStars(s=>s+v);
+      };
+      const onClaimPrize = (p) => {
+        if (p.starsValue) setStars(s=>s+p.starsValue);
+        setClaimed(arr=>[{...p, ts:Date.now()}, ...arr].slice(0,100));
+      };
+
+      const Inventory = () => (
+        <div className="rounded-2xl p-4 border" style="border-color:var(--border); background:#0b0f14">
+          <div className="text-sm" style="color:var(--nardo)">Инвентарь</div>
+          {claimed.length===0 ? <div className="text-sm" style="color:var(--nardo)">Пусто</div> :
+            <div className="grid grid-cols-2 gap-3">
+              {claimed.map((p,i)=>(
+                <div key={i} className="flex items-center gap-2 p-2 rounded-xl border" style="border-color:var(--border); background:#0b0f14">
+                  <div className="text-xl">{p.emoji||'🎁'}</div>
+                  <div className="text-sm">
+                    <div className="font-medium">{p.label}</div>
+                    <div className="text-[11px]" style="color:var(--nardo)">{new Date(p.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                  </div>
+                </div>
+              ))}
+            </div>}
+        </div>
+      );
+
+      const Voting = () => (
+        <div className="rounded-2xl p-4 border" style="border-color:var(--border); background:#0b0f14">
+          <div className="text-sm mb-3" style="color:var(--nardo)">Голосование за фичи</div>
+          {['Новый «Ультра-кейс»','Еженедельные турниры','Обмен призов между пользователями'].map((opt,i)=>(
+            <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl border"
+                 style="border-color:var(--border); background:#0b0f14">
+              <div className="text-sm">{opt}</div>
+              <button className="btn-primary px-3 min-h-[40px]">Голосовать</button>
+            </div>
+          ))}
+        </div>
+      );
+
+      const Profile = () => (
+        <div className="rounded-2xl p-4 border" style="border-color:var(--border); background:#0b0f14">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full" style="background:#161a1f; display:flex;align-items:center;justify-content:center;">👤</div>
+              <div>
+                <div className="font-semibold">@username</div>
+                <div className="text-sm" style="color:var(--nardo)">⭐ {stars} · призов: {claimed.length}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      const Home = () => (
+        <>
+          {/* live above cases */}
+          <LiveFeed events={feed}/>
+          {/* cases grid */}
+          <section className="mt-3 cases-grid">
+            {cases.map(c=>(
+              <HomeCaseCard key={c.id} c={c} onClick={()=>setSelectedCase(c)} />
+            ))}
+          </section>
+        </>
+      );
+
+      return (
+        <div className="min-h-dvh pb-20 px-4 py-5">
+          <div className="mx-auto max-w-md">
+            {!selectedCase && <Home/>}
+            {selectedCase && (
+              <CaseDetail
+                data={selectedCase}
+                onBack={()=>setSelectedCase(null)}
+                onOpenServer={onOpenServerPrepare}
+                opening={opening}
+                onClaimPrize={(p)=>{ onClaimPrize(p); setSelectedCase(null); }}
+                onSellPrize={onSellPrize}
+                pushFeed={(p)=>pushFeed(p,'@you')}
+              />
+            )}
+            {/* extra tabs */}
+            {(!selectedCase && false) && <Inventory/>}
+          </div>
+
+          {/* bottom nav */}
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-3" style="background:rgba(0,0,0,.72); backdrop-filter:blur(8px); border-top:1px solid var(--border);">
+            <div className="mx-auto max-w-md tabbar">
+              <button className="tab-btn active" onClick={()=>{}}><span>👤</span><span className="text-xs">Профиль</span></button>
+              <button className="tab-btn" onClick={()=>{}}><span>🗳️</span><span className="text-xs">Голосование</span></button>
+              <button className="tab-btn" onClick={()=>{}}><span>🎒</span><span className="text-xs">Инвентарь</span></button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
