@@ -6,8 +6,8 @@
   <title>Кейсы за ⭐ — Telegram Mini App</title>
 
   <!-- libs -->
-  <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={darkMode:'class',theme:{extend:{}}};</script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -34,79 +34,64 @@
     :root{
       --black:#0A0B0C;
       --white:#FFFFFF;
-      --nardo:#8E9492; /* Nardo Grey */
+      --nardo:#8E9492;
       --orange:#FF7A1A;
-      --bg-1:#0c0e11;
       --border:#272a2e;
     }
     html,body,#root{height:100%;}
     body{
-      background:
-        radial-gradient(1200px 800px at 15% -10%, #14181e 0%, transparent 60%),
-        radial-gradient(1000px 700px at 120% 0%, #191a1f 0%, transparent 55%),
-        linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
+      background:linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
       color:var(--white);
       font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
-    .fade-in{ animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
-    .mini-fan{ position:relative; height:70px; display:flex; align-items:flex-end; justify-content:center; }
-    .mini-card{ width:58px; height:74px; border-radius:12px; background:#111418; border:1px solid var(--border);
-      display:flex; align-items:center; justify-content:center; position:relative; box-shadow:0 12px 28px rgba(0,0,0,.35); }
-    .glow-common{ box-shadow:0 0 0 2px rgba(142,148,146,.45) inset, 0 12px 26px rgba(0,0,0,.35);}
-    .glow-rare{ box-shadow:0 0 0 2px rgba(120,180,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
-    .glow-epic{ box-shadow:0 0 0 2px rgba(180,120,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
-    .glow-legendary{ box-shadow:0 0 0 2px rgba(255,122,26,.70) inset, 0 12px 26px rgba(0,0,0,.35);}
-    .hfeed-wrap{ margin-top:10px; margin-bottom:12px;}
-    .hfeed{ display:flex; gap:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
-    .hfeed::-webkit-scrollbar{ display:none; }
-    .hfeed-item{ min-width:220px; border-radius:14px; border:1px solid var(--border);
-      background:linear-gradient(135deg,#14171b,#0d0f12); padding:10px 12px;
-      display:flex; align-items:center; justify-content:space-between; }
-    .cases-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
-    .hand{ position:relative; height:186px; display:flex; justify-content:center; align-items:flex-end; pointer-events:none; }
-    .hand-card{ position:relative; pointer-events:auto; margin-left:-44px; transition:transform .35s cubic-bezier(.2,.8,.2,1);}
-    .hand-card:first-child{ margin-left:0; }
-    .flip-card{ width:120px; height:160px; position:relative; transform-style:preserve-3d; transition:transform 680ms cubic-bezier(.2,.8,.2,1);
-      border-radius:16px; box-shadow:0 16px 34px rgba(0,0,0,.42); }
-    .flip-card.flipped{ transform:rotateY(180deg); }
-    .flip-face{ position:absolute; inset:0; border-radius:16px; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
-    .flip-face.front{ background:linear-gradient(135deg,#151920,#0f1216); color:#eaeef2; }
-    .flip-face.back{ background:#0f1114; transform:rotateY(180deg); }
-    .glow-common-b{ box-shadow:0 0 0 2px rgba(142,148,146,.45), 0 0 18px rgba(142,148,146,.22); }
-    .glow-rare-b{ box-shadow:0 0 0 2px rgba(120,180,255,.55), 0 0 20px rgba(120,180,255,.28); }
-    .glow-epic-b{ box-shadow:0 0 0 2px rgba(180,120,255,.60), 0 0 22px rgba(180,120,255,.30); }
-    .glow-legendary-b{ box-shadow:0 0 0 2px rgba(255,122,26,.70), 0 0 24px rgba(255,122,26,.35); }
-    .btn-primary{ background:linear-gradient(180deg,var(--orange),#ea6f0c);
-      color:#111; border:none; border-radius:16px; padding:.9rem 1.05rem; font-weight:800;
-      box-shadow:0 8px 24px rgba(255,122,26,.28), 0 0 0 1px rgba(255,122,26,.35) inset; }
-    .btn-secondary{ background:#101317; color:#e4e4e7; border:1px solid var(--border); border-radius:14px; padding:.75rem .95rem; font-weight:700; }
-    .tabbar{ display:flex; gap:10px;}
-    .tab-btn{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
-      padding:10px 6px; border-radius:14px; border:1px solid var(--border); background:#0f1216; font-weight:800;
-      transition: transform .12s ease, filter .15s ease, box-shadow .25s ease, border-color .25s ease; }
-    .tab-btn.active{ border-color:rgba(255,122,26,.65); }
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .fade-in{animation:fadeInUp .38s cubic-bezier(.2,.8,.2,1) both;}
+    .mini-fan{position:relative;height:70px;display:flex;align-items:flex-end;justify-content:center;}
+    .mini-card{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 12px 28px rgba(0,0,0,.35);}
+    .glow-common{box-shadow:0 0 0 2px rgba(142,148,146,.45) inset,0 12px 26px rgba(0,0,0,.35);}
+    .glow-rare{box-shadow:0 0 0 2px rgba(120,180,255,.55) inset,0 12px 26px rgba(0,0,0,.35);}
+    .glow-epic{box-shadow:0 0 0 2px rgba(180,120,255,.55) inset,0 12px 26px rgba(0,0,0,.35);}
+    .glow-legendary{box-shadow:0 0 0 2px rgba(255,122,26,.70) inset,0 12px 26px rgba(0,0,0,.35);}
+    .cases-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;}
+    .hfeed-wrap{margin-top:10px;margin-bottom:12px;}
+    .hfeed{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+    .hfeed::-webkit-scrollbar{display:none;}
+    .hfeed-item{min-width:220px;border-radius:14px;border:1px solid var(--border);
+      background:linear-gradient(135deg,#14171b,#0d0f12);padding:10px 12px;
+      display:flex;align-items:center;justify-content:space-between;}
   </style>
 </head>
-
 <body>
   <div id="root"></div>
-  <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
+  <pre id="err" style="display:none;position:fixed;left:8px;bottom:64px;right:8px;max-height:40vh;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;z-index:9999"></pre>
 
   <script type="text/babel">
-    const { useState } = React;
-    const glowMini = (r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'');
-    const top3Prizes = (list=[]) => list.slice(0,3);
+    const {useState,useEffect,useRef} = React;
 
-    const MiniCards = ({ prizes }) => {
-      const picks = top3Prizes(prizes);
-      const fan = [{rot:-14,x:-16,z:10,s:0.98,ml:0},{rot:0,x:0,z:30,s:1.06,ml:-24},{rot:14,x:16,z:20,s:0.98,ml:-24}];
-      return (
-        <div className="mini-fan mt-2">
+    const START_STARS=25;
+    const DEFAULT_CASES=[/* твои кейсы как раньше */ 
+      {id:'lite',title:'Лайт-кейс',priceStars:3,description:'Дешёвый вход',
+        prizes:[{emoji:'⭐',rarity:'common'},{emoji:'💥',rarity:'epic'},{emoji:'🚀',rarity:'legendary'}]},
+      {id:'starter',title:'Стартовый кейс',priceStars:6,description:'Для новичков',
+        prizes:[{emoji:'😺',rarity:'common'},{emoji:'🏅',rarity:'rare'},{emoji:'💫',rarity:'legendary'}]},
+      {id:'pro',title:'Про-кейс',priceStars:12,description:'Большой риск',
+        prizes:[{emoji:'🌟',rarity:'rare'},{emoji:'🎨',rarity:'epic'},{emoji:'🏆',rarity:'legendary'}]},
+      {id:'ultra',title:'Ультра-кейс',priceStars:30,description:'Королевские награды',
+        prizes:[{emoji:'🧿',rarity:'epic'},{emoji:'🏆',rarity:'legendary'},{emoji:'🦄',rarity:'legendary'}]}
+    ];
+
+    const glowMini=(r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'');
+
+    const MiniCards=({prizes})=>{
+      const picks=prizes.slice(0,3);
+      const fan=[{rot:-14,x:-16,z:10,s:0.98,ml:0},{rot:0,x:0,z:30,s:1.06,ml:-24},{rot:14,x:16,z:20,s:0.98,ml:-24}];
+      return(
+        <div className="mini-fan">
           {picks.map((p,i)=>(
-            <div key={i} className={`mini-card ${glowMini(p.rarity)}`} 
-                 style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,
-                         zIndex:fan[i].z, marginLeft:i===0?0:fan[i].ml}}>
+            <div key={i} className={`mini-card ${glowMini(p.rarity)}`}
+              style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,
+                      zIndex:fan[i].z,marginLeft:i===0?0:fan[i].ml}}>
               {p.emoji}
             </div>
           ))}
@@ -114,9 +99,9 @@
       );
     };
 
-    const HomeCaseCard = ({ c, onClick }) => (
+    const HomeCaseCard=({c,onClick})=>(
       <div onClick={onClick} role="button" className="rounded-2xl p-4 border transition cursor-pointer fade-in"
-           style={{background:'#0b0f14', borderColor:'var(--border)'}}>
+        style={{background:'#0b0f14',borderColor:'var(--border)'}}>
         <MiniCards prizes={c.prizes}/>
         <div className="mt-3 flex flex-col items-center justify-center text-center fade-in">
           <div className="text-base font-extrabold">{c.title}</div>
@@ -126,18 +111,43 @@
       </div>
     );
 
+    const LiveFeed=({events})=>{
+      const listRef=useRef();
+      useEffect(()=>{if(listRef.current){listRef.current.scrollLeft=listRef.current.scrollWidth;}},[events]);
+      return(
+        <div className="hfeed-wrap">
+          <div className="hfeed" ref={listRef}>
+            {events.map((e,i)=>(
+              <div key={i} className="hfeed-item">
+                <span>{e.user} выбил {e.emoji} {e.label}</span>
+                <span className="text-xs text-gray-400">{e.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
     function App(){
-      const [cases]=useState([
-        {id:'lite',title:'Лайт-кейс',priceStars:3,description:'Дешёвый вход',prizes:[{emoji:'⭐',rarity:'common'},{emoji:'💥',rarity:'epic'},{emoji:'🚀',rarity:'legendary'}]},
-        {id:'pro',title:'Про-кейс',priceStars:12,description:'Большой риск',prizes:[{emoji:'🌟',rarity:'rare'},{emoji:'🎨',rarity:'epic'},{emoji:'🏆',rarity:'legendary'}]},
-        {id:'starter',title:'Стартовый кейс',priceStars:6,description:'Для новичков',prizes:[{emoji:'😺',rarity:'common'},{emoji:'🏅',rarity:'rare'},{emoji:'💫',rarity:'legendary'}]},
-        {id:'ultra',title:'Ультра-кейс',priceStars:30,description:'Королевские награды',prizes:[{emoji:'🧿',rarity:'epic'},{emoji:'🏆',rarity:'legendary'},{emoji:'🦄',rarity:'legendary'}]}
-      ]);
-      return (
+      const [cases]=useState(DEFAULT_CASES);
+      const [stars,setStars]=useState(START_STARS);
+      const [events,setEvents]=useState([]);
+
+      const onClaimPrize=(p)=>{
+        const ev={user:'Игрок',emoji:p.emoji,label:p.label||'Приз',time:new Date().toLocaleTimeString()};
+        setEvents(evs=>[...evs,ev]);
+      };
+
+      return(
         <div className="min-h-dvh pb-20 px-4 py-5">
           <div className="mx-auto max-w-md">
+            <header className="flex items-center justify-between fade-in" style={{animationDelay:'20ms'}}>
+              <h1 className="text-2xl font-bold tracking-tight">Кейсы за ⭐</h1>
+              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
+            </header>
+            <LiveFeed events={events}/>
             <section className="mt-3 cases-grid">
-              {cases.map(c=><HomeCaseCard key={c.id} c={c} onClick={()=>alert(c.title)}/>)}
+              {cases.map(c=><HomeCaseCard key={c.id} c={c} onClick={()=>onClaimPrize(c.prizes[0])}/>)}
             </section>
           </div>
         </div>
