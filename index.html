@@ -5,27 +5,39 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Кейсы за ⭐ — Telegram Mini App</title>
 
-  <!-- libs -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config={darkMode:'class',theme:{extend:{}}};</script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- внешние скрипты -->
+  <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = { darkMode: 'class', theme: { extend: {} } };
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- error catcher -->
+  <!-- ловец ошибок -->
   <script>
-    (function(){
-      const show=(title,detail)=>{
-        try{const box=document.getElementById('err');
-        if(box){box.style.display='block';box.textContent=`${title}\n${detail||''}`;}}catch(_){}
+    (function () {
+      const show = (title, detail) => {
+        try {
+          const box = document.getElementById('err');
+          if (box) { box.style.display='block'; box.textContent = `${title}\n${detail || ''}`; }
+        } catch(_) {}
       };
-      window.onerror=(m,src,line,col,err)=>{
-        show(`JS error: ${m}`,[`source: ${src||'-'}`,`line: ${line||'-'}, col: ${col||'-'}`,`stack: ${(err&&err.stack)||'-'}`].join('\n'));
+      window.onerror = function (message, source, lineno, colno, error) {
+        const detail = [
+          `source: ${source || '-'}`,
+          `line: ${lineno || '-'}, col: ${colno || '-'}`,
+          `stack: ${(error && error.stack) ? error.stack : '-'}`
+        ].join('\n');
+        show(`JS error: ${message}`, detail);
       };
-      window.addEventListener('unhandledrejection',e=>{
-        show('Promise error',(e.reason&&e.reason.stack)||String(e.reason));
+      window.addEventListener('unhandledrejection', (e) => {
+        const reason = e && e.reason;
+        const detail = (reason && reason.stack) || String(reason);
+        show('Promise error', detail);
       });
     })();
   </script>
@@ -34,93 +46,207 @@
     :root{
       --black:#0A0B0C;
       --white:#FFFFFF;
-      --nardo:#8E9492;
+      --nardo:#8E9492; /* Nardo Grey */
       --orange:#FF7A1A;
       --border:#272a2e;
+      --card:#0b0f14;
     }
-    html,body,#root{height:100%;}
+    html, body, #root { height: 100%; }
     body{
-      background:linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
+      background:
+        radial-gradient(1200px 800px at 15% -10%, #14181e 0%, transparent 60%),
+        radial-gradient(1000px 700px at 120% 0%, #191a1f 0%, transparent 55%),
+        linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
       color:var(--white);
       font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
-    .fade-in{animation:fadeInUp .38s cubic-bezier(.2,.8,.2,1) both;}
-    .mini-fan{position:relative;height:70px;display:flex;align-items:flex-end;justify-content:center;}
-    .mini-card{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 12px 28px rgba(0,0,0,.35);}
-    .glow-common{box-shadow:0 0 0 2px rgba(142,148,146,.45) inset,0 12px 26px rgba(0,0,0,.35);}
-    .glow-rare{box-shadow:0 0 0 2px rgba(120,180,255,.55) inset,0 12px 26px rgba(0,0,0,.35);}
-    .glow-epic{box-shadow:0 0 0 2px rgba(180,120,255,.55) inset,0 12px 26px rgba(0,0,0,.35);}
-    .glow-legendary{box-shadow:0 0 0 2px rgba(255,122,26,.70) inset,0 12px 26px rgba(0,0,0,.35);}
-    .cases-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;}
-    .hfeed-wrap{margin-top:10px;margin-bottom:12px;}
-    .hfeed{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
-    .hfeed::-webkit-scrollbar{display:none;}
-    .hfeed-item{min-width:220px;border-radius:14px;border:1px solid var(--border);
-      background:linear-gradient(135deg,#14171b,#0d0f12);padding:10px 12px;
-      display:flex;align-items:center;justify-content:space-between;}
+
+    /* Fade-in */
+    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+    .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
+
+    /* мини превью-карты (топ-3) */
+    .mini-fan{ position:relative; height:70px; display:flex; align-items:flex-end; justify-content:center; }
+    .mini-card{ width:58px; height:74px; border-radius:12px; background:#111418; border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; position:relative; box-shadow:0 12px 28px rgba(0,0,0,.35); }
+    .glow-common{ box-shadow:0 0 0 2px rgba(142,148,146,.45) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-rare{ box-shadow:0 0 0 2px rgba(120,180,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-epic{ box-shadow:0 0 0 2px rgba(180,120,255,.55) inset, 0 12px 26px rgba(0,0,0,.35);}
+    .glow-legendary{ box-shadow:0 0 0 2px rgba(255,122,26,.70) inset, 0 12px 26px rgba(0,0,0,.35);}
+
+    /* лайв-лента */
+    .hfeed-wrap{ margin-top:10px; margin-bottom:12px; }
+    .hfeed{ display:flex; gap:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
+    .hfeed::-webkit-scrollbar{ display:none; }
+    .hfeed-item{ min-width:240px; border-radius:14px; border:1px solid var(--border);
+      background:linear-gradient(135deg,#14171b,#0d0f12); padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between; }
+
+    /* сетка 2×N */
+    .cases-grid{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+
+    /* Flip cards (НЕпрозрачные поверхности) */
+    .hand { position: relative; height: 176px; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
+    .hand-card { position: relative; pointer-events: auto; margin-left: -44px; transition:
+        transform .35s cubic-bezier(.2,.8,.2,1), filter .2s ease, opacity .2s ease; }
+    .hand-card:first-child { margin-left: 0; }
+    .flip-card { width: 118px; height: 156px; position: relative; transform-style: preserve-3d;
+      transition: transform 700ms cubic-bezier(.2,.8,.2,1); border-radius: 16px; box-shadow: 0 16px 34px rgba(0,0,0,.42); }
+    .flip-card.flipped { transform: rotateY(180deg); }
+    .flip-face { position: absolute; inset: 0; border-radius: 16px; backface-visibility: hidden; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
+    .flip-face.front { background: linear-gradient(135deg,#151920,#0f1216); color:#eaeef2; }
+    .flip-face.back  { background: #0f1114; transform: rotateY(180deg); }
+
+    /* Glow по редкости — большие карты */
+    .glow-common-b{ box-shadow:0 0 0 2px rgba(142,148,146,.45), 0 0 18px rgba(142,148,146,.22); }
+    .glow-rare-b{ box-shadow:0 0 0 2px rgba(120,180,255,.55), 0 0 20px rgba(120,180,255,.28); }
+    .glow-epic-b{ box-shadow:0 0 0 2px rgba(180,120,255,.60), 0 0 22px rgba(180,120,255,.30); }
+    .glow-legendary-b{ box-shadow:0 0 0 2px rgba(255,122,26,.70), 0 0 24px rgba(255,122,26,.35); }
+
+    /* кнопки */
+    .btn-orange {
+      background: linear-gradient(180deg,#f97316,#ea580c);
+      color:#111; border:none; border-radius:18px;
+      padding:.9rem 1.1rem; font-weight:800;
+      box-shadow: 0 8px 24px rgba(234,88,12,.28), 0 0 0 1px rgba(234,88,12,.35) inset;
+      transition: transform .06s ease, box-shadow .15s ease, filter .15s ease;
+    }
+    .btn-orange:hover { filter: brightness(1.05); }
+    .btn-orange:active { transform: scale(.98); }
+    .btn-secondary {
+      background: #101317; color:#e4e4e7;
+      border:1px solid var(--border); border-radius:16px;
+      padding:.8rem 1rem; font-weight:700;
+    }
+
+    /* таббар */
+    .tabbar{ display:flex; gap:10px; }
+    .tab-btn{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      padding:10px 6px; border-radius:14px; border:1px solid var(--border); background:#0f1216; font-weight:800;
+      transition: transform .12s ease, filter .15s ease, box-shadow .25s ease, border-color .25s ease; }
+    .tab-btn:hover{ filter:brightness(1.06) }
+    .tab-btn:active{ transform: scale(.96) }
+    .tab-btn.active{ border-color:rgba(255,122,26,.65); box-shadow:0 0 0 2px rgba(255,122,26,.28) inset; }
   </style>
 </head>
+
 <body>
   <div id="root"></div>
-  <pre id="err" style="display:none;position:fixed;left:8px;bottom:64px;right:8px;max-height:40vh;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;z-index:9999"></pre>
+  <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
 
   <script type="text/babel">
-    const {useState,useEffect,useRef} = React;
+    const { useEffect, useState, useMemo, useRef } = React;
+    const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
 
-    const START_STARS=25;
-    const DEFAULT_CASES=[/* твои кейсы как раньше */ 
-      {id:'lite',title:'Лайт-кейс',priceStars:3,description:'Дешёвый вход',
-        prizes:[{emoji:'⭐',rarity:'common'},{emoji:'💥',rarity:'epic'},{emoji:'🚀',rarity:'legendary'}]},
-      {id:'starter',title:'Стартовый кейс',priceStars:6,description:'Для новичков',
-        prizes:[{emoji:'😺',rarity:'common'},{emoji:'🏅',rarity:'rare'},{emoji:'💫',rarity:'legendary'}]},
-      {id:'pro',title:'Про-кейс',priceStars:12,description:'Большой риск',
-        prizes:[{emoji:'🌟',rarity:'rare'},{emoji:'🎨',rarity:'epic'},{emoji:'🏆',rarity:'legendary'}]},
-      {id:'ultra',title:'Ультра-кейс',priceStars:30,description:'Королевские награды',
-        prizes:[{emoji:'🧿',rarity:'epic'},{emoji:'🏆',rarity:'legendary'},{emoji:'🦄',rarity:'legendary'}]}
+    /* ===== данные и утилиты ===== */
+    const START_STARS = 25;
+    const DEFAULT_CASES = [
+      { id:'lite', title:'Лайт-кейс', priceStars:3, description:'Дешёвый вход, быстрые призы',
+        prizes:[ {id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
+                 {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,starsValue:1},
+                 {id:'l3',label:'Малый буст профиля',emoji:'🔹',rarity:'rare',weight:12},
+                 {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,starsValue:5} ]},
+      { id:'starter', title:'Стартовый кейс', priceStars:6, description:'Открывай и лови удачу!',
+        prizes:[ {id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
+                 {id:'s2',label:'2⭐ назад',emoji:'⭐',rarity:'common',weight:28,starsValue:2},
+                 {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
+                 {id:'s4',label:'Аватар-рамка',emoji:'🖼️',rarity:'epic',weight:8},
+                 {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,starsValue:20} ]},
+      { id:'pro', title:'Про-кейс', priceStars:12, description:'Больше риск — круче призы',
+        prizes:[ {id:'p1',label:'3⭐ назад',emoji:'⭐',rarity:'common',weight:32,starsValue:3},
+                 {id:'p2',label:'Скин для профиля',emoji:'🎨',rarity:'rare',weight:28},
+                 {id:'p3',label:'Анимация имени',emoji:'✨',rarity:'rare',weight:20},
+                 {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,starsValue:10},
+                 {id:'p5',label:'Суперприз: 60⭐',emoji:'🚀',rarity:'legendary',weight:5,starsValue:60} ]},
+      { id:'ultra', title:'Ультра-кейс', priceStars:30, description:'Высокая ставка — королевские награды',
+        prizes:[ {id:'u1',label:'7⭐ назад',emoji:'⭐',rarity:'rare',weight:30,starsValue:7},
+                 {id:'u2',label:'Редкий скин + эффект',emoji:'🧿',rarity:'epic',weight:28},
+                 {id:'u3',label:'15⭐ назад',emoji:'🌟',rarity:'epic',weight:20,starsValue:15},
+                 {id:'u4',label:'Легенда: 120⭐',emoji:'🏆',rarity:'legendary',weight:6,starsValue:120},
+                 {id:'u5',label:'Легендарный сет предметов',emoji:'🎖️',rarity:'legendary',weight:4},
+                 {id:'u6',label:'Мифический: 300⭐',emoji:'🦄',rarity:'legendary',weight:2,starsValue:300} ]},
     ];
+    const SELL_BY_RARITY = { common:1, rare:2, epic:6, legendary:20 };
+    const rarityOrder = { legendary:4, epic:3, rare:2, common:1 };
+    const glowMini = (r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'glow-common');
+    const glowBig  = (r)=>({common:'glow-common-b',rare:'glow-rare-b',epic:'glow-epic-b',legendary:'glow-legendary-b'}[r]||'glow-common-b');
 
-    const glowMini=(r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'');
+    const top3Prizes = (list=[]) => list.slice().sort((a,b)=>{
+      const ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
+      if (rb!==ra) return rb-ra;
+      const sa=a.starsValue||0, sb=b.starsValue||0; if (sb!==sa) return sb-sa;
+      return (a.weight||0)-(b.weight||0);
+    }).slice(0,3);
 
-    const MiniCards=({prizes})=>{
-      const picks=prizes.slice(0,3);
-      const fan=[{rot:-14,x:-16,z:10,s:0.98,ml:0},{rot:0,x:0,z:30,s:1.06,ml:-24},{rot:14,x:16,z:20,s:0.98,ml:-24}];
-      return(
+    /* звук/вибро из старого индекса */
+    class SpinAudio {
+      constructor(){ this.ctx=null; this.gain=null; }
+      ensure(){ if(!this.ctx){ const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
+        this.ctx=new AC(); this.gain=this.ctx.createGain(); this.gain.gain.value=0.06; this.gain.connect(this.ctx.destination);} }
+      flip(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+        o.type='triangle'; o.frequency.value=520; o.connect(g).connect(this.gain);
+        const t=this.ctx.currentTime; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);
+        o.start(t); o.stop(t+0.16); }
+      win(){ this.ensure(); if(!this.ctx||!this.gain) return; const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+        o.type='sine'; o.frequency.value=880; o.connect(g).connect(this.gain);
+        const t=this.ctx.currentTime; g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);
+        o.frequency.exponentialRampToValueAtTime(1320, t+0.35); o.start(t); o.stop(t+0.4); }
+    }
+    const audio = new SpinAudio();
+
+    /* ===== UI куски ===== */
+    const MiniCards = ({ prizes }) => {
+      const picks = top3Prizes(prizes);
+      const fan = [
+        {rot:-14, x:-16, z:10, s:0.98, ml:0},
+        {rot:0,   x:  0, z:30, s:1.06, ml:-24}, // центральная сверху
+        {rot: 14, x: 16, z:20, s:0.98, ml:-24}
+      ];
+      return (
         <div className="mini-fan">
           {picks.map((p,i)=>(
-            <div key={i} className={`mini-card ${glowMini(p.rarity)}`}
-              style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,
-                      zIndex:fan[i].z,marginLeft:i===0?0:fan[i].ml}}>
-              {p.emoji}
+            <div key={p.id||i}
+                 className={`mini-card ${glowMini(p.rarity)}`}
+                 style={{
+                   transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,
+                   zIndex:fan[i].z,
+                   marginLeft:i===0?0:fan[i].ml
+                 }}>
+              <span className="text-lg leading-none">{p.emoji || '🎁'}</span>
             </div>
           ))}
         </div>
       );
     };
 
-    const HomeCaseCard=({c,onClick})=>(
-      <div onClick={onClick} role="button" className="rounded-2xl p-4 border transition cursor-pointer fade-in"
-        style={{background:'#0b0f14',borderColor:'var(--border)'}}>
-        <MiniCards prizes={c.prizes}/>
-        <div className="mt-3 flex flex-col items-center justify-center text-center fade-in">
-          <div className="text-base font-extrabold">{c.title}</div>
-          <div className="text-xs" style={{color:'var(--nardo)'}}>{c.description}</div>
-          <div className="mt-2 text-xs" style={{color:'var(--nardo)'}}>Цена: <span style={{color:'#fff'}}>{c.priceStars} ⭐</span></div>
+    const HomeCaseCard = ({ c, onClick }) => (
+      <div onClick={onClick} role="button"
+           className="rounded-2xl p-4 border transition cursor-pointer fade-in"
+           style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+        <MiniCards prizes={c.prizes} />
+        <div className="mt-3 flex flex-col items-center justify-center text-center fade-in" style={{animationDelay:'20ms'}}>
+          <div className="text-base font-extrabold fade-in" style={{animationDelay:'60ms'}}>{c.title}</div>
+          <div className="text-xs fade-in" style={{animationDelay:'110ms', color:'var(--nardo)'}}>{c.description}</div>
+          <div className="mt-2 text-xs fade-in" style={{animationDelay:'160ms', color:'var(--nardo)'}}>Цена: <span style={{color:'#fff'}}>{c.priceStars} ⭐</span></div>
         </div>
       </div>
     );
 
-    const LiveFeed=({events})=>{
-      const listRef=useRef();
-      useEffect(()=>{if(listRef.current){listRef.current.scrollLeft=listRef.current.scrollWidth;}},[events]);
-      return(
+    const LiveFeed = ({ events }) => {
+      const listRef = useRef(null);
+      useEffect(()=>{ if(listRef.current){ listRef.current.scrollLeft = listRef.current.scrollWidth; } },[events]);
+      return (
         <div className="hfeed-wrap">
           <div className="hfeed" ref={listRef}>
             {events.map((e,i)=>(
               <div key={i} className="hfeed-item">
-                <span>{e.user} выбил {e.emoji} {e.label}</span>
-                <span className="text-xs text-gray-400">{e.time}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="text-xl">{e.emoji}</div>
+                  <div className="truncate text-sm">
+                    <span style={{color:'var(--nardo)'}}>{e.user}</span> получил <span className="font-semibold">{e.label}</span>
+                  </div>
+                </div>
+                <div className="text-[11px]" style={{color:'var(--nardo)'}}>{e.time}</div>
               </div>
             ))}
           </div>
@@ -128,33 +254,383 @@
       );
     };
 
-    function App(){
-      const [cases]=useState(DEFAULT_CASES);
-      const [stars,setStars]=useState(START_STARS);
-      const [events,setEvents]=useState([]);
-
-      const onClaimPrize=(p)=>{
-        const ev={user:'Игрок',emoji:p.emoji,label:p.label||'Приз',time:new Date().toLocaleTimeString()};
-        setEvents(evs=>[...evs,ev]);
-      };
-
-      return(
-        <div className="min-h-dvh pb-20 px-4 py-5">
-          <div className="mx-auto max-w-md">
-            <header className="flex items-center justify-between fade-in" style={{animationDelay:'20ms'}}>
-              <h1 className="text-2xl font-bold tracking-tight">Кейсы за ⭐</h1>
-              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
-            </header>
-            <LiveFeed events={events}/>
-            <section className="mt-3 cases-grid">
-              {cases.map(c=><HomeCaseCard key={c.id} c={c} onClick={()=>onClaimPrize(c.prizes[0])}/>)}
-            </section>
+    function CardFront({ prize }) {
+      return (
+        <div className="flip-face back">
+          <div className="flex flex-col items-center justify-center h-full p-3 text-center">
+            <div className="text-4xl">{prize?.emoji ?? '🎁'}</div>
+            <div className="mt-2 text-sm font-semibold">{prize?.label ?? 'Приз'}</div>
+            {prize ? (
+              <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]" style={{background:'var(--nardo)', color:'#111'}}>
+                {prize.rarity}
+              </div>
+            ) : null}
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+    /* Детальная страница с веером и разъездом */
+    function CaseDetailCards({ data, onBack, onOpenServer, opening, onClaimPrize, onSellPrize, pushFeed }) {
+      const [phase, setPhase] = useState('idle'); // idle | choosing | picking | revealed
+      const [cards, setCards] = useState(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
+      const [pickedIndex, setPickedIndex] = useState(null);
+      const [landedPrize, setLandedPrize] = useState(null);
+
+      const prepareCards = () => {
+        setPhase('choosing');
+        setCards(Array(5).fill(null).map(() => ({ prize: null, flipped: false, picked: false })));
+        setPickedIndex(null);
+        setLandedPrize(null);
+      };
+
+      const onPick = async (idx) => {
+        if (phase !== 'choosing') return;
+
+        setPhase('picking');
+        setPickedIndex(idx);
+        setCards((cs) => cs.map((c, i) => i === idx ? { ...c, picked: true } : c));
+
+        let prize = null;
+        try {
+          const res = await fetch('/api/open', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caseId: data.id })
+          });
+          if (res.ok) {
+            const json = await res.json().catch(() => ({}));
+            if (json && json.prize) prize = json.prize;
+          }
+        } catch (_) {}
+
+        if (!prize || !prize.id) {
+          const total = (data.prizes || []).reduce((s,p)=>s+(p?.weight||0),0);
+          let r = Math.random()*Math.max(1,total);
+          prize = data.prizes?.[data.prizes.length-1] || null;
+          for (const p of (data.prizes || [])) { r -= (p?.weight||0); if (r<=0) { prize=p; break; } }
+        }
+        if (!prize) { setPhase('choosing'); return; }
+
+        audio.flip();
+        tg?.WebApp?.HapticFeedback?.selectionChanged?.();
+        setCards((cs) => cs.map((c, i) => i === idx ? ({ ...c, prize, flipped: true }) : c));
+        setPhase('revealed');
+        setLandedPrize(prize);
+
+        // раскрываем остальные
+        setTimeout(() => {
+          setCards((cs) => {
+            const chosenId = prize && prize.id;
+            const pool = Array.isArray(data.prizes) ? data.prizes.slice() : [];
+            const remainingPool = chosenId ? pool.filter(p => p.id !== chosenId) : pool;
+            const shuffled = remainingPool.slice().sort(()=>Math.random()-0.5);
+            let ri = 0;
+            return cs.map((c, i) => {
+              if (i === idx) return c;
+              const alt = shuffled[ri++] || remainingPool[0] || prize;
+              return { ...c, prize: alt, flipped: true };
+            });
+          });
+        }, 380);
+
+        setTimeout(()=>{ audio.win(); tg?.WebApp?.HapticFeedback?.impactOccurred?.('heavy'); }, 150);
+      };
+
+      const onStart = async () => {
+        if (opening) return;
+        const ok = await onOpenServer(data);
+        if (ok) prepareCards();
+      };
+
+      // Фан-позиции
+      const baseTransform = (i, n) => {
+        const angle = -12 + i * (24 / Math.max(1, n - 1));
+        const y = Math.abs(i - (n - 1) / 2) * 3;
+        return { angle, y };
+      };
+
+      // Разъезд
+      const displacedStyle = (i, n, picked) => {
+        const { angle, y } = baseTransform(i, n);
+        if (picked == null) return { transform: `rotate(${angle}deg) translateY(${y}px)`, zIndex: 5 };
+
+        if (i === picked) {
+          return {
+            transform: `rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)`,
+            zIndex: 50
+          };
+        }
+
+        const dir = i < picked ? -1 : 1;
+        const distance = 90 + Math.abs(i - picked) * 12;
+        const lift  = 10;
+        const ang   = angle * 0.8;
+        return {
+          transform: `rotate(${ang}deg) translate(${dir*distance}px, ${y + lift}px) scale(.96)`,
+          zIndex: 5 - Math.abs(i - picked)
+        };
+      };
+
+      return (
+        <div className="fade-in">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={onBack} className="btn-secondary">← Назад</button>
+            <div className="text-xl font-semibold">{data.title}</div>
+            <div className="ml-auto text-sm" style={{color:'var(--nardo)'}}>Цена: {data.priceStars} ⭐</div>
+          </div>
+
+          <div className="mt-2 rounded-2xl p-4 border" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+            <div className="text-sm" style={{color:'var(--nardo)'}}>
+              {phase==='idle' ? 'Нажми «Открыть», чтобы начать' : (phase==='choosing' ? 'Выбери одну карту' : 'Ваш результат')}
+            </div>
+
+            {/* Веер + разъезд */}
+            <div className="mt-3 hand">
+              {cards.map((card, i) => (
+                <div
+                  key={i}
+                  className="hand-card"
+                  style={{
+                    ...(phase === 'revealed'
+                      ? displacedStyle(i, cards.length, pickedIndex)
+                      : (() => { const {angle,y}=baseTransform(i,cards.length); return { transform:`rotate(${angle}deg) translateY(${y}px)`, zIndex:5 }; })()
+                    )
+                  }}
+                >
+                  <div
+                    className={`flip-card ${card?.flipped ? 'flipped' : ''} ${(!card?.flipped || !card?.prize) ? '' : glowBig(card.prize.rarity)}`}
+                    onClick={() => (phase==='choosing') && onPick(i)}
+                  >
+                    <div className="flip-face front">
+                      <div className="text-4xl">?</div>
+                    </div>
+                    <CardFront prize={card?.prize} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="sticky bottom-3 mt-5 z-10">
+              <button
+                className="btn-orange w-full"
+                onClick={onStart}
+                disabled={opening}
+                style={opening ? { filter:'grayscale(0.2) opacity(.7)' } : undefined}
+              >
+                Открыть за {data.priceStars} ⭐
+              </button>
+            </div>
+
+            {phase === 'revealed' && landedPrize && (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border"
+                   style={{borderColor:'var(--border)', background:'var(--card)'}}>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">{landedPrize.emoji ?? '🎁'}</div>
+                  <div className="text-sm">
+                    <div className="font-semibold">{landedPrize.label}</div>
+                    <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]" style={{background:'var(--nardo)', color:'#111'}}>{landedPrize.rarity}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn-secondary" onClick={() => onSellPrize(landedPrize)}>
+                    Продать за {(SELL_BY_RARITY[landedPrize.rarity]||1)} ⭐
+                  </button>
+                  <button className="btn-orange" onClick={() => { onClaimPrize(landedPrize); pushFeed(landedPrize); }}>
+                    Забрать
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-2xl p-4 border" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+            <div className="text-sm" style={{color:'var(--nardo)'}}>Доступные призы</div>
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              {data.prizes.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl border"
+                     style={{borderColor:'var(--border)', background:'#0b0b0c'}}>
+                  <div className="text-xl">{p.emoji ?? '🎁'}</div>
+                  <div className="text-sm">
+                    <div className="font-medium">{p.label}</div>
+                    <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]" style={{background:'var(--nardo)', color:'#111'}}>{p.rarity}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const Toast = ({ text, onClose }) => {
+      useEffect(()=>{ const t=setTimeout(onClose,2000); return ()=>clearTimeout(t); },[onClose]);
+      return <div className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-orange-500 text-black shadow-xl z-[60]">{text}</div>;
+    };
+
+    /* ===== приложение ===== */
+    function App(){
+      const [cases] = useState(DEFAULT_CASES);
+      const [stars,setStars]=useState(START_STARS);
+      const [opening,setOpening]=useState(false);
+      const [selectedCase,setSelectedCase]=useState(null);
+      const [toast,setToast]=useState(null);
+      const [page,setPage]=useState('home'); // home | profile | voting | inventory
+
+      const [feed,setFeed]=useState([
+        {user:'@dino',emoji:'💥',label:'Эпик приз',time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})},
+        {user:'@anna',emoji:'🚀',label:'Легендарка',time:new Date(Date.now()-60e3).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})},
+      ]);
+
+      // эмуляция «все игроки»: каждые 6–8 сек добавляем случайный дроп
+      useEffect(()=>{
+        const users = ['@max','@ivan','@lena','@art','@bot','@kira','@john','@mike'];
+        const allPrizes = cases.flatMap(c=>c.prizes);
+        const timer = setInterval(()=>{
+          const p = allPrizes[Math.floor(Math.random()*allPrizes.length)];
+          const u = users[Math.floor(Math.random()*users.length)];
+          setFeed(f=>[...f.slice(-60), {user:u, emoji:p.emoji||'🎁', label:p.label||'Приз', time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}]);
+        }, 6500 + Math.random()*1500);
+        return ()=>clearInterval(timer);
+      },[cases]);
+
+      useEffect(()=>{ try{ tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); }catch(e){} },[]);
+
+      const openDetails=(c)=>{ setSelectedCase(c); };
+
+      const onOpenServerPrepare = async (c) => {
+        if (opening) return false;
+        if (stars < c.priceStars) { setToast('Недостаточно ⭐'); tg?.WebApp?.HapticFeedback?.notificationOccurred?.('warning'); return false; }
+        setOpening(true);
+        setStars(s=>s-c.priceStars); // списываем сразу
+        tg?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
+        await new Promise(r=>setTimeout(r, 180));
+        setOpening(false);
+        return true;
+      };
+
+      const pushFeed = (p, user='@you')=>{
+        setFeed(f=>[...f.slice(-60), {user, emoji:p.emoji||'🎁', label:p.label||'Приз', time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}]);
+      };
+      const onSellPrize = (p) => { const v = SELL_BY_RARITY[p.rarity] || 1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`); };
+      const onClaimPrize = (p) => { if (p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен в инвентарь'); pushFeed(p); };
+
+      /* страницы */
+      const Profile = () => (
+        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-[#161a1f] flex items-center justify-center">👤</div>
+              <div>
+                <div className="font-semibold">@username</div>
+                <div className="text-sm" style={{color:'var(--nardo)'}}>⭐ {stars}</div>
+              </div>
+            </div>
+            <button className="btn-secondary" onClick={()=>setPage('home')}>Домой</button>
+          </div>
+        </div>
+      );
+      const Voting = () => (
+        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+          <div className="text-sm mb-3" style={{color:'var(--nardo)'}}>Голосование за фичи</div>
+          {['Новый «Ультра-кейс»','Еженедельные турниры','Обмен призов между пользователями'].map((opt,i)=>(
+            <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl border mb-2" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+              <div className="text-sm">{opt}</div>
+              <button className="btn-orange px-3">Голосовать</button>
+            </div>
+          ))}
+          <div className="mt-3 text-right">
+            <button className="btn-secondary" onClick={()=>setPage('home')}>Домой</button>
+          </div>
+        </div>
+      );
+      const Inventory = () => (
+        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)', background:'var(--card)'}}>
+          <div className="text-sm mb-2" style={{color:'var(--nardo)'}}>Инвентарь (демо)</div>
+          <div className="text-sm" style={{color:'var(--nardo)'}}>Сюда можно вывести реальные предметы с бэка.</div>
+          <div className="mt-3 text-right">
+            <button className="btn-secondary" onClick={()=>setPage('home')}>Домой</button>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="min-h-dvh pb-20 px-4 py-5">
+          <div className="mx-auto max-w-md">
+            {/* header + баланс */}
+            <header className="flex items-center justify-between fade-in" style={{animationDelay:'20ms'}}>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Кейсы за ⭐</h1>
+                <p className="text-sm" style={{color:'var(--nardo)'}}>Открывай кейсы и забирай призы</p>
+              </div>
+              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
+            </header>
+
+            {/* контент страниц */}
+            {page==='home' && !selectedCase && (
+              <>
+                <LiveFeed events={feed} />
+
+                <section className="mt-3 cases-grid">
+                  {cases.map((c, i)=>(
+                    <div
+                      key={c.id}
+                      role="button"
+                      onClick={()=>openDetails(c)}
+                      className="fade-in"
+                      style={{animationDelay:`${i*60+40}ms`}}
+                    >
+                      <HomeCaseCard c={c} onClick={()=>openDetails(c)} />
+                    </div>
+                  ))}
+                </section>
+              </>
+            )}
+
+            {selectedCase && (
+              <section className="mt-5">
+                <CaseDetailCards
+                  data={selectedCase}
+                  onBack={()=>setSelectedCase(null)}
+                  onOpenServer={onOpenServerPrepare}
+                  opening={opening}
+                  onClaimPrize={(p)=>{ onClaimPrize(p); setSelectedCase(null); }}
+                  onSellPrize={onSellPrize}
+                  pushFeed={(p)=>pushFeed(p,'@you')}
+                />
+              </section>
+            )}
+
+            {page==='profile' && <section className="mt-5"><Profile/></section>}
+            {page==='voting'  && <section className="mt-5"><Voting/></section>}
+            {page==='inventory'&& <section className="mt-5"><Inventory/></section>}
+
+            <footer className="mt-8 text-center text-xs fade-in" style={{animationDelay:'200ms', color:'var(--nardo)'}}>
+              Деморежим. Сервер возвращает приз через <span style={{color:'#fff'}}>/api/open</span>.
+            </footer>
+          </div>
+
+          {/* Таббар — на всех страницах */}
+          <div className="fixed bottom-0 left-0 right-0 px-4 py-3" style={{background:'rgba(0,0,0,.72)', backdropFilter:'blur(8px)', borderTop:'1px solid var(--border)'}}>
+            <div className="mx-auto max-w-md tabbar">
+              <button className={`tab-btn ${page==='profile'?'active':''}`} onClick={()=>setPage('profile')}>
+                <span>👤</span><span className="text-xs">Профиль</span>
+              </button>
+              <button className={`tab-btn ${page==='voting'?'active':''}`} onClick={()=>setPage('voting')}>
+                <span>🗳️</span><span className="text-xs">Голосование</span>
+              </button>
+              <button className={`tab-btn ${page==='inventory'?'active':''}`} onClick={()=>setPage('inventory')}>
+                <span>🎒</span><span className="text-xs">Инвентарь</span>
+              </button>
+            </div>
+          </div>
+
+          {toast && <Toast text={toast} onClose={()=>setToast(null)} />}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
