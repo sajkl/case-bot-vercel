@@ -9,7 +9,6 @@
 
   <style>
     :root{
-      /* brand tokens */
       --bg-dark:#0a0b0c; --bg-card:#0b0f14; --border:#272a2e;
       --text:#ffffff; --muted:#8e9492; --orange:#ff7a1a;
       --blue:#7bb5ff; --purple:#b68aff;
@@ -28,16 +27,13 @@
 
     .container{max-width:960px;margin:0 auto;padding:20px 16px 96px}
     .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-
     @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
     .fade{animation:fadeInUp .38s var(--ease) both}
 
-    /* header */
     .title{font-size:32px;font-weight:800;letter-spacing:-.01em;margin:0}
     .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#ff8a2a,#ff7a1a);
       color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 10px 26px rgba(255,122,26,.28)}
 
-    /* feed */
     .feed{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 2px;margin-top:12px}
     .feed::-webkit-scrollbar{display:none}
     .feed-item{min-width:280px;border:1px solid var(--border);background:linear-gradient(135deg,#14171b,#0d0f12);
@@ -46,11 +42,9 @@
     .feed-time{font-size:12px;color:var(--muted)}
     .emoji{font-size:20px}
 
-    /* grid */
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
     @media (min-width:820px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
 
-    /* case card */
     .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:16px;
       box-shadow:var(--shadow-lg);transition:transform .18s var(--ease), filter .18s var(--ease);cursor:pointer}
     .card:hover{transform:translateY(-4px);filter:brightness(1.04)}
@@ -68,7 +62,6 @@
     .card-sub{font-size:12px;color:var(--muted);text-align:center;margin:0}
     .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
 
-    /* detail: flip cards */
     .detail-head{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer}
     .btn-primary{background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;
@@ -92,7 +85,6 @@
     .result{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);
       background:var(--bg-card);border-radius:16px;padding:10px 12px}
 
-    /* tabbar */
     .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
       border-top:1px solid var(--border);z-index:5}
     .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
@@ -103,6 +95,10 @@
     .tab small{font-size:12px;color:#cdd0d4}
 
     @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
+
+    /* on-screen error */
+    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241; color:#fff; font:12px/1.4 monospace;
+      padding:10px; border-radius:10px; border:1px solid #6c4; box-shadow:0 10px 20px rgba(0,0,0,.4); display:none; white-space:pre-wrap; z-index:9999}
   </style>
 </head>
 <body>
@@ -116,17 +112,48 @@
     </div>
   </nav>
 
+  <pre id="err"></pre>
+
   <script>
-    // ===== Mini helpers =====
-    const tg = window.Telegram?.WebApp;
-    try{ tg?.ready?.(); tg?.expand?.(); }catch(_){}
+  (function(){
+    'use strict';
 
-    const qs = (sel, root=document) => root.querySelector(sel);
-    const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+    // ---- error box
+    function showErr(title, detail){
+      try{
+        var box=document.getElementById('err');
+        if(box){ box.style.display='block'; box.textContent = title + "\n" + (detail||''); }
+      }catch(_){}
+    }
+    window.onerror=function(message, source, lineno, colno, error){
+      var detail = [
+        'source: ' + (source||'-'),
+        'line: ' + (lineno||'-') + ', col: ' + (colno||'-'),
+        'stack: ' + (error && error.stack ? error.stack : '-')
+      ].join('\n');
+      showErr('JS error: ' + message, detail);
+    };
+    window.addEventListener('unhandledrejection', function(e){
+      var reason = e && e.reason;
+      var detail = (reason && reason.stack) || String(reason);
+      showErr('Promise error', detail);
+    });
 
-    // ===== Demo data =====
-    const START_STARS = 25;
-    const CASES = [
+    // ---- helpers
+    var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+    try{ if(tg && tg.ready) tg.ready(); if(tg && tg.expand) tg.expand(); }catch(_){}
+
+    function qs(sel, root){ return (root||document).querySelector(sel); }
+    function el(tag, cls, html){
+      var n=document.createElement(tag);
+      if(cls) n.className=cls;
+      if(html!=null) n.innerHTML=html;
+      return n;
+    }
+
+    // ---- data
+    var START_STARS = 25;
+    var CASES = [
       { id:'lite', title:'Лайт-кейс', price:3, sub:'Дешёвый вход',
         prizes:[{id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
                 {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,stars:1},
@@ -144,246 +171,281 @@
                 {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,stars:120},
                 {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}]},
     ];
-    const SELL = { common:1, rare:2, epic:6, legendary:20 };
-    const rarityOrder = {legendary:4,epic:3,rare:2,common:1};
+    var SELL = { common:1, rare:2, epic:6, legendary:20 };
+    var rarityOrder = {legendary:4,epic:3,rare:2,common:1};
 
-    const top3 = (arr) => arr.slice().sort((a,b)=>{
-      const ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
-      if(rb!==ra) return rb-ra;
-      const sa=a.stars||0, sb=b.stars||0; if(sb!==sa) return sb-sa;
-      return (a.weight||0)-(b.weight||0);
-    }).slice(0,3);
+    function top3(arr){
+      return arr.slice().sort(function(a,b){
+        var ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
+        if(rb!==ra) return rb-ra;
+        var sa=a.stars||0, sb=b.stars||0; if(sb!==sa) return sb-sa;
+        return (a.weight||0)-(b.weight||0);
+      }).slice(0,3);
+    }
+    function glowMiniClass(r){
+      var map = {common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'};
+      return map[r] || 'glow-blue';
+    }
 
-    const glowMiniClass = r => ({common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'}[r]||'glow-blue');
+    // ---- state
+    var stars = START_STARS;
+    var selected = null; // case id
+    var feed = [];
 
-    // ===== State =====
-    let stars = START_STARS;
-    let selected = null; // case id
-    const feed = [];
+    function ts(){
+      try{ return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+      catch(_){ var d=new Date(); return (''+d.getHours()).padStart(2,'0')+':'+(''+d.getMinutes()).padStart(2,'0'); }
+    }
 
-    // simulate global feed
     (function seedFeed(){
-      const users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
-      const all=CASES.flatMap(c=>c.prizes);
-      for(let i=0;i<4;i++){
-        const p=all[Math.floor(Math.random()*all.length)];
-        const u=users[Math.floor(Math.random()*users.length)];
-        feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
-      }
-      setInterval(()=>{
-        const p=all[Math.floor(Math.random()*all.length)];
-        const u=users[Math.floor(Math.random()*users.length)];
-        feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
-        render();
-      }, 6500+Math.random()*1500);
+      try{
+        var users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
+        var all=[]; for(var c=0;c<CASES.length;c++) all=all.concat(CASES[c].prizes);
+        for(var i=0;i<4;i++){
+          var p=all[Math.floor(Math.random()*all.length)];
+          var u=users[Math.floor(Math.random()*users.length)];
+          feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
+        }
+        setInterval(function(){
+          var p=all[Math.floor(Math.random()*all.length)];
+          var u=users[Math.floor(Math.random()*users.length)];
+          feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
+          render();
+        }, 6500+Math.random()*1500);
+      }catch(e){ showErr('seed error', e.stack||String(e)); }
     })();
 
-    const ts = () => new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    // ---- audio (ленивая)
+    function SpinAudio(){ this.ctx=null; this.gain=null; }
+    SpinAudio.prototype.ensure=function(){
+      if(!this.ctx){
+        var AC=window.AudioContext||window.webkitAudioContext;
+        if(!AC) return;
+        try{
+          this.ctx=new AC();
+          this.gain=this.ctx.createGain();
+          this.gain.gain.value=0.06;
+          this.gain.connect(this.ctx.destination);
+        }catch(_){}
+      }
+    };
+    SpinAudio.prototype.flip=function(){
+      this.ensure(); if(!this.ctx||!this.gain) return;
+      var o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='triangle'; o.frequency.value=520; o.connect(g).connect(this.gain);
+      var t=this.ctx.currentTime; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);
+      o.start(t); o.stop(t+0.16);
+    };
+    SpinAudio.prototype.win=function(){
+      this.ensure(); if(!this.ctx||!this.gain) return;
+      var o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='sine'; o.frequency.value=880; o.connect(g).connect(this.gain);
+      var t=this.ctx.currentTime; g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);
+      o.frequency.exponentialRampToValueAtTime(1320,t+0.35); o.start(t); o.stop(t+0.4);
+    };
+    var audio = new SpinAudio();
 
-    // ===== Audio =====
-    class SpinAudio{
-      constructor(){this.ctx=null;this.gain=null;}
-      ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;this.ctx=new AC();this.gain=this.ctx.createGain();this.gain.gain.value=0.06;this.gain.connect(this.ctx.destination);}}
-      flip(){this.ensure();if(!this.ctx||!this.gain)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='triangle';o.frequency.value=520;o.connect(g).connect(this.gain);const t=this.ctx.currentTime;g.gain.setValueAtTime(0.05,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);o.start(t);o.stop(t+0.16);}
-      win(){this.ensure();if(!this.ctx||!this.gain)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='sine';o.frequency.value=880;o.connect(g).connect(this.gain);const t=this.ctx.currentTime;g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);o.frequency.exponentialRampToValueAtTime(1320,t+0.35);o.start(t);o.stop(t+0.4);}
-    }
-    const audio = new SpinAudio();
-
-    // ===== Views =====
+    // ---- render
     function render(){
-      const root = qs('#app'); root.innerHTML = '';
-      // header
-      const header = el('div','row fade');
-      header.innerHTML = `<h1 class="title">${selected? 'Открытие кейса' : 'Кейсы за ⭐'}</h1>
-                          <div class="pill"><span id="stars">${stars}</span><span>⭐</span></div>`;
-      root.appendChild(header);
+      try{
+        var root = qs('#app'); if(!root){ showErr('root not found','#app missing'); return; }
+        root.innerHTML = '';
 
-      // live feed
-      root.appendChild(renderFeed());
+        var header = el('div','row fade',
+          '<h1 class="title">'+(selected? 'Открытие кейса' : 'Кейсы за ⭐')+'</h1>'+
+          '<div class="pill"><span id="stars">'+stars+'</span><span>⭐</span></div>'
+        );
+        root.appendChild(header);
 
-      // content
-      if(!selected) root.appendChild(renderHome());
-      else root.appendChild(renderDetail(selected));
+        root.appendChild(renderFeed());
 
-      // footer
-      const foot = el('div','fade'); foot.style.marginTop='16px';
-      foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
-      foot.innerHTML = `Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.`;
-      root.appendChild(foot);
+        if(!selected) root.appendChild(renderHome());
+        else root.appendChild(renderDetail(selected));
+
+        var foot = el('div','fade');
+        foot.style.marginTop='16px'; foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
+        foot.innerHTML='Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.';
+        root.appendChild(foot);
+      }catch(e){ showErr('render error', e.stack||String(e)); }
     }
 
     function renderFeed(){
-      const wrap = el('section','feed fade');
-      feed.slice(-20).forEach(e=>{
-        const it = el('div','feed-item');
-        it.innerHTML = `
-          <div class="feed-text">
-            <div class="emoji">${e.emoji}</div>
-            <div class="txt"><span style="color:var(--muted)">${e.user}</span>&nbsp;получил&nbsp;<b>${e.label}</b></div>
-          </div>
-          <div class="feed-time">${e.time}</div>`;
+      var wrap = el('section','feed fade');
+      var last = feed.slice(-20);
+      for(var i=0;i<last.length;i++){
+        var e = last[i];
+        var it = el('div','feed-item',
+          '<div class="feed-text">'+
+            '<div class="emoji">'+e.emoji+'</div>'+
+            '<div class="txt"><span style="color:var(--muted)">'+e.user+'</span>&nbsp;получил&nbsp;<b>'+e.label+'</b></div>'+
+          '</div>'+
+          '<div class="feed-time">'+e.time+'</div>'
+        );
         wrap.appendChild(it);
-      });
-      setTimeout(()=>{wrap.scrollLeft = wrap.scrollWidth},0);
+      }
+      setTimeout(function(){ try{ wrap.scrollLeft = wrap.scrollWidth; }catch(_){}} ,0);
       return wrap;
     }
 
     function renderHome(){
-      const grid = el('section','grid fade');
-      CASES.forEach(c=>{
-        const card = el('article','card');
-        const picks = top3(c.prizes);
-        card.innerHTML = `
-          <div class="fan">
-            ${picks.map(p=>`<div class="mini ${glowMiniClass(p.rarity)}"><span>${p.emoji||'🎁'}</span></div>`).join('')}
-          </div>
-          <h3 class="card-title">${c.title}</h3>
-          <p class="card-sub">${c.sub}</p>
-          <div class="meta">Цена: <b style="color:#fff">${c.price} ⭐</b></div>`;
-        card.addEventListener('click',()=>{ selected=c.id; window.scrollTo({top:0,behavior:'smooth'}); render(); });
+      var grid = el('section','grid fade');
+      for(var i=0;i<CASES.length;i++){
+        var c = CASES[i]; var picks=top3(c.prizes);
+        var html = '<div class="fan">'+
+          picks.map(function(p){ return '<div class="mini '+glowMiniClass(p.rarity)+'"><span>'+ (p.emoji||'🎁') +'</span></div>'; }).join('')+
+        '</div>'+
+        '<h3 class="card-title">'+c.title+'</h3>'+
+        '<p class="card-sub">'+c.sub+'</p>'+
+        '<div class="meta">Цена: <b style="color:#fff">'+c.price+' ⭐</b></div>';
+        var card = el('article','card', html);
+        (function(id){ card.addEventListener('click', function(){ selected=id; window.scrollTo({top:0,behavior:'smooth'}); render(); }); })(c.id);
         grid.appendChild(card);
-      });
+      }
       return grid;
     }
 
     function renderDetail(caseId){
-      const data = CASES.find(x=>x.id===caseId);
-      const wrap = el('section','fade');
+      var data = null;
+      for(var i=0;i<CASES.length;i++){ if(CASES[i].id===caseId){ data=CASES[i]; break; } }
+      if(!data){ var d=el('div'); d.textContent='Кейс не найден'; return d; }
 
-      const head = el('div','detail-head');
-      head.innerHTML = `<button class="btn btn-secondary" id="back">← Назад</button>
-                        <div style="font-size:18px;font-weight:800">${data.title}</div>
-                        <div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: ${data.price} ⭐</div>`;
+      var wrap = el('section','fade');
+
+      var head = el('div','detail-head',
+        '<button class="btn btn-secondary" id="back">← Назад</button>'+
+        '<div style="font-size:18px;font-weight:800">'+data.title+'</div>'+
+        '<div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: '+data.price+' ⭐</div>'
+      );
       wrap.appendChild(head);
-      qs('#back', head).onclick = ()=>{ selected=null; render(); };
+      qs('#back', head).onclick=function(){ selected=null; render(); };
 
-      const hint = el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px';
-      hint.textContent = 'Нажми «Открыть», чтобы начать';
+      var hint = el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px'; hint.textContent='Нажми «Открыть», чтобы начать';
       wrap.appendChild(hint);
 
-      const hand = el('div','hand'); wrap.appendChild(hand);
-      const cards = Array.from({length:5},()=>({el:null}));
-      for(let i=0;i<5;i++){
-        const holder = el('div','hand-card');
-        const f = el('div','flip');
-        f.innerHTML = `<div class="face front"><div style="font-size:32px">?</div></div>
-                       <div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">
-                         <div style="font-size:34px" class="p-emoji">🎁</div>
-                         <div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div>
-                         <div class="rar-chip p-rar">rarity</div>
-                       </div></div>`;
-        holder.appendChild(f);
-        hand.appendChild(holder);
-        cards[i].el = holder;
+      var hand = el('div','hand'); wrap.appendChild(hand);
+      var cards = []; for(var k=0;k<5;k++){ cards.push({el:null}); }
+      for(var j=0;j<5;j++){
+        var holder = el('div','hand-card');
+        var f = el('div','flip',
+          '<div class="face front"><div style="font-size:32px">?</div></div>'+
+          '<div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">'+
+            '<div style="font-size:34px" class="p-emoji">🎁</div>'+
+            '<div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div>'+
+            '<div class="rar-chip p-rar">rarity</div>'+
+          '</div></div>'
+        );
+        holder.appendChild(f); hand.appendChild(holder); cards[j].el = holder;
       }
 
-      const baseTransform=(i,n)=>{
-        const narrow = window.innerWidth <= 414;
-        const spread = narrow?18:24, start=-spread/2;
-        const angle = start + i * (spread / Math.max(1, n-1));
-        const y = Math.abs(i - (n-1)/2) * (narrow?2:3);
-        return {angle,y};
-      };
-      const placeIdle = ()=>{
-        cards.forEach((c,i)=>{
-          const {angle,y}=baseTransform(i,cards.length);
-          c.el.style.transform = `rotate(${angle}deg) translateY(${y}px)`;
-          c.el.style.zIndex = 5;
-        });
-      };
-      const placeRevealed=(picked)=>{
-        const narrow = window.innerWidth <= 414;
-        cards.forEach((c,i)=>{
-          const {angle,y}=baseTransform(i,cards.length);
-          if(i===picked){ c.el.style.transform=`rotate(${angle}deg) translateY(${Math.max(0,y-(narrow?1:2))}px) scale(${narrow?1.03:1.06})`; c.el.style.zIndex=50; return; }
-          const dir=i<picked?-1:1, distance=(narrow?56:90)+Math.abs(i-picked)*(narrow?8:12), lift=narrow?6:10, ang=angle*(narrow?0.9:0.8);
-          c.el.style.transform=`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(${narrow?0.965:0.96})`;
-          c.el.style.zIndex = 5-Math.abs(i-picked);
-        });
-      };
-
+      function baseTransform(i,n){
+        var narrow = (window.innerWidth||390) <= 414;
+        var spread = narrow?18:24; var start=-spread/2;
+        var angle = start + i * (spread / Math.max(1, n-1));
+        var y = Math.abs(i - (n-1)/2) * (narrow?2:3);
+        return {angle:angle,y:y};
+      }
+      function placeIdle(){
+        for(var i=0;i<cards.length;i++){
+          var t=baseTransform(i,cards.length);
+          cards[i].el.style.transform='rotate('+t.angle+'deg) translateY('+t.y+'px)';
+          cards[i].el.style.zIndex=5;
+        }
+      }
+      function placeRevealed(picked){
+        var narrow = (window.innerWidth||390) <= 414;
+        for(var i=0;i<cards.length;i++){
+          var t=baseTransform(i,cards.length);
+          if(i===picked){
+            cards[i].el.style.transform='rotate('+t.angle+'deg) translateY('+Math.max(0,t.y-(narrow?1:2))+'px) scale('+(narrow?1.03:1.06)+')';
+            cards[i].el.style.zIndex=50;
+          }else{
+            var dir=i<picked?-1:1, distance=(narrow?56:90)+Math.abs(i-picked)*(narrow?8:12), lift=narrow?6:10, ang=t.angle*(narrow?0.9:0.8);
+            cards[i].el.style.transform='rotate('+ang+'deg) translate('+(dir*distance)+'px,'+(t.y+lift)+'px) scale('+(narrow?0.965:0.96)+')';
+            cards[i].el.style.zIndex=5-Math.abs(i-picked);
+          }
+        }
+      }
       placeIdle();
 
-      let opening = false, pickedIndex=null, landedPrize=null;
+      var opening=false, pickedIndex=null, landedPrize=null;
 
-      const weightedPick = (arr)=>{
-        const total = arr.reduce((s,p)=>s+(p.weight||0),0) || 1;
-        let r = Math.random()*total;
-        for(const p of arr){ r -= (p.weight||0); if(r<=0) return p; }
+      function weightedPick(arr){
+        var total=0; for(var i=0;i<arr.length;i++) total+= (arr[i].weight||0);
+        if(total<=0) total=1;
+        var r=Math.random()*total;
+        for(var j=0;j<arr.length;j++){ r-=(arr[j].weight||0); if(r<=0) return arr[j]; }
         return arr[arr.length-1];
-      };
+      }
 
       function startOpen(){
         if(opening) return;
-        if(stars < data.price){ toast('Недостаточно ⭐'); tg?.HapticFeedback?.notificationOccurred?.('warning'); return; }
-        opening = true; stars -= data.price; updateStars();
-        tg?.HapticFeedback?.impactOccurred?.('medium');
-        hint.textContent = 'Выбери одну карту';
+        if(stars < data.price){ toast('Недостаточно ⭐'); try{tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred && tg.HapticFeedback.notificationOccurred('warning');}catch(_){}
+        return; }
+        opening=true; stars-=data.price; updateStars();
+        try{ tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred && tg.HapticFeedback.impactOccurred('medium'); }catch(_){}
+        hint.textContent='Выбери одну карту';
       }
 
-      function flipPick(i){
+      function flipPick(idx){
         if(!opening || pickedIndex!==null) return;
-        pickedIndex = i;
+        pickedIndex=idx;
+        var prize = weightedPick(data.prizes);
 
-        let prize = weightedPick(data.prizes);
-
-        // flip chosen
-        audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
-        const holder = cards[i].el.querySelector('.flip');
+        try{ audio.flip(); tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged && tg.HapticFeedback.selectionChanged(); }catch(_){}
+        var holder = cards[idx].el.querySelector('.flip');
         holder.classList.add('flipped');
         fillPrize(holder, prize);
         holder.classList.add(prize.rarity==='legendary'?'glow-b-orange':prize.rarity==='epic'?'glow-b-purple':prize.rarity==='rare'?'glow-b-blue':'');
 
-        landedPrize = prize;
-        placeRevealed(i);
-        setTimeout(()=>{ // reveal rest
-          cards.forEach((c,idx)=>{
-            if(idx===i) return;
-            const alt = weightedPick(data.prizes);
-            const f = c.el.querySelector('.flip');
+        landedPrize=prize; placeRevealed(idx);
+
+        setTimeout(function(){
+          for(var i=0;i<cards.length;i++){
+            if(i===idx) continue;
+            var alt = weightedPick(data.prizes);
+            var f = cards[i].el.querySelector('.flip');
             f.classList.add('flipped'); fillPrize(f, alt);
-          });
-          audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy');
-          hint.textContent = 'Ваш результат';
+          }
+          try{ audio.win(); tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred && tg.HapticFeedback.impactOccurred('heavy'); }catch(_){}
+          hint.textContent='Ваш результат';
           renderResult();
         }, 400);
       }
 
       function fillPrize(f, prize){
-        f.querySelector('.p-emoji').textContent = prize.emoji || '🎁';
-        f.querySelector('.p-label').textContent = prize.label || 'Приз';
-        f.querySelector('.p-rar').textContent = prize.rarity || 'rare';
+        var e=f.querySelector('.p-emoji'); if(e) e.textContent = prize.emoji || '🎁';
+        var l=f.querySelector('.p-label'); if(l) l.textContent = prize.label || 'Приз';
+        var r=f.querySelector('.p-rar');   if(r) r.textContent = prize.rarity || 'rare';
       }
 
-      const actions = el('div'); actions.style.marginTop='12px';
-      actions.innerHTML = `<button class="btn btn-primary" id="open">Открыть за ${data.price} ⭐</button>`;
+      var actions = el('div'); actions.style.marginTop='12px';
+      actions.innerHTML = '<button class="btn btn-primary" id="open">Открыть за '+data.price+' ⭐</button>';
       wrap.appendChild(actions);
-      qs('#open',actions).onclick = ()=>{ startOpen(); };
+      qs('#open',actions).onclick=function(){ startOpen(); };
 
-      cards.forEach((c,i)=> c.el.addEventListener('click',()=> flipPick(i)));
+      for(var i=0;i<cards.length;i++){
+        (function(ii){ cards[ii].el.addEventListener('click', function(){ flipPick(ii); }); })(i);
+      }
 
       function renderResult(){
-        const box = el('div','result');
-        box.innerHTML = `
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="font-size:22px">${landedPrize.emoji||'🎁'}</div>
-            <div style="font-size:14px">
-              <div style="font-weight:800">${landedPrize.label}</div>
-              <div class="rar-chip">${landedPrize.rarity}</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-secondary" id="sell">Продать за ${(SELL[landedPrize.rarity]||1)} ⭐</button>
-            <button class="btn btn-primary" id="claim">Забрать</button>
-          </div>`;
+        var box = el('div','result',
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<div style="font-size:22px">'+(landedPrize.emoji||'🎁')+'</div>'+
+            '<div style="font-size:14px"><div style="font-weight:800">'+landedPrize.label+'</div><div class="rar-chip">'+landedPrize.rarity+'</div></div>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px">'+
+            '<button class="btn btn-secondary" id="sell">Продать за '+((SELL[landedPrize.rarity]||1))+' ⭐</button>'+
+            '<button class="btn btn-primary" id="claim">Забрать</button>'+
+          '</div>'
+        );
         wrap.appendChild(box);
 
-        qs('#sell',box).onclick = ()=>{
-          const v = SELL[landedPrize.rarity]||1; stars += v; updateStars(); toast(`Продано: +${v} ⭐`);
+        qs('#sell',box).onclick=function(){
+          var v=SELL[landedPrize.rarity]||1; stars+=v; updateStars(); toast('Продано: +'+v+' ⭐');
           selected=null; render();
         };
-        qs('#claim',box).onclick = ()=>{
-          if(landedPrize.stars) { stars += landedPrize.stars; updateStars(); }
+        qs('#claim',box).onclick=function(){
+          if(landedPrize.stars){ stars+=landedPrize.stars; updateStars(); }
           pushFeed(landedPrize,'@you'); toast('Предмет добавлен');
           selected=null; render();
         };
@@ -392,25 +454,33 @@
       return wrap;
     }
 
-    function updateStars(){ const s=qs('#stars'); if(s) s.textContent = stars; }
+    function updateStars(){ var s=qs('#stars'); if(s) s.textContent = String(stars); }
     function pushFeed(prize,user){
       feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()});
     }
-
     function toast(text){
-      let t = qs('#toast'); if(t) t.remove();
-      t = el('div'); t.id='toast';
+      var t=qs('#toast'); if(t) t.remove();
+      t=el('div'); t.id='toast';
       t.style.position='fixed'; t.style.left='50%'; t.style.bottom='88px'; t.style.transform='translateX(-50%)';
       t.style.background='var(--orange)'; t.style.color='#111'; t.style.padding='8px 12px'; t.style.borderRadius='12px';
       t.style.boxShadow='0 8px 24px rgba(255,122,26,.25)'; t.style.fontWeight='800'; t.style.zIndex='9';
-      t.textContent=text; document.body.appendChild(t); setTimeout(()=>t.remove(),1800);
+      t.textContent=text; document.body.appendChild(t); setTimeout(function(){ try{ t.remove(); }catch(_){ t.style.display='none'; } },1800);
     }
 
-    document.querySelectorAll('.tab').forEach(t=>{
-      t.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');});
-    });
+    // tabbar visual
+    var tabs=document.querySelectorAll('.tab');
+    for(var i=0;i<tabs.length;i++){
+      tabs[i].addEventListener('click',function(e){
+        e.preventDefault();
+        for(var j=0;j<tabs.length;j++) tabs[j].classList.remove('active');
+        this.classList.add('active');
+      });
+    }
 
+    // initial render
     render();
+
+  })();
   </script>
 </body>
 </html>
