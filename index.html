@@ -6,99 +6,51 @@
   <title>Кейсы за ⭐ — Mini App</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
-
   <style>
-    :root{
-      --bg-dark:#0a0b0c; --bg-card:#0b0f14; --border:#272a2e;
-      --text:#ffffff; --muted:#8e9492; --orange:#ff7a1a;
-      --blue:#7bb5ff; --purple:#b68aff;
-      --radius-xl:16px; --shadow-lg:0 16px 34px rgba(0,0,0,.42);
-      --ease:cubic-bezier(.2,.8,.2,1);
-    }
+    :root{ --bg-dark:#0a0b0c; --bg-card:#0b0f14; --border:#272a2e; --text:#fff; --muted:#8e9492; --orange:#ff7a1a; --blue:#7bb5ff; --purple:#b68aff; --shadow-lg:0 16px 34px rgba(0,0,0,.42); --ease:cubic-bezier(.2,.8,.2,1); }
     *{box-sizing:border-box} html,body{height:100%}
-    body{
-      margin:0; color:var(--text); font-family:'Manrope',system-ui,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(1100px 700px at 15% -10%, #14181e 0%, transparent 60%),
-        radial-gradient(900px 600px at 115% 0%, #191a1f 0%, transparent 55%),
-        linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
-    }
+    body{ margin:0; color:var(--text); font-family:'Manrope',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1100px 700px at 15% -10%, #14181e 0%, transparent 60%), radial-gradient(900px 600px at 115% 0%, #191a1f 0%, transparent 55%), linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);}
     a{color:inherit;text-decoration:none}
-
     .container{max-width:960px;margin:0 auto;padding:20px 16px 96px}
     .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
-    .fade{animation:fadeInUp .38s var(--ease) both}
-
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}} .fade{animation:fadeInUp .38s var(--ease) both}
     .title{font-size:32px;font-weight:800;letter-spacing:-.01em;margin:0}
-    .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#ff8a2a,#ff7a1a);
-      color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 10px 26px rgba(255,122,26,.28)}
-
-    .feed{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 2px;margin-top:12px}
-    .feed::-webkit-scrollbar{display:none}
-    .feed-item{min-width:280px;border:1px solid var(--border);background:linear-gradient(135deg,#14171b,#0d0f12);
-      border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
-    .feed-text{display:flex;align-items:center;gap:10px;min-width:0}
-    .feed-time{font-size:12px;color:var(--muted)}
-    .emoji{font-size:20px}
-
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
-    @media (min-width:820px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
-
-    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:16px;
-      box-shadow:var(--shadow-lg);transition:transform .18s var(--ease), filter .18s var(--ease);cursor:pointer}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 10px 26px rgba(255,122,26,.28)}
+    .feed{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 2px;margin-top:12px} .feed::-webkit-scrollbar{display:none}
+    .feed-item{min-width:280px;border:1px solid var(--border);background:linear-gradient(135deg,#14171b,#0d0f12);border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+    .feed-text{display:flex;align-items:center;gap:10px;min-width:0} .feed-time{font-size:12px;color:var(--muted)} .emoji{font-size:20px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px} @media (min-width:820px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:var(--shadow-lg);transition:transform .18s var(--ease),filter .18s var(--ease);cursor:pointer}
     .card:hover{transform:translateY(-4px);filter:brightness(1.04)}
     .fan{position:relative;height:74px;display:flex;align-items:flex-end;justify-content:center}
-    .mini{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+    .mini{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.35)}
     .mini.glow-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
     .mini.glow-purple{box-shadow:0 0 0 2px rgba(182,138,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
     .mini.glow-orange{box-shadow:0 0 0 2px rgba(255,122,26,.7) inset,0 12px 26px rgba(0,0,0,.35)}
-    .mini:nth-child(1){transform:translateX(-16px) rotate(-14deg) scale(.98)}
-    .mini:nth-child(2){transform:translateX(0) rotate(0) scale(1.06);z-index:2;margin-left:-24px}
-    .mini:nth-child(3){transform:translateX(16px) rotate(14deg) scale(.98);margin-left:-24px}
-
-    .card-title{font-size:18px;font-weight:800;text-align:center;margin:12px 0 4px}
-    .card-sub{font-size:12px;color:var(--muted);text-align:center;margin:0}
-    .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
-
+    .mini:nth-child(1){transform:translateX(-16px) rotate(-14deg) scale(.98)} .mini:nth-child(2){transform:translateX(0) rotate(0) scale(1.06);z-index:2;margin-left:-24px} .mini:nth-child(3){transform:translateX(16px) rotate(14deg) scale(.98);margin-left:-24px}
+    .card-title{font-size:18px;font-weight:800;text-align:center;margin:12px 0 4px} .card-sub{font-size:12px;color:var(--muted);text-align:center;margin:0} .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
     .detail-head{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer}
-    .btn-primary{background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;
-      box-shadow:0 8px 24px rgba(255,122,26,.28)}
+    .btn-primary{background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 8px 24px rgba(255,122,26,.28)}
     .btn-secondary{background:#101317;color:#e4e4e7;border:1px solid var(--border);border-radius:16px;padding:8px 12px;font-weight:700}
-
     .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none;margin-top:8px}
-    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s var(--ease),filter .2s,opacity .2s}
-    .hand-card:first-child{margin-left:0}
-    .flip{width:clamp(96px,28vw,118px);height:clamp(128px,36vw,156px);position:relative;transform-style:preserve-3d;transition:transform 700ms var(--ease);
-      border-radius:16px;box-shadow:var(--shadow-lg)}
+    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s var(--ease),filter .2s,opacity .2s} .hand-card:first-child{margin-left:0}
+    .flip{width:clamp(96px,28vw,118px);height:clamp(128px,36vw,156px);position:relative;transform-style:preserve-3d;transition:transform 700ms var(--ease);border-radius:16px;box-shadow:var(--shadow-lg)}
     .flip.flipped{transform:rotateY(180deg)}
     .face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
-    .front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2}
-    .back{background:#0f1114;transform:rotateY(180deg)}
+    .front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2} .back{background:#0f1114;transform:rotateY(180deg)}
     .rar-chip{margin-top:6px;display:inline-block;padding:2px 6px;border-radius:999px;font-size:10px;background:var(--muted);color:#111}
     .glow-b-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55),0 0 20px rgba(123,181,255,.28)}
     .glow-b-purple{box-shadow:0 0 0 2px rgba(182,138,255,.60),0 0 22px rgba(182,138,255,.30)}
     .glow-b-orange{box-shadow:0 0 0 2px rgba(255,122,26,.70),0 0 24px rgba(255,122,26,.35)}
-
-    .result{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);
-      background:var(--bg-card);border-radius:16px;padding:10px 12px}
-
-    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
-      border-top:1px solid var(--border);z-index:5}
+    .result{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);background:var(--bg-card);border-radius:16px;padding:10px 12px}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);border-top:1px solid var(--border);z-index:5}
     .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
-    .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);
-      border-radius:14px;padding:10px 6px;font-weight:800;transition:filter .15s var(--ease), transform .12s var(--ease), border-color .25s var(--ease)}
-    .tab:active{transform:scale(.96)}
-    .tab.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset}
-    .tab small{font-size:12px;color:#cdd0d4}
-
+    .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);border-radius:14px;padding:10px 6px;font-weight:800;transition:filter .15s var(--ease),transform .12s var(--ease),border-color .25s var(--ease)}
+    .tab:active{transform:scale(.96)} .tab.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset} .tab small{font-size:12px;color:#cdd0d4}
     @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
-
-    /* on-screen error */
-    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241; color:#fff; font:12px/1.4 monospace;
-      padding:10px; border-radius:10px; border:1px solid #6c4; box-shadow:0 10px 20px rgba(0,0,0,.4); display:none; white-space:pre-wrap; z-index:9999}
+    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241;color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:10px;border:1px solid #6c4;box-shadow:0 10px 20px rgba(0,0,0,.4);display:none;white-space:pre-wrap;z-index:9999}
   </style>
 </head>
 <body>
@@ -118,368 +70,160 @@
   (function(){
     'use strict';
 
-    // ---- error box
+    /* error box */
     function showErr(title, detail){
-      try{
-        var box=document.getElementById('err');
-        if(box){ box.style.display='block'; box.textContent = title + "\n" + (detail||''); }
-      }catch(_){}
+      var box=document.getElementById('err'); if(!box) return;
+      box.style.display='block'; box.textContent=title+"\n"+(detail||'');
     }
     window.onerror=function(message, source, lineno, colno, error){
-      var detail = [
-        'source: ' + (source||'-'),
-        'line: ' + (lineno||'-') + ', col: ' + (colno||'-'),
-        'stack: ' + (error && error.stack ? error.stack : '-')
-      ].join('\n');
-      showErr('JS error: ' + message, detail);
+      var detail=['source: '+(source||'-'),'line: '+(lineno||'-')+', col: '+(colno||'-'),'stack: '+(error&&error.stack?error.stack:'-')].join('\n');
+      showErr('JS error: '+message, detail);
     };
     window.addEventListener('unhandledrejection', function(e){
-      var reason = e && e.reason;
-      var detail = (reason && reason.stack) || String(reason);
+      var reason=e&&e.reason; var detail=(reason&&reason.stack)||String(reason);
       showErr('Promise error', detail);
     });
 
-    // ---- helpers
     var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-    try{ if(tg && tg.ready) tg.ready(); if(tg && tg.expand) tg.expand(); }catch(_){}
+    try{ tg&&tg.ready&&tg.ready(); tg&&tg.expand&&tg.expand(); }catch(_){}
 
-    function qs(sel, root){ return (root||document).querySelector(sel); }
-    function el(tag, cls, html){
-      var n=document.createElement(tag);
-      if(cls) n.className=cls;
-      if(html!=null) n.innerHTML=html;
-      return n;
-    }
+    function qs(s,r){return (r||document).querySelector(s)}
+    function el(t,c,h){var n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n;}
 
-    // ---- data
-    var START_STARS = 25;
-    var CASES = [
-      { id:'lite', title:'Лайт-кейс', price:3, sub:'Дешёвый вход',
-        prizes:[{id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
-                {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,stars:1},
-                {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,stars:5}]},
-      { id:'starter', title:'Стартовый кейс', price:6, sub:'Для новичков',
-        prizes:[{id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
-                {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
-                {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,stars:20}]},
-      { id:'pro', title:'Про-кейс', price:12, sub:'Большой риск',
-        prizes:[{id:'p2',label:'Скин',emoji:'🎨',rarity:'rare',weight:28},
-                {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,stars:10},
-                {id:'p5',label:'60⭐ джекпот',emoji:'🏆',rarity:'legendary',weight:5,stars:60}]},
-      { id:'ultra', title:'Ультра-кейс', price:30, sub:'Королевские награды',
-        prizes:[{id:'u2',label:'Редкий эффект',emoji:'🧿',rarity:'epic',weight:28},
-                {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,stars:120},
-                {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}]},
+    /* data */
+    var START_STARS=25;
+    var CASES=[
+      {id:'lite',title:'Лайт-кейс',price:3,sub:'Дешёвый вход',prizes:[
+        {id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
+        {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,stars:1},
+        {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,stars:5}
+      ]},
+      {id:'starter',title:'Стартовый кейс',price:6,sub:'Для новичков',prizes:[
+        {id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
+        {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
+        {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,stars:20}
+      ]},
+      {id:'pro',title:'Про-кейс',price:12,sub:'Большой риск',prizes:[
+        {id:'p2',label:'Скин',emoji:'🎨',rarity:'rare',weight:28},
+        {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,stars:10},
+        {id:'p5',label:'60⭐ джекпот',emoji:'🏆',rarity:'legendary',weight:5,stars:60}
+      ]},
+      {id:'ultra',title:'Ультра-кейс',price:30,sub:'Королевские награды',prizes:[
+        {id:'u2',label:'Редкий эффект',emoji:'🧿',rarity:'epic',weight:28},
+        {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,stars:120},
+        {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}
+      ]}
     ];
-    var SELL = { common:1, rare:2, epic:6, legendary:20 };
-    var rarityOrder = {legendary:4,epic:3,rare:2,common:1};
+    var SELL={common:1,rare:2,epic:6,legendary:20};
+    var rarityOrder={legendary:4,epic:3,rare:2,common:1};
+    function top3(a){return a.slice().sort(function(x,y){var rx=rarityOrder[x.rarity]||0,ry=rarityOrder[y.rarity]||0;if(ry!==rx)return ry-rx;var sx=x.stars||0,sy=y.stars||0;if(sy!==sx)return sy-sx;return (x.weight||0)-(y.weight||0)}).slice(0,3)}
+    function glowMiniClass(r){var m={common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'};return m[r]||'glow-blue'}
+    function ts(){try{return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(_){var d=new Date();return (''+d.getHours()).padStart(2,'0')+':'+(''+d.getMinutes()).padStart(2,'0')}}
 
-    function top3(arr){
-      return arr.slice().sort(function(a,b){
-        var ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
-        if(rb!==ra) return rb-ra;
-        var sa=a.stars||0, sb=b.stars||0; if(sb!==sa) return sb-sa;
-        return (a.weight||0)-(b.weight||0);
-      }).slice(0,3);
-    }
-    function glowMiniClass(r){
-      var map = {common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'};
-      return map[r] || 'glow-blue';
-    }
-
-    // ---- state
-    var stars = START_STARS;
-    var selected = null; // case id
-    var feed = [];
-
-    function ts(){
-      try{ return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-      catch(_){ var d=new Date(); return (''+d.getHours()).padStart(2,'0')+':'+(''+d.getMinutes()).padStart(2,'0'); }
-    }
-
-    (function seedFeed(){
-      try{
-        var users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
-        var all=[]; for(var c=0;c<CASES.length;c++) all=all.concat(CASES[c].prizes);
-        for(var i=0;i<4;i++){
-          var p=all[Math.floor(Math.random()*all.length)];
-          var u=users[Math.floor(Math.random()*users.length)];
-          feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
-        }
-        setInterval(function(){
-          var p=all[Math.floor(Math.random()*all.length)];
-          var u=users[Math.floor(Math.random()*users.length)];
-          feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
-          render();
-        }, 6500+Math.random()*1500);
-      }catch(e){ showErr('seed error', e.stack||String(e)); }
+    /* state */
+    var stars=START_STARS, selected=null, feed=[];
+    (function seed(){var users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];var all=[];for(var i=0;i<CASES.length;i++)all=all.concat(CASES[i].prizes);
+      for(var j=0;j<4;j++){var p=all[Math.floor(Math.random()*all.length)],u=users[Math.floor(Math.random()*users.length)];feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()})}
+      setInterval(function(){var p=all[Math.floor(Math.random()*all.length)],u=users[Math.floor(Math.random()*users.length)];feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});render()},6500+Math.random()*1500)
     })();
 
-    // ---- audio (ленивая)
-    function SpinAudio(){ this.ctx=null; this.gain=null; }
-    SpinAudio.prototype.ensure=function(){
-      if(!this.ctx){
-        var AC=window.AudioContext||window.webkitAudioContext;
-        if(!AC) return;
-        try{
-          this.ctx=new AC();
-          this.gain=this.ctx.createGain();
-          this.gain.gain.value=0.06;
-          this.gain.connect(this.ctx.destination);
-        }catch(_){}
-      }
-    };
-    SpinAudio.prototype.flip=function(){
-      this.ensure(); if(!this.ctx||!this.gain) return;
-      var o=this.ctx.createOscillator(), g=this.ctx.createGain();
-      o.type='triangle'; o.frequency.value=520; o.connect(g).connect(this.gain);
-      var t=this.ctx.currentTime; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);
-      o.start(t); o.stop(t+0.16);
-    };
-    SpinAudio.prototype.win=function(){
-      this.ensure(); if(!this.ctx||!this.gain) return;
-      var o=this.ctx.createOscillator(), g=this.ctx.createGain();
-      o.type='sine'; o.frequency.value=880; o.connect(g).connect(this.gain);
-      var t=this.ctx.currentTime; g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);
-      o.frequency.exponentialRampToValueAtTime(1320,t+0.35); o.start(t); o.stop(t+0.4);
-    };
-    var audio = new SpinAudio();
+    /* audio */
+    function SpinAudio(){this.ctx=null;this.gain=null}
+    SpinAudio.prototype.ensure=function(){if(!this.ctx){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{this.ctx=new AC();this.gain=this.ctx.createGain();this.gain.gain.value=0.06;this.gain.connect(this.ctx.destination)}catch(_){}}}
+    SpinAudio.prototype.flip=function(){this.ensure();if(!this.ctx||!this.gain)return;var o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='triangle';o.frequency.value=520;o.connect(g).connect(this.gain);var t=this.ctx.currentTime;g.gain.setValueAtTime(0.05,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);o.start(t);o.stop(t+0.16)}
+    SpinAudio.prototype.win=function(){this.ensure();if(!this.ctx||!this.gain)return;var o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='sine';o.frequency.value=880;o.connect(g).connect(this.gain);var t=this.ctx.currentTime;g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);o.frequency.exponentialRampToValueAtTime(1320,t+0.35);o.start(t);o.stop(t+0.4)}
+    var audio=new SpinAudio();
 
-    // ---- render
+    /* view */
     function render(){
-      try{
-        var root = qs('#app'); if(!root){ showErr('root not found','#app missing'); return; }
-        root.innerHTML = '';
-
-        var header = el('div','row fade',
-          '<h1 class="title">'+(selected? 'Открытие кейса' : 'Кейсы за ⭐')+'</h1>'+
-          '<div class="pill"><span id="stars">'+stars+'</span><span>⭐</span></div>'
-        );
-        root.appendChild(header);
-
-        root.appendChild(renderFeed());
-
-        if(!selected) root.appendChild(renderHome());
-        else root.appendChild(renderDetail(selected));
-
-        var foot = el('div','fade');
-        foot.style.marginTop='16px'; foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
-        foot.innerHTML='Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.';
-        root.appendChild(foot);
-      }catch(e){ showErr('render error', e.stack||String(e)); }
+      var root=qs('#app'); root.innerHTML='';
+      var header=el('div','row fade','<h1 class="title">'+(selected?'Открытие кейса':'Кейсы за ⭐')+'</h1><div class="pill"><span id="stars">'+stars+'</span><span>⭐</span></div>');
+      root.appendChild(header);
+      root.appendChild(renderFeed());
+      root.appendChild(selected?renderDetail(selected):renderHome());
+      var foot=el('div','fade'); foot.style.marginTop='16px'; foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
+      foot.innerHTML='Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.'; root.appendChild(foot);
     }
 
     function renderFeed(){
-      var wrap = el('section','feed fade');
-      var last = feed.slice(-20);
-      for(var i=0;i<last.length;i++){
-        var e = last[i];
-        var it = el('div','feed-item',
-          '<div class="feed-text">'+
-            '<div class="emoji">'+e.emoji+'</div>'+
-            '<div class="txt"><span style="color:var(--muted)">'+e.user+'</span>&nbsp;получил&nbsp;<b>'+e.label+'</b></div>'+
-          '</div>'+
-          '<div class="feed-time">'+e.time+'</div>'
-        );
-        wrap.appendChild(it);
-      }
-      setTimeout(function(){ try{ wrap.scrollLeft = wrap.scrollWidth; }catch(_){}} ,0);
-      return wrap;
+      var wrap=el('section','feed fade'); var last=feed.slice(-20);
+      for(var i=0;i<last.length;i++){var e=last[i];wrap.appendChild(el('div','feed-item','<div class="feed-text"><div class="emoji">'+e.emoji+'</div><div class="txt"><span style="color:var(--muted)">'+e.user+'</span>&nbsp;получил&nbsp;<b>'+e.label+'</b></div></div><div class="feed-time">'+e.time+'</div>'))}
+      setTimeout(function(){wrap.scrollLeft=wrap.scrollWidth},0); return wrap;
     }
 
     function renderHome(){
-      var grid = el('section','grid fade');
-      for(var i=0;i<CASES.length;i++){
-        var c = CASES[i]; var picks=top3(c.prizes);
-        var html = '<div class="fan">'+
-          picks.map(function(p){ return '<div class="mini '+glowMiniClass(p.rarity)+'"><span>'+ (p.emoji||'🎁') +'</span></div>'; }).join('')+
-        '</div>'+
-        '<h3 class="card-title">'+c.title+'</h3>'+
-        '<p class="card-sub">'+c.sub+'</p>'+
-        '<div class="meta">Цена: <b style="color:#fff">'+c.price+' ⭐</b></div>';
-        var card = el('article','card', html);
-        (function(id){ card.addEventListener('click', function(){ selected=id; window.scrollTo({top:0,behavior:'smooth'}); render(); }); })(c.id);
+      var grid=el('section','grid fade');
+      for(var i=0;i<CASES.length;i++){var c=CASES[i], picks=top3(c.prizes);
+        var card=el('article','card','<div class="fan">'+picks.map(function(p){return '<div class="mini '+glowMiniClass(p.rarity)+'"><span>'+ (p.emoji||'🎁') +'</span></div>'}).join('')+'</div><h3 class="card-title">'+c.title+'</h3><p class="card-sub">'+c.sub+'</p><div class="meta">Цена: <b style="color:#fff">'+c.price+' ⭐</b></div>');
+        (function(id){card.addEventListener('click',function(){selected=id;window.scrollTo({top:0,behavior:'smooth'});render()})})(c.id);
         grid.appendChild(card);
       }
       return grid;
     }
 
     function renderDetail(caseId){
-      var data = null;
-      for(var i=0;i<CASES.length;i++){ if(CASES[i].id===caseId){ data=CASES[i]; break; } }
-      if(!data){ var d=el('div'); d.textContent='Кейс не найден'; return d; }
+      var data=CASES.filter(function(x){return x.id===caseId})[0]; if(!data) return el('div',null,'Кейс не найден');
+      var wrap=el('section','fade');
+      var head=el('div','detail-head','<button class="btn btn-secondary" id="back">← Назад</button><div style="font-size:18px;font-weight:800">'+data.title+'</div><div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: '+data.price+' ⭐</div>');
+      wrap.appendChild(head); qs('#back',head).onclick=function(){selected=null;render()};
+      var hint=el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px'; hint.textContent='Нажми «Открыть», чтобы начать'; wrap.appendChild(hint);
 
-      var wrap = el('section','fade');
+      var hand=el('div','hand'); wrap.appendChild(hand); var cards=[], i;
+      for(i=0;i<5;i++){var holder=el('div','hand-card'), f=el('div','flip','<div class="face front"><div style="font-size:32px">?</div></div><div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center"><div style="font-size:34px" class="p-emoji">🎁</div><div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div><div class="rar-chip p-rar">rarity</div></div></div>'); holder.appendChild(f); hand.appendChild(holder); cards.push({el:holder})}
 
-      var head = el('div','detail-head',
-        '<button class="btn btn-secondary" id="back">← Назад</button>'+
-        '<div style="font-size:18px;font-weight:800">'+data.title+'</div>'+
-        '<div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: '+data.price+' ⭐</div>'
-      );
-      wrap.appendChild(head);
-      qs('#back', head).onclick=function(){ selected=null; render(); };
-
-      var hint = el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px'; hint.textContent='Нажми «Открыть», чтобы начать';
-      wrap.appendChild(hint);
-
-      var hand = el('div','hand'); wrap.appendChild(hand);
-      var cards = []; for(var k=0;k<5;k++){ cards.push({el:null}); }
-      for(var j=0;j<5;j++){
-        var holder = el('div','hand-card');
-        var f = el('div','flip',
-          '<div class="face front"><div style="font-size:32px">?</div></div>'+
-          '<div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">'+
-            '<div style="font-size:34px" class="p-emoji">🎁</div>'+
-            '<div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div>'+
-            '<div class="rar-chip p-rar">rarity</div>'+
-          '</div></div>'
-        );
-        holder.appendChild(f); hand.appendChild(holder); cards[j].el = holder;
-      }
-
-      function baseTransform(i,n){
-        var narrow = (window.innerWidth||390) <= 414;
-        var spread = narrow?18:24; var start=-spread/2;
-        var angle = start + i * (spread / Math.max(1, n-1));
-        var y = Math.abs(i - (n-1)/2) * (narrow?2:3);
-        return {angle:angle,y:y};
-      }
-      function placeIdle(){
-        for(var i=0;i<cards.length;i++){
-          var t=baseTransform(i,cards.length);
-          cards[i].el.style.transform='rotate('+t.angle+'deg) translateY('+t.y+'px)';
-          cards[i].el.style.zIndex=5;
-        }
-      }
-      function placeRevealed(picked){
-        var narrow = (window.innerWidth||390) <= 414;
-        for(var i=0;i<cards.length;i++){
-          var t=baseTransform(i,cards.length);
-          if(i===picked){
-            cards[i].el.style.transform='rotate('+t.angle+'deg) translateY('+Math.max(0,t.y-(narrow?1:2))+'px) scale('+(narrow?1.03:1.06)+')';
-            cards[i].el.style.zIndex=50;
-          }else{
-            var dir=i<picked?-1:1, distance=(narrow?56:90)+Math.abs(i-picked)*(narrow?8:12), lift=narrow?6:10, ang=t.angle*(narrow?0.9:0.8);
-            cards[i].el.style.transform='rotate('+ang+'deg) translate('+(dir*distance)+'px,'+(t.y+lift)+'px) scale('+(narrow?0.965:0.96)+')';
-            cards[i].el.style.zIndex=5-Math.abs(i-picked);
-          }
-        }
-      }
+      function baseTransform(i,n){var narrow=(window.innerWidth||390)<=414, spread=narrow?18:24, start=-spread/2, angle=start+i*(spread/Math.max(1,n-1)), y=Math.abs(i-(n-1)/2)*(narrow?2:3); return {angle:angle,y:y}}
+      function placeIdle(){for(var k=0;k<cards.length;k++){var t=baseTransform(k,cards.length); cards[k].el.style.transform='rotate('+t.angle+'deg) translateY('+t.y+'px)'; cards[k].el.style.zIndex=5 }}
+      function placeRevealed(p){var narrow=(window.innerWidth||390)<=414; for(var k=0;k<cards.length;k++){var t=baseTransform(k,cards.length); if(k===p){cards[k].el.style.transform='rotate('+t.angle+'deg) translateY('+Math.max(0,t.y-(narrow?1:2))+'px) scale('+(narrow?1.03:1.06)+')'; cards[k].el.style.zIndex=50}else{var dir=k<p?-1:1,dist=(narrow?56:90)+Math.abs(k-p)*(narrow?8:12),lift=narrow?6:10,ang=t.angle*(narrow?0.9:0.8); cards[k].el.style.transform='rotate('+ang+'deg) translate('+(dir*dist)+'px,'+(t.y+lift)+'px) scale('+(narrow?0.965:0.96)+')'; cards[k].el.style.zIndex=5-Math.abs(k-p) } } }
       placeIdle();
 
       var opening=false, pickedIndex=null, landedPrize=null;
+      function weightedPick(a){var tot=0;for(var q=0;q<a.length;q++)tot+=a[q].weight||0; if(tot<=0)tot=1; var r=Math.random()*tot; for(var w=0;w<a.length;w++){r-=a[w].weight||0; if(r<=0)return a[w]} return a[a.length-1]}
 
-      function weightedPick(arr){
-        var total=0; for(var i=0;i<arr.length;i++) total+= (arr[i].weight||0);
-        if(total<=0) total=1;
-        var r=Math.random()*total;
-        for(var j=0;j<arr.length;j++){ r-=(arr[j].weight||0); if(r<=0) return arr[j]; }
-        return arr[arr.length-1];
-      }
-
-      function startOpen(){
-        if(opening) return;
-        if(stars < data.price){ toast('Недостаточно ⭐'); try{tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred && tg.HapticFeedback.notificationOccurred('warning');}catch(_){}
-        return; }
-        opening=true; stars-=data.price; updateStars();
-        try{ tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred && tg.HapticFeedback.impactOccurred('medium'); }catch(_){}
-        hint.textContent='Выбери одну карту';
-      }
+      function startOpen(){ if(opening) return; if(stars<data.price){ toast('Недостаточно ⭐'); try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred&&tg.HapticFeedback.notificationOccurred('warning')}catch(_){ } return } opening=true; stars-=data.price; updateStars(); try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred&&tg.HapticFeedback.impactOccurred('medium')}catch(_){ } hint.textContent='Выбери одну карту' }
 
       function flipPick(idx){
-        if(!opening || pickedIndex!==null) return;
+        if(!opening||pickedIndex!==null) return;
         pickedIndex=idx;
-        var prize = weightedPick(data.prizes);
+        var prize=weightedPick(data.prizes);
 
-        try{ audio.flip(); tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged && tg.HapticFeedback.selectionChanged(); }catch(_){}
-        var holder = cards[idx].el.querySelector('.flip');
-        holder.classList.add('flipped');
-        fillPrize(holder, prize);
-        holder.classList.add(prize.rarity==='legendary'?'glow-b-orange':prize.rarity==='epic'?'glow-b-purple':prize.rarity==='rare'?'glow-b-blue':'');
+        try{audio.flip(); tg&&tg.HapticFeedback&&tg.HapticFeedback.selectionChanged&&tg.HapticFeedback.selectionChanged()}catch(_){}
+        var holder=cards[idx].el.querySelector('.flip'); holder.classList.add('flipped');
+        fillPrize(holder,prize);
+        // ✅ добавляем glow-класс только если он не пустой
+        var glow = prize.rarity==='legendary'?'glow-b-orange':prize.rarity==='epic'?'glow-b-purple':prize.rarity==='rare'?'glow-b-blue':'';
+        if(glow) holder.classList.add(glow);
 
         landedPrize=prize; placeRevealed(idx);
 
         setTimeout(function(){
-          for(var i=0;i<cards.length;i++){
-            if(i===idx) continue;
-            var alt = weightedPick(data.prizes);
-            var f = cards[i].el.querySelector('.flip');
-            f.classList.add('flipped'); fillPrize(f, alt);
-          }
-          try{ audio.win(); tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred && tg.HapticFeedback.impactOccurred('heavy'); }catch(_){}
-          hint.textContent='Ваш результат';
-          renderResult();
-        }, 400);
+          for(var t=0;t<cards.length;t++){ if(t===idx) continue; var alt=weightedPick(data.prizes); var f=cards[t].el.querySelector('.flip'); f.classList.add('flipped'); fillPrize(f,alt); }
+          try{audio.win(); tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred&&tg.HapticFeedback.impactOccurred('heavy')}catch(_){}
+          hint.textContent='Ваш результат'; renderResult();
+        },400);
       }
 
-      function fillPrize(f, prize){
-        var e=f.querySelector('.p-emoji'); if(e) e.textContent = prize.emoji || '🎁';
-        var l=f.querySelector('.p-label'); if(l) l.textContent = prize.label || 'Приз';
-        var r=f.querySelector('.p-rar');   if(r) r.textContent = prize.rarity || 'rare';
-      }
+      function fillPrize(f,prize){ var e=f.querySelector('.p-emoji'); if(e) e.textContent=prize.emoji||'🎁'; var l=f.querySelector('.p-label'); if(l) l.textContent=prize.label||'Приз'; var r=f.querySelector('.p-rar'); if(r) r.textContent=prize.rarity||'rare' }
 
-      var actions = el('div'); actions.style.marginTop='12px';
-      actions.innerHTML = '<button class="btn btn-primary" id="open">Открыть за '+data.price+' ⭐</button>';
-      wrap.appendChild(actions);
-      qs('#open',actions).onclick=function(){ startOpen(); };
-
-      for(var i=0;i<cards.length;i++){
-        (function(ii){ cards[ii].el.addEventListener('click', function(){ flipPick(ii); }); })(i);
-      }
+      var actions=el('div'); actions.style.marginTop='12px'; actions.innerHTML='<button class="btn btn-primary" id="open">Открыть за '+data.price+' ⭐</button>'; wrap.appendChild(actions);
+      qs('#open',actions).onclick=function(){startOpen()};
+      for(i=0;i<cards.length;i++){(function(ii){cards[ii].el.addEventListener('click',function(){flipPick(ii)})})(i)}
 
       function renderResult(){
-        var box = el('div','result',
-          '<div style="display:flex;align-items:center;gap:8px">'+
-            '<div style="font-size:22px">'+(landedPrize.emoji||'🎁')+'</div>'+
-            '<div style="font-size:14px"><div style="font-weight:800">'+landedPrize.label+'</div><div class="rar-chip">'+landedPrize.rarity+'</div></div>'+
-          '</div>'+
-          '<div style="display:flex;gap:8px">'+
-            '<button class="btn btn-secondary" id="sell">Продать за '+((SELL[landedPrize.rarity]||1))+' ⭐</button>'+
-            '<button class="btn btn-primary" id="claim">Забрать</button>'+
-          '</div>'
-        );
+        var box=el('div','result','<div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">'+(landedPrize.emoji||'🎁')+'</div><div style="font-size:14px"><div style="font-weight:800">'+landedPrize.label+'</div><div class="rar-chip">'+landedPrize.rarity+'</div></div></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="sell">Продать за '+((SELL[landedPrize.rarity]||1))+' ⭐</button><button class="btn btn-primary" id="claim">Забрать</button></div>');
         wrap.appendChild(box);
-
-        qs('#sell',box).onclick=function(){
-          var v=SELL[landedPrize.rarity]||1; stars+=v; updateStars(); toast('Продано: +'+v+' ⭐');
-          selected=null; render();
-        };
-        qs('#claim',box).onclick=function(){
-          if(landedPrize.stars){ stars+=landedPrize.stars; updateStars(); }
-          pushFeed(landedPrize,'@you'); toast('Предмет добавлен');
-          selected=null; render();
-        };
+        qs('#sell',box).onclick=function(){var v=SELL[landedPrize.rarity]||1; stars+=v; updateStars(); toast('Продано: +'+v+' ⭐'); selected=null; render()};
+        qs('#claim',box).onclick=function(){ if(landedPrize.stars){stars+=landedPrize.stars;updateStars()} pushFeed(landedPrize,'@you'); toast('Предмет добавлен'); selected=null; render(); };
       }
 
       return wrap;
     }
 
-    function updateStars(){ var s=qs('#stars'); if(s) s.textContent = String(stars); }
-    function pushFeed(prize,user){
-      feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()});
-    }
-    function toast(text){
-      var t=qs('#toast'); if(t) t.remove();
-      t=el('div'); t.id='toast';
-      t.style.position='fixed'; t.style.left='50%'; t.style.bottom='88px'; t.style.transform='translateX(-50%)';
-      t.style.background='var(--orange)'; t.style.color='#111'; t.style.padding='8px 12px'; t.style.borderRadius='12px';
-      t.style.boxShadow='0 8px 24px rgba(255,122,26,.25)'; t.style.fontWeight='800'; t.style.zIndex='9';
-      t.textContent=text; document.body.appendChild(t); setTimeout(function(){ try{ t.remove(); }catch(_){ t.style.display='none'; } },1800);
-    }
+    function updateStars(){var s=qs('#stars'); if(s) s.textContent=String(stars)}
+    function pushFeed(prize,user){feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()})}
+    function toast(text){var t=qs('#toast'); if(t) t.remove(); t=el('div'); t.id='toast'; t.style.position='fixed'; t.style.left='50%'; t.style.bottom='88px'; t.style.transform='translateX(-50%)'; t.style.background='var(--orange)'; t.style.color='#111'; t.style.padding='8px 12px'; t.style.borderRadius='12px'; t.style.boxShadow='0 8px 24px rgba(255,122,26,.25)'; t.style.fontWeight='800'; t.style.zIndex='9'; t.textContent=text; document.body.appendChild(t); setTimeout(function(){t.remove()},1800)}
 
-    // tabbar visual
-    var tabs=document.querySelectorAll('.tab');
-    for(var i=0;i<tabs.length;i++){
-      tabs[i].addEventListener('click',function(e){
-        e.preventDefault();
-        for(var j=0;j<tabs.length;j++) tabs[j].classList.remove('active');
-        this.classList.add('active');
-      });
-    }
-
-    // initial render
+    document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(e){e.preventDefault();document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active')})});
     render();
-
   })();
   </script>
 </body>
