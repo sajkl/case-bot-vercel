@@ -102,7 +102,6 @@
     .tab.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset}
     .tab small{font-size:12px;color:#cdd0d4}
 
-    /* cards compact on very small screens */
     @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
   </style>
 </head>
@@ -125,7 +124,7 @@
     const qs = (sel, root=document) => root.querySelector(sel);
     const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
 
-    // ===== Demo data (можно менять) =====
+    // ===== Demo data =====
     const START_STARS = 25;
     const CASES = [
       { id:'lite', title:'Лайт-кейс', price:3, sub:'Дешёвый вход',
@@ -146,8 +145,6 @@
                 {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}]},
     ];
     const SELL = { common:1, rare:2, epic:6, legendary:20 };
-    const rarityGlowMini = r => ({common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'}[r]||'glow-blue');
-    const rarityGlowBig  = r => ({common:'',      rare:'glow-b-blue', ep ic:'glow-b-purple',legendary:'glow-b-orange'}[r]||'');
     const rarityOrder = {legendary:4,epic:3,rare:2,common:1};
 
     const top3 = (arr) => arr.slice().sort((a,b)=>{
@@ -157,10 +154,12 @@
       return (a.weight||0)-(b.weight||0);
     }).slice(0,3);
 
+    const glowMiniClass = r => ({common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'}[r]||'glow-blue');
+
     // ===== State =====
     let stars = START_STARS;
     let selected = null; // case id
-    const feed = []; // live events
+    const feed = [];
 
     // simulate global feed
     (function seedFeed(){
@@ -175,7 +174,7 @@
         const p=all[Math.floor(Math.random()*all.length)];
         const u=users[Math.floor(Math.random()*users.length)];
         feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
-        render(); // update live
+        render();
       }, 6500+Math.random()*1500);
     })();
 
@@ -206,7 +205,7 @@
       if(!selected) root.appendChild(renderHome());
       else root.appendChild(renderDetail(selected));
 
-      // footer note
+      // footer
       const foot = el('div','fade'); foot.style.marginTop='16px';
       foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
       foot.innerHTML = `Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.`;
@@ -236,7 +235,7 @@
         const picks = top3(c.prizes);
         card.innerHTML = `
           <div class="fan">
-            ${picks.map(p=>`<div class="mini ${'glow-'+rarityGlowMini(p.rarity).split('glow-')[1]}"><span>${p.emoji||'🎁'}</span></div>`).join('')}
+            ${picks.map(p=>`<div class="mini ${glowMiniClass(p.rarity)}"><span>${p.emoji||'🎁'}</span></div>`).join('')}
           </div>
           <h3 class="card-title">${c.title}</h3>
           <p class="card-sub">${c.sub}</p>
@@ -258,14 +257,12 @@
       wrap.appendChild(head);
       qs('#back', head).onclick = ()=>{ selected=null; render(); };
 
-      // status text
       const hint = el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px';
       hint.textContent = 'Нажми «Открыть», чтобы начать';
       wrap.appendChild(hint);
 
-      // hand of cards
       const hand = el('div','hand'); wrap.appendChild(hand);
-      const cards = Array.from({length:5},()=>({el:null, prize:null, flipped:false, picked:false}));
+      const cards = Array.from({length:5},()=>({el:null}));
       for(let i=0;i<5;i++){
         const holder = el('div','hand-card');
         const f = el('div','flip');
@@ -280,7 +277,6 @@
         cards[i].el = holder;
       }
 
-      // layout helpers
       const baseTransform=(i,n)=>{
         const narrow = window.innerWidth <= 414;
         const spread = narrow?18:24, start=-spread/2;
@@ -308,7 +304,6 @@
 
       placeIdle();
 
-      // open actions
       let opening = false, pickedIndex=null, landedPrize=null;
 
       const weightedPick = (arr)=>{
@@ -330,15 +325,14 @@
         if(!opening || pickedIndex!==null) return;
         pickedIndex = i;
 
-        // prize from server (демо — локально)
         let prize = weightedPick(data.prizes);
 
-        // apply flip
+        // flip chosen
         audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
         const holder = cards[i].el.querySelector('.flip');
         holder.classList.add('flipped');
         fillPrize(holder, prize);
-        holder.classList.add(glowClass(prize));
+        holder.classList.add(prize.rarity==='legendary'?'glow-b-orange':prize.rarity==='epic'?'glow-b-purple':prize.rarity==='rare'?'glow-b-blue':'');
 
         landedPrize = prize;
         placeRevealed(i);
@@ -351,7 +345,7 @@
           });
           audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy');
           hint.textContent = 'Ваш результат';
-          renderResult(); // show result buttons
+          renderResult();
         }, 400);
       }
 
@@ -360,18 +354,14 @@
         f.querySelector('.p-label').textContent = prize.label || 'Приз';
         f.querySelector('.p-rar').textContent = prize.rarity || 'rare';
       }
-      const glowClass = p => (p.rarity==='legendary'?'glow-b-orange':p.rarity==='epic'?'glow-b-purple':p.rarity==='rare'?'glow-b-blue':'');
 
-      // controls
       const actions = el('div'); actions.style.marginTop='12px';
       actions.innerHTML = `<button class="btn btn-primary" id="open">Открыть за ${data.price} ⭐</button>`;
       wrap.appendChild(actions);
       qs('#open',actions).onclick = ()=>{ startOpen(); };
 
-      // click handlers on cards
       cards.forEach((c,i)=> c.el.addEventListener('click',()=> flipPick(i)));
 
-      // result box
       function renderResult(){
         const box = el('div','result');
         box.innerHTML = `
@@ -403,12 +393,10 @@
     }
 
     function updateStars(){ const s=qs('#stars'); if(s) s.textContent = stars; }
-
     function pushFeed(prize,user){
       feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()});
     }
 
-    // toast
     function toast(text){
       let t = qs('#toast'); if(t) t.remove();
       t = el('div'); t.id='toast';
@@ -418,12 +406,10 @@
       t.textContent=text; document.body.appendChild(t); setTimeout(()=>t.remove(),1800);
     }
 
-    // tabbar active state (визуально)
     document.querySelectorAll('.tab').forEach(t=>{
       t.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');});
     });
 
-    // initial render
     render();
   </script>
 </body>
