@@ -58,7 +58,7 @@
     /* grid 2xN */
     .cases-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 
-    /* flip detail — UPDATED for mobile */
+    /* flip detail — compact for mobile */
     .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none}
     .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .2s,opacity .2s}
     .hand-card:first-child{margin-left:0}
@@ -209,7 +209,7 @@
       const [pickedIndex,setPickedIndex]=useState(null);
       const [landedPrize,setLandedPrize]=useState(null);
 
-      // COMPACT fan for mobile
+      // compact fan for mobile
       const baseTransform=(i,n)=>{
         const isNarrow = window.innerWidth <= 414;
         const spread = isNarrow ? 18 : 24;
@@ -425,7 +425,7 @@
             </footer>
           </div>
 
-          <!-- TABBAR -->
+          {/* TABBAR */}
           <div className="fixed bottom-0 left-0 right-0 px-4 py-3" style={{background:'rgba(0,0,0,.72)',backdropFilter:'blur(8px)',borderTop:'1px solid var(--border)'}}>
             <div className="mx-auto max-w-md tabbar">
               <button className={`tab-btn ${page==='profile'?'active':''}`} onClick={()=>{setSelected(null);setPage('profile')}}>
