@@ -17,12 +17,8 @@
   <!-- error catcher -->
   <script>
     (function(){
-      const show=(title,detail)=>{
-        try{const box=document.getElementById('err'); if(box){box.style.display='block';box.textContent=`${title}\n${detail||''}`;}}catch(_){}
-      };
-      window.onerror=(m,src,line,col,err)=>{
-        show(`JS error: ${m}`,[`source: ${src||'-'}`,`line: ${line||'-'}, col: ${col||'-'}`,`stack: ${(err&&err.stack)||'-'}`].join('\n'));
-      };
+      const show=(title,detail)=>{try{const box=document.getElementById('err');if(box){box.style.display='block';box.textContent=`${title}\n${detail||''}`;}}catch(_){}}; 
+      window.onerror=(m,src,line,col,err)=>show(`JS error: ${m}`,[`source: ${src||'-'}`,`line: ${line||'-'}, col: ${col||'-'}`,`stack: ${(err&&err.stack)||'-'}`].join('\n'));
       window.addEventListener('unhandledrejection',e=>show('Promise error',(e.reason&&e.reason.stack)||String(e.reason)));
     })();
   </script>
@@ -62,12 +58,16 @@
     /* grid 2xN */
     .cases-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 
-    /* flip detail */
-    .hand{position:relative;height:176px;display:flex;justify-content:center;align-items:flex-end;pointer-events:none}
-    .hand-card{position:relative;pointer-events:auto;margin-left:-44px;transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .2s,opacity .2s}
+    /* flip detail — UPDATED for mobile */
+    .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none}
+    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .2s,opacity .2s}
     .hand-card:first-child{margin-left:0}
-    .flip-card{width:118px;height:156px;position:relative;transform-style:preserve-3d;transition:transform 700ms cubic-bezier(.2,.8,.2,1);
-      border-radius:16px;box-shadow:0 16px 34px rgba(0,0,0,.42)}
+    .flip-card{
+      width:clamp(96px,28vw,118px);
+      height:clamp(128px,36vw,156px);
+      position:relative;transform-style:preserve-3d;transition:transform 700ms cubic-bezier(.2,.8,.2,1);
+      border-radius:16px;box-shadow:0 16px 34px rgba(0,0,0,.42)
+    }
     .flip-card.flipped{transform:rotateY(180deg)}
     .flip-face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
     .flip-face.front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2}
@@ -76,6 +76,10 @@
     .glow-rare-b{box-shadow:0 0 0 2px rgba(120,180,255,.55),0 0 20px rgba(120,180,255,.28)}
     .glow-epic-b{box-shadow:0 0 0 2px rgba(180,120,255,.60),0 0 22px rgba(180,120,255,.30)}
     .glow-legendary-b{box-shadow:0 0 0 2px rgba(255,122,26,.70),0 0 24px rgba(255,122,26,.35)}
+
+    .hand-card:hover{transform:translateY(-4px) scale(1.0);filter:brightness(1.04)}
+    @media (hover:none){.hand-card:hover{transform:none;filter:none}}
+    @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
 
     .btn-orange{background:linear-gradient(180deg,#f97316,#ea580c);color:#111;border:none;border-radius:18px;padding:.9rem 1.1rem;font-weight:800;
       box-shadow:0 8px 24px rgba(234,88,12,.28),0 0 0 1px rgba(234,88,12,.35) inset}
@@ -96,7 +100,7 @@
   <pre id="err" style="display:none;position:fixed;left:8px;bottom:64px;right:8px;max-height:40vh;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;z-index:9999"></pre>
 
   <script type="text/babel">
-    const {useState,useEffect,useMemo,useRef} = React;
+    const {useState,useEffect,useRef} = React;
     const tg = window.Telegram?.WebApp;
 
     /* ===== data ===== */
@@ -130,7 +134,7 @@
       return (a.weight||0)-(b.weight||0);
     }).slice(0,3);
 
-    /* audio from old index */
+    /* audio */
     class SpinAudio{
       constructor(){this.ctx=null;this.gain=null;}
       ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;this.ctx=new AC();this.gain=this.ctx.createGain();this.gain.gain.value=0.06;this.gain.connect(this.ctx.destination);}}
@@ -139,7 +143,7 @@
     }
     const audio=new SpinAudio();
 
-    /* ------- components ------- */
+    /* components */
     const MiniCards=({prizes})=>{
       const picks=top3Prizes(prizes);
       const fan=[{rot:-14,x:-16,z:10,s:0.98,ml:0},{rot:0,x:0,z:30,s:1.06,ml:-24},{rot:14,x:16,z:20,s:0.98,ml:-24}];
@@ -205,12 +209,23 @@
       const [pickedIndex,setPickedIndex]=useState(null);
       const [landedPrize,setLandedPrize]=useState(null);
 
-      const baseTransform=(i,n)=>{ const angle=-12+i*(24/Math.max(1,n-1)); const y=Math.abs(i-(n-1)/2)*3; return {angle,y}; };
-      const displacedStyle=(i,n,picked)=>{ const {angle,y}=baseTransform(i,n);
+      // COMPACT fan for mobile
+      const baseTransform=(i,n)=>{
+        const isNarrow = window.innerWidth <= 414;
+        const spread = isNarrow ? 18 : 24;
+        const start  = -spread/2;
+        const angle  = start + i * (spread / Math.max(1, n - 1));
+        const yLift  = isNarrow ? 2 : 3;
+        const y      = Math.abs(i - (n - 1) / 2) * yLift;
+        return {angle,y};
+      };
+      const displacedStyle=(i,n,picked)=>{
+        const {angle,y}=baseTransform(i,n);
+        const isNarrow = window.innerWidth <= 414;
         if(picked==null) return {transform:`rotate(${angle}deg) translateY(${y}px)`,zIndex:5};
-        if(i===picked) return {transform:`rotate(${angle}deg) translateY(${Math.max(0,y-2)}px) scale(1.06)`,zIndex:50};
-        const dir=i<picked?-1:1, distance=90+Math.abs(i-picked)*12, lift=10, ang=angle*0.8;
-        return {transform:`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(.96)`,zIndex:5-Math.abs(i-picked)};
+        if(i===picked) return {transform:`rotate(${angle}deg) translateY(${Math.max(0,y-(isNarrow?1:2))}px) scale(${isNarrow?1.03:1.06})`,zIndex:50};
+        const dir=i<picked?-1:1, distance=(isNarrow?56:90)+Math.abs(i-picked)*(isNarrow?8:12), lift=isNarrow?6:10, ang=angle*(isNarrow?0.9:0.8);
+        return {transform:`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(${isNarrow?0.965:0.96})`,zIndex:5-Math.abs(i-picked)};
       };
 
       const prepare=()=>{ setPhase('choosing'); setCards(Array(5).fill(null).map(()=>({prize:null,flipped:false,picked:false}))); setPickedIndex(null); setLandedPrize(null); };
@@ -218,31 +233,21 @@
       const onPick=async(i)=>{
         if(phase!=='choosing') return;
         setPhase('picking'); setPickedIndex(i); setCards(cs=>cs.map((c,idx)=>idx===i?{...c,picked:true}:c));
-
-        // получить приз (или локально с весами)
         let prize=null;
         try{
           const res=await fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId:data.id})});
-          if(res.ok){ const json=await res.json().catch(()=>({})); if(json && json.prize) prize=json.prize; }
+          if(res.ok){ const json=await res.json().catch(()=>({})); if(json&&json.prize) prize=json.prize; }
         }catch(_){}
         if(!prize||!prize.id){
-          const total=(data.prizes||[]).reduce((s,p)=>s+(p?.weight||0),0);
-          let r=Math.random()*Math.max(1,total);
-          prize=data.prizes?.[0]||null;
-          for(const p of (data.prizes||[])){ r-=(p?.weight||0); if(r<=0){ prize=p; break; } }
+          const total=(data.prizes||[]).reduce((s,p)=>s+(p?.weight||0),0); let r=Math.random()*Math.max(1,total);
+          prize=data.prizes?.[0]||null; for(const p of (data.prizes||[])){ r-=(p?.weight||0); if(r<=0){ prize=p; break; } }
         }
-
         audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
         setCards(cs=>cs.map((c,idx)=>idx===i?{...c,prize,flipped:true}:c));
         setPhase('revealed'); setLandedPrize(prize);
-
-        setTimeout(()=>{ // показать остальные
-          setCards(cs=>{
-            const chosenId=prize&&prize.id, pool=Array.isArray(data.prizes)?data.prizes.slice():[];
-            const rest=chosenId?pool.filter(p=>p.id!==chosenId):pool, shuffled=rest.slice().sort(()=>Math.random()-0.5); let ri=0;
-            return cs.map((c,idx)=>idx===i?c:{...c,prize:(shuffled[ri++]||rest[0]||prize),flipped:true});
-          });
-        },380);
+        setTimeout(()=>{ setCards(cs=>{ const chosenId=prize&&prize.id; const pool=Array.isArray(data.prizes)?data.prizes.slice():[];
+          const rest=chosenId?pool.filter(p=>p.id!==chosenId):pool; const shuffled=rest.slice().sort(()=>Math.random()-0.5); let ri=0;
+          return cs.map((c,idx)=>idx===i?c:{...c,prize:(shuffled[ri++]||rest[0]||prize),flipped:true}); }); },380);
         setTimeout(()=>{audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy');},150);
       };
 
@@ -254,7 +259,6 @@
 
       return(
         <>
-          {/* live feed identical to home */}
           <LiveFeed events={live}/>
           <div className="flex items-center gap-2 mb-4">
             <button onClick={onBack} className="btn-secondary">← Назад</button>
@@ -323,7 +327,6 @@
         {user:'@anna',emoji:'🚀',label:'Легендарка',time:new Date(Date.now()-6e4).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})},
       ]);
 
-      // emulate global drops
       useEffect(()=>{
         const users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
         const all=cases.flatMap(c=>c.prizes);
@@ -351,7 +354,6 @@
       const onSellPrize=(p)=>{const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`);};
       const onClaimPrize=(p)=>{if(p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен');};
 
-      /* pages */
       const Home=()=>(
         <>
           <LiveFeed events={feed}/>
@@ -367,11 +369,9 @@
 
       const Profile=()=>(
         <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#161a1f] flex items-center justify-center">👤</div>
-              <div><div className="font-semibold">@username</div><div className="text-sm" style={{color:'var(--nardo)'}}>⭐ {stars}</div></div>
-            </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#161a1f] flex items-center justify-center">👤</div>
+            <div><div className="font-semibold">@username</div><div className="text-sm" style={{color:'var(--nardo)'}}>⭐ {stars}</div></div>
           </div>
         </div>
       );
@@ -396,7 +396,6 @@
       return(
         <div className="min-h-dvh pb-20 px-4 py-5">
           <div className="mx-auto max-w-md">
-            {/* header */}
             <header className="flex items-center justify-between">
               <h1 className="text-2xl font-bold">Кейсы за ⭐</h1>
               <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
@@ -426,7 +425,7 @@
             </footer>
           </div>
 
-          {/* TABBAR (всегда) */}
+          <!-- TABBAR -->
           <div className="fixed bottom-0 left-0 right-0 px-4 py-3" style={{background:'rgba(0,0,0,.72)',backdropFilter:'blur(8px)',borderTop:'1px solid var(--border)'}}>
             <div className="mx-auto max-w-md tabbar">
               <button className={`tab-btn ${page==='profile'?'active':''}`} onClick={()=>{setSelected(null);setPage('profile')}}>
@@ -441,7 +440,6 @@
             </div>
           </div>
 
-          {/* toasts */}
           {toast && <Toast text={toast} onClose={()=>setToast(null)}/>}
         </div>
       );
