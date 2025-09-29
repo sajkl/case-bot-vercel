@@ -1,451 +1,430 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Кейсы за ⭐ — Telegram Mini App</title>
-
-  <!-- libs -->
-  <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
-  <script>tailwind.config={darkMode:'class',theme:{extend:{}}};</script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Кейсы за ⭐ — Mini App</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- error catcher -->
-  <script>
-    (function(){
-      const show=(title,detail)=>{try{const box=document.getElementById('err');if(box){box.style.display='block';box.textContent=`${title}\n${detail||''}`;}}catch(_){}}; 
-      window.onerror=(m,src,line,col,err)=>show(`JS error: ${m}`,[`source: ${src||'-'}`,`line: ${line||'-'}, col: ${col||'-'}`,`stack: ${(err&&err.stack)||'-'}`].join('\n'));
-      window.addEventListener('unhandledrejection',e=>show('Promise error',(e.reason&&e.reason.stack)||String(e.reason)));
-    })();
-  </script>
+  <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
 
   <style>
     :root{
-      --black:#0A0B0C; --white:#FFFFFF; --nardo:#8E9492; --orange:#FF7A1A;
-      --border:#272a2e; --card:#0b0f14;
+      /* brand tokens */
+      --bg-dark:#0a0b0c; --bg-card:#0b0f14; --border:#272a2e;
+      --text:#ffffff; --muted:#8e9492; --orange:#ff7a1a;
+      --blue:#7bb5ff; --purple:#b68aff;
+      --radius-xl:16px; --shadow-lg:0 16px 34px rgba(0,0,0,.42);
+      --ease:cubic-bezier(.2,.8,.2,1);
     }
-    html,body,#root{height:100%}
+    *{box-sizing:border-box} html,body{height:100%}
     body{
+      margin:0; color:var(--text); font-family:'Manrope',system-ui,Segoe UI,Roboto,Arial,sans-serif;
       background:
-        radial-gradient(1200px 800px at 15% -10%, #14181e 0%, transparent 60%),
-        radial-gradient(1000px 700px at 120% 0%, #191a1f 0%, transparent 55%),
+        radial-gradient(1100px 700px at 15% -10%, #14181e 0%, transparent 60%),
+        radial-gradient(900px 600px at 115% 0%, #191a1f 0%, transparent 55%),
         linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);
-      color:var(--white); font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
+    a{color:inherit;text-decoration:none}
+
+    .container{max-width:960px;margin:0 auto;padding:20px 16px 96px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
     @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
-    .fade-in{animation:fadeInUp .38s cubic-bezier(.2,.8,.2,1) both;}
+    .fade{animation:fadeInUp .38s var(--ease) both}
 
-    /* live feed */
-    .hfeed-wrap{margin-top:10px;margin-bottom:12px}
-    .hfeed{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-    .hfeed::-webkit-scrollbar{display:none}
-    .hfeed-item{min-width:240px;border-radius:14px;border:1px solid var(--border);
-      background:linear-gradient(135deg,#14171b,#0d0f12);padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+    /* header */
+    .title{font-size:32px;font-weight:800;letter-spacing:-.01em;margin:0}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#ff8a2a,#ff7a1a);
+      color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 10px 26px rgba(255,122,26,.28)}
 
-    /* mini fan (top3) */
-    .mini-fan{position:relative;height:70px;display:flex;align-items:flex-end;justify-content:center}
-    .mini-card{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 12px 28px rgba(0,0,0,.35)}
-    .glow-common{box-shadow:0 0 0 2px rgba(142,148,146,.45) inset,0 12px 26px rgba(0,0,0,.35)}
-    .glow-rare{box-shadow:0 0 0 2px rgba(120,180,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
-    .glow-epic{box-shadow:0 0 0 2px rgba(180,120,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
-    .glow-legendary{box-shadow:0 0 0 2px rgba(255,122,26,.70) inset,0 12px 26px rgba(0,0,0,.35)}
+    /* feed */
+    .feed{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 2px;margin-top:12px}
+    .feed::-webkit-scrollbar{display:none}
+    .feed-item{min-width:280px;border:1px solid var(--border);background:linear-gradient(135deg,#14171b,#0d0f12);
+      border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+    .feed-text{display:flex;align-items:center;gap:10px;min-width:0}
+    .feed-time{font-size:12px;color:var(--muted)}
+    .emoji{font-size:20px}
 
-    /* grid 2xN */
-    .cases-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+    /* grid */
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
+    @media (min-width:820px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
 
-    /* flip detail — compact for mobile */
-    .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none}
-    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .2s,opacity .2s}
+    /* case card */
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:16px;
+      box-shadow:var(--shadow-lg);transition:transform .18s var(--ease), filter .18s var(--ease);cursor:pointer}
+    .card:hover{transform:translateY(-4px);filter:brightness(1.04)}
+    .fan{position:relative;height:74px;display:flex;align-items:flex-end;justify-content:center}
+    .mini{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+    .mini.glow-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini.glow-purple{box-shadow:0 0 0 2px rgba(182,138,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini.glow-orange{box-shadow:0 0 0 2px rgba(255,122,26,.7) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini:nth-child(1){transform:translateX(-16px) rotate(-14deg) scale(.98)}
+    .mini:nth-child(2){transform:translateX(0) rotate(0) scale(1.06);z-index:2;margin-left:-24px}
+    .mini:nth-child(3){transform:translateX(16px) rotate(14deg) scale(.98);margin-left:-24px}
+
+    .card-title{font-size:18px;font-weight:800;text-align:center;margin:12px 0 4px}
+    .card-sub{font-size:12px;color:var(--muted);text-align:center;margin:0}
+    .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+
+    /* detail: flip cards */
+    .detail-head{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer}
+    .btn-primary{background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;
+      box-shadow:0 8px 24px rgba(255,122,26,.28)}
+    .btn-secondary{background:#101317;color:#e4e4e7;border:1px solid var(--border);border-radius:16px;padding:8px 12px;font-weight:700}
+
+    .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none;margin-top:8px}
+    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s var(--ease),filter .2s,opacity .2s}
     .hand-card:first-child{margin-left:0}
-    .flip-card{
-      width:clamp(96px,28vw,118px);
-      height:clamp(128px,36vw,156px);
-      position:relative;transform-style:preserve-3d;transition:transform 700ms cubic-bezier(.2,.8,.2,1);
-      border-radius:16px;box-shadow:0 16px 34px rgba(0,0,0,.42)
-    }
-    .flip-card.flipped{transform:rotateY(180deg)}
-    .flip-face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
-    .flip-face.front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2}
-    .flip-face.back{background:#0f1114;transform:rotateY(180deg)}
-    .glow-common-b{box-shadow:0 0 0 2px rgba(142,148,146,.45),0 0 18px rgba(142,148,146,.22)}
-    .glow-rare-b{box-shadow:0 0 0 2px rgba(120,180,255,.55),0 0 20px rgba(120,180,255,.28)}
-    .glow-epic-b{box-shadow:0 0 0 2px rgba(180,120,255,.60),0 0 22px rgba(180,120,255,.30)}
-    .glow-legendary-b{box-shadow:0 0 0 2px rgba(255,122,26,.70),0 0 24px rgba(255,122,26,.35)}
+    .flip{width:clamp(96px,28vw,118px);height:clamp(128px,36vw,156px);position:relative;transform-style:preserve-3d;transition:transform 700ms var(--ease);
+      border-radius:16px;box-shadow:var(--shadow-lg)}
+    .flip.flipped{transform:rotateY(180deg)}
+    .face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+    .front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2}
+    .back{background:#0f1114;transform:rotateY(180deg)}
+    .rar-chip{margin-top:6px;display:inline-block;padding:2px 6px;border-radius:999px;font-size:10px;background:var(--muted);color:#111}
+    .glow-b-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55),0 0 20px rgba(123,181,255,.28)}
+    .glow-b-purple{box-shadow:0 0 0 2px rgba(182,138,255,.60),0 0 22px rgba(182,138,255,.30)}
+    .glow-b-orange{box-shadow:0 0 0 2px rgba(255,122,26,.70),0 0 24px rgba(255,122,26,.35)}
 
-    .hand-card:hover{transform:translateY(-4px) scale(1.0);filter:brightness(1.04)}
-    @media (hover:none){.hand-card:hover{transform:none;filter:none}}
-    @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
-
-    .btn-orange{background:linear-gradient(180deg,#f97316,#ea580c);color:#111;border:none;border-radius:18px;padding:.9rem 1.1rem;font-weight:800;
-      box-shadow:0 8px 24px rgba(234,88,12,.28),0 0 0 1px rgba(234,88,12,.35) inset}
-    .btn-secondary{background:#101317;color:#e4e4e7;border:1px solid var(--border);border-radius:16px;padding:.8rem 1rem;font-weight:700}
+    .result{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);
+      background:var(--bg-card);border-radius:16px;padding:10px 12px}
 
     /* tabbar */
-    .tabbar{display:flex;gap:10px}
-    .tab-btn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-      padding:10px 6px;border-radius:14px;border:1px solid var(--border);background:#0f1216;font-weight:800;transition:transform .12s,filter .15s,border-color .25s}
-    .tab-btn:hover{filter:brightness(1.06)}
-    .tab-btn:active{transform:scale(.96)}
-    .tab-btn.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
+      border-top:1px solid var(--border);z-index:5}
+    .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
+    .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);
+      border-radius:14px;padding:10px 6px;font-weight:800;transition:filter .15s var(--ease), transform .12s var(--ease), border-color .25s var(--ease)}
+    .tab:active{transform:scale(.96)}
+    .tab.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset}
+    .tab small{font-size:12px;color:#cdd0d4}
+
+    /* cards compact on very small screens */
+    @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
   </style>
 </head>
-
 <body>
-  <div id="root"></div>
-  <pre id="err" style="display:none;position:fixed;left:8px;bottom:64px;right:8px;max-height:40vh;overflow:auto;background:#111;color:#fff;padding:8px;border-radius:8px;z-index:9999"></pre>
+  <main class="container" id="app"></main>
 
-  <script type="text/babel">
-    const {useState,useEffect,useRef} = React;
+  <nav class="tabbar">
+    <div class="tabs">
+      <a href="#" class="tab active" data-tab="profile"><div>👤</div><small>Профиль</small></a>
+      <a href="#" class="tab" data-tab="voting"><div>🗳️</div><small>Голосование</small></a>
+      <a href="#" class="tab" data-tab="inventory"><div>🎒</div><small>Инвентарь</small></a>
+    </div>
+  </nav>
+
+  <script>
+    // ===== Mini helpers =====
     const tg = window.Telegram?.WebApp;
+    try{ tg?.ready?.(); tg?.expand?.(); }catch(_){}
 
-    /* ===== data ===== */
+    const qs = (sel, root=document) => root.querySelector(sel);
+    const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+
+    // ===== Demo data (можно менять) =====
     const START_STARS = 25;
-    const DEFAULT_CASES = [
-      { id:'lite', title:'Лайт-кейс', priceStars:3, description:'Дешёвый вход',
+    const CASES = [
+      { id:'lite', title:'Лайт-кейс', price:3, sub:'Дешёвый вход',
         prizes:[{id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
-                {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,starsValue:1},
-                {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,starsValue:5}]},
-      { id:'starter', title:'Стартовый кейс', priceStars:6, description:'Для новичков',
+                {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,stars:1},
+                {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,stars:5}]},
+      { id:'starter', title:'Стартовый кейс', price:6, sub:'Для новичков',
         prizes:[{id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
                 {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
-                {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,starsValue:20}]},
-      { id:'pro', title:'Про-кейс', priceStars:12, description:'Большой риск',
+                {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,stars:20}]},
+      { id:'pro', title:'Про-кейс', price:12, sub:'Большой риск',
         prizes:[{id:'p2',label:'Скин',emoji:'🎨',rarity:'rare',weight:28},
-                {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,starsValue:10},
-                {id:'p5',label:'60⭐ джекпот',emoji:'🏆',rarity:'legendary',weight:5,starsValue:60}]},
-      { id:'ultra', title:'Ультра-кейс', priceStars:30, description:'Королевские награды',
+                {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,stars:10},
+                {id:'p5',label:'60⭐ джекпот',emoji:'🏆',rarity:'legendary',weight:5,stars:60}]},
+      { id:'ultra', title:'Ультра-кейс', price:30, sub:'Королевские награды',
         prizes:[{id:'u2',label:'Редкий эффект',emoji:'🧿',rarity:'epic',weight:28},
-                {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,starsValue:120},
-                {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,starsValue:300}]},
+                {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,stars:120},
+                {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}]},
     ];
-    const SELL_BY_RARITY = { common:1, rare:2, epic:6, legendary:20 };
-    const rarityOrder={legendary:4,epic:3,rare:2,common:1};
-    const glowMini=(r)=>({common:'glow-common',rare:'glow-rare',epic:'glow-epic',legendary:'glow-legendary'}[r]||'glow-common');
-    const glowBig =(r)=>({common:'glow-common-b',rare:'glow-rare-b',epic:'glow-epic-b',legendary:'glow-legendary-b'}[r]||'glow-common-b');
-    const top3Prizes=(list=[])=>list.slice().sort((a,b)=>{
+    const SELL = { common:1, rare:2, epic:6, legendary:20 };
+    const rarityGlowMini = r => ({common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'}[r]||'glow-blue');
+    const rarityGlowBig  = r => ({common:'',      rare:'glow-b-blue', ep ic:'glow-b-purple',legendary:'glow-b-orange'}[r]||'');
+    const rarityOrder = {legendary:4,epic:3,rare:2,common:1};
+
+    const top3 = (arr) => arr.slice().sort((a,b)=>{
       const ra=rarityOrder[a.rarity]||0, rb=rarityOrder[b.rarity]||0;
       if(rb!==ra) return rb-ra;
-      const sa=a.starsValue||0, sb=b.starsValue||0; if(sb!==sa) return sb-sa;
+      const sa=a.stars||0, sb=b.stars||0; if(sb!==sa) return sb-sa;
       return (a.weight||0)-(b.weight||0);
     }).slice(0,3);
 
-    /* audio */
+    // ===== State =====
+    let stars = START_STARS;
+    let selected = null; // case id
+    const feed = []; // live events
+
+    // simulate global feed
+    (function seedFeed(){
+      const users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
+      const all=CASES.flatMap(c=>c.prizes);
+      for(let i=0;i<4;i++){
+        const p=all[Math.floor(Math.random()*all.length)];
+        const u=users[Math.floor(Math.random()*users.length)];
+        feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
+      }
+      setInterval(()=>{
+        const p=all[Math.floor(Math.random()*all.length)];
+        const u=users[Math.floor(Math.random()*users.length)];
+        feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});
+        render(); // update live
+      }, 6500+Math.random()*1500);
+    })();
+
+    const ts = () => new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+    // ===== Audio =====
     class SpinAudio{
       constructor(){this.ctx=null;this.gain=null;}
       ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;this.ctx=new AC();this.gain=this.ctx.createGain();this.gain.gain.value=0.06;this.gain.connect(this.ctx.destination);}}
       flip(){this.ensure();if(!this.ctx||!this.gain)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='triangle';o.frequency.value=520;o.connect(g).connect(this.gain);const t=this.ctx.currentTime;g.gain.setValueAtTime(0.05,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);o.start(t);o.stop(t+0.16);}
       win(){this.ensure();if(!this.ctx||!this.gain)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='sine';o.frequency.value=880;o.connect(g).connect(this.gain);const t=this.ctx.currentTime;g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);o.frequency.exponentialRampToValueAtTime(1320,t+0.35);o.start(t);o.stop(t+0.4);}
     }
-    const audio=new SpinAudio();
+    const audio = new SpinAudio();
 
-    /* components */
-    const MiniCards=({prizes})=>{
-      const picks=top3Prizes(prizes);
-      const fan=[{rot:-14,x:-16,z:10,s:0.98,ml:0},{rot:0,x:0,z:30,s:1.06,ml:-24},{rot:14,x:16,z:20,s:0.98,ml:-24}];
-      return(
-        <div className="mini-fan">
-          {picks.map((p,i)=>(
-            <div key={p.id||i} className={`mini-card ${glowMini(p.rarity)}`}
-              style={{transform:`translateX(${fan[i].x}px) rotate(${fan[i].rot}deg) scale(${fan[i].s})`,zIndex:fan[i].z,marginLeft:i===0?0:fan[i].ml}}>
-              <span className="text-lg leading-none">{p.emoji||'🎁'}</span>
-            </div>
-          ))}
-        </div>
-      );
-    };
+    // ===== Views =====
+    function render(){
+      const root = qs('#app'); root.innerHTML = '';
+      // header
+      const header = el('div','row fade');
+      header.innerHTML = `<h1 class="title">${selected? 'Открытие кейса' : 'Кейсы за ⭐'}</h1>
+                          <div class="pill"><span id="stars">${stars}</span><span>⭐</span></div>`;
+      root.appendChild(header);
 
-    const HomeCaseCard=({c,onClick})=>(
-      <div onClick={onClick} role="button" className="rounded-2xl p-4 border transition cursor-pointer fade-in"
-        style={{background:'var(--card)',borderColor:'var(--border)'}}>
-        <MiniCards prizes={c.prizes}/>
-        <div className="mt-3 flex flex-col items-center justify-center text-center">
-          <div className="text-base font-extrabold">{c.title}</div>
-          <div className="text-xs" style={{color:'var(--nardo)'}}>{c.description}</div>
-          <div className="mt-2 text-xs" style={{color:'var(--nardo)'}}>Цена: <span style={{color:'#fff'}}>{c.priceStars} ⭐</span></div>
-        </div>
-      </div>
-    );
+      // live feed
+      root.appendChild(renderFeed());
 
-    const LiveFeed=({events})=>{
-      const ref=useRef(null);
-      useEffect(()=>{ if(ref.current){ ref.current.scrollLeft = ref.current.scrollWidth; }},[events]);
-      return(
-        <div className="hfeed-wrap">
-          <div className="hfeed" ref={ref}>
-            {events.map((e,i)=>(
-              <div key={i} className="hfeed-item">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="text-xl">{e.emoji}</div>
-                  <div className="truncate text-sm"><span style={{color:'var(--nardo)'}}>{e.user}</span> получил <span className="font-semibold">{e.label}</span></div>
-                </div>
-                <div className="text-[11px]" style={{color:'var(--nardo)'}}>{e.time}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    };
+      // content
+      if(!selected) root.appendChild(renderHome());
+      else root.appendChild(renderDetail(selected));
 
-    function CardFront({prize}){
-      return(
-        <div className="flip-face back">
-          <div className="flex flex-col items-center justify-center h-full p-3 text-center">
-            <div className="text-4xl">{prize?.emoji ?? '🎁'}</div>
-            <div className="mt-2 text-sm font-semibold">{prize?.label ?? 'Приз'}</div>
-            {prize ? <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]" style={{background:'var(--nardo)',color:'#111'}}>{prize.rarity}</div> : null}
-          </div>
-        </div>
-      );
+      // footer note
+      const foot = el('div','fade'); foot.style.marginTop='16px';
+      foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
+      foot.innerHTML = `Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.`;
+      root.appendChild(foot);
     }
 
-    function CaseDetail({data,onBack,onOpenServer,opening,onClaimPrize,onSellPrize,pushFeed,live}){
-      const [phase,setPhase]=useState('idle');
-      const [cards,setCards]=useState(Array(5).fill(null).map(()=>({prize:null,flipped:false,picked:false})));
-      const [pickedIndex,setPickedIndex]=useState(null);
-      const [landedPrize,setLandedPrize]=useState(null);
+    function renderFeed(){
+      const wrap = el('section','feed fade');
+      feed.slice(-20).forEach(e=>{
+        const it = el('div','feed-item');
+        it.innerHTML = `
+          <div class="feed-text">
+            <div class="emoji">${e.emoji}</div>
+            <div class="txt"><span style="color:var(--muted)">${e.user}</span>&nbsp;получил&nbsp;<b>${e.label}</b></div>
+          </div>
+          <div class="feed-time">${e.time}</div>`;
+        wrap.appendChild(it);
+      });
+      setTimeout(()=>{wrap.scrollLeft = wrap.scrollWidth},0);
+      return wrap;
+    }
 
-      // compact fan for mobile
+    function renderHome(){
+      const grid = el('section','grid fade');
+      CASES.forEach(c=>{
+        const card = el('article','card');
+        const picks = top3(c.prizes);
+        card.innerHTML = `
+          <div class="fan">
+            ${picks.map(p=>`<div class="mini ${'glow-'+rarityGlowMini(p.rarity).split('glow-')[1]}"><span>${p.emoji||'🎁'}</span></div>`).join('')}
+          </div>
+          <h3 class="card-title">${c.title}</h3>
+          <p class="card-sub">${c.sub}</p>
+          <div class="meta">Цена: <b style="color:#fff">${c.price} ⭐</b></div>`;
+        card.addEventListener('click',()=>{ selected=c.id; window.scrollTo({top:0,behavior:'smooth'}); render(); });
+        grid.appendChild(card);
+      });
+      return grid;
+    }
+
+    function renderDetail(caseId){
+      const data = CASES.find(x=>x.id===caseId);
+      const wrap = el('section','fade');
+
+      const head = el('div','detail-head');
+      head.innerHTML = `<button class="btn btn-secondary" id="back">← Назад</button>
+                        <div style="font-size:18px;font-weight:800">${data.title}</div>
+                        <div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: ${data.price} ⭐</div>`;
+      wrap.appendChild(head);
+      qs('#back', head).onclick = ()=>{ selected=null; render(); };
+
+      // status text
+      const hint = el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px';
+      hint.textContent = 'Нажми «Открыть», чтобы начать';
+      wrap.appendChild(hint);
+
+      // hand of cards
+      const hand = el('div','hand'); wrap.appendChild(hand);
+      const cards = Array.from({length:5},()=>({el:null, prize:null, flipped:false, picked:false}));
+      for(let i=0;i<5;i++){
+        const holder = el('div','hand-card');
+        const f = el('div','flip');
+        f.innerHTML = `<div class="face front"><div style="font-size:32px">?</div></div>
+                       <div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center">
+                         <div style="font-size:34px" class="p-emoji">🎁</div>
+                         <div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div>
+                         <div class="rar-chip p-rar">rarity</div>
+                       </div></div>`;
+        holder.appendChild(f);
+        hand.appendChild(holder);
+        cards[i].el = holder;
+      }
+
+      // layout helpers
       const baseTransform=(i,n)=>{
-        const isNarrow = window.innerWidth <= 414;
-        const spread = isNarrow ? 18 : 24;
-        const start  = -spread/2;
-        const angle  = start + i * (spread / Math.max(1, n - 1));
-        const yLift  = isNarrow ? 2 : 3;
-        const y      = Math.abs(i - (n - 1) / 2) * yLift;
+        const narrow = window.innerWidth <= 414;
+        const spread = narrow?18:24, start=-spread/2;
+        const angle = start + i * (spread / Math.max(1, n-1));
+        const y = Math.abs(i - (n-1)/2) * (narrow?2:3);
         return {angle,y};
       };
-      const displacedStyle=(i,n,picked)=>{
-        const {angle,y}=baseTransform(i,n);
-        const isNarrow = window.innerWidth <= 414;
-        if(picked==null) return {transform:`rotate(${angle}deg) translateY(${y}px)`,zIndex:5};
-        if(i===picked) return {transform:`rotate(${angle}deg) translateY(${Math.max(0,y-(isNarrow?1:2))}px) scale(${isNarrow?1.03:1.06})`,zIndex:50};
-        const dir=i<picked?-1:1, distance=(isNarrow?56:90)+Math.abs(i-picked)*(isNarrow?8:12), lift=isNarrow?6:10, ang=angle*(isNarrow?0.9:0.8);
-        return {transform:`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(${isNarrow?0.965:0.96})`,zIndex:5-Math.abs(i-picked)};
+      const placeIdle = ()=>{
+        cards.forEach((c,i)=>{
+          const {angle,y}=baseTransform(i,cards.length);
+          c.el.style.transform = `rotate(${angle}deg) translateY(${y}px)`;
+          c.el.style.zIndex = 5;
+        });
+      };
+      const placeRevealed=(picked)=>{
+        const narrow = window.innerWidth <= 414;
+        cards.forEach((c,i)=>{
+          const {angle,y}=baseTransform(i,cards.length);
+          if(i===picked){ c.el.style.transform=`rotate(${angle}deg) translateY(${Math.max(0,y-(narrow?1:2))}px) scale(${narrow?1.03:1.06})`; c.el.style.zIndex=50; return; }
+          const dir=i<picked?-1:1, distance=(narrow?56:90)+Math.abs(i-picked)*(narrow?8:12), lift=narrow?6:10, ang=angle*(narrow?0.9:0.8);
+          c.el.style.transform=`rotate(${ang}deg) translate(${dir*distance}px, ${y+lift}px) scale(${narrow?0.965:0.96})`;
+          c.el.style.zIndex = 5-Math.abs(i-picked);
+        });
       };
 
-      const prepare=()=>{ setPhase('choosing'); setCards(Array(5).fill(null).map(()=>({prize:null,flipped:false,picked:false}))); setPickedIndex(null); setLandedPrize(null); };
+      placeIdle();
 
-      const onPick=async(i)=>{
-        if(phase!=='choosing') return;
-        setPhase('picking'); setPickedIndex(i); setCards(cs=>cs.map((c,idx)=>idx===i?{...c,picked:true}:c));
-        let prize=null;
-        try{
-          const res=await fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId:data.id})});
-          if(res.ok){ const json=await res.json().catch(()=>({})); if(json&&json.prize) prize=json.prize; }
-        }catch(_){}
-        if(!prize||!prize.id){
-          const total=(data.prizes||[]).reduce((s,p)=>s+(p?.weight||0),0); let r=Math.random()*Math.max(1,total);
-          prize=data.prizes?.[0]||null; for(const p of (data.prizes||[])){ r-=(p?.weight||0); if(r<=0){ prize=p; break; } }
-        }
-        audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
-        setCards(cs=>cs.map((c,idx)=>idx===i?{...c,prize,flipped:true}:c));
-        setPhase('revealed'); setLandedPrize(prize);
-        setTimeout(()=>{ setCards(cs=>{ const chosenId=prize&&prize.id; const pool=Array.isArray(data.prizes)?data.prizes.slice():[];
-          const rest=chosenId?pool.filter(p=>p.id!==chosenId):pool; const shuffled=rest.slice().sort(()=>Math.random()-0.5); let ri=0;
-          return cs.map((c,idx)=>idx===i?c:{...c,prize:(shuffled[ri++]||rest[0]||prize),flipped:true}); }); },380);
-        setTimeout(()=>{audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy');},150);
+      // open actions
+      let opening = false, pickedIndex=null, landedPrize=null;
+
+      const weightedPick = (arr)=>{
+        const total = arr.reduce((s,p)=>s+(p.weight||0),0) || 1;
+        let r = Math.random()*total;
+        for(const p of arr){ r -= (p.weight||0); if(r<=0) return p; }
+        return arr[arr.length-1];
       };
 
-      const onStart=async()=>{
+      function startOpen(){
         if(opening) return;
-        const ok=await onOpenServer(data);
-        if(ok) prepare();
-      };
+        if(stars < data.price){ toast('Недостаточно ⭐'); tg?.HapticFeedback?.notificationOccurred?.('warning'); return; }
+        opening = true; stars -= data.price; updateStars();
+        tg?.HapticFeedback?.impactOccurred?.('medium');
+        hint.textContent = 'Выбери одну карту';
+      }
 
-      return(
-        <>
-          <LiveFeed events={live}/>
-          <div className="flex items-center gap-2 mb-4">
-            <button onClick={onBack} className="btn-secondary">← Назад</button>
-            <div className="text-xl font-semibold">{data.title}</div>
-            <div className="ml-auto text-sm" style={{color:'var(--nardo)'}}>Цена: {data.priceStars} ⭐</div>
+      function flipPick(i){
+        if(!opening || pickedIndex!==null) return;
+        pickedIndex = i;
+
+        // prize from server (демо — локально)
+        let prize = weightedPick(data.prizes);
+
+        // apply flip
+        audio.flip(); tg?.HapticFeedback?.selectionChanged?.();
+        const holder = cards[i].el.querySelector('.flip');
+        holder.classList.add('flipped');
+        fillPrize(holder, prize);
+        holder.classList.add(glowClass(prize));
+
+        landedPrize = prize;
+        placeRevealed(i);
+        setTimeout(()=>{ // reveal rest
+          cards.forEach((c,idx)=>{
+            if(idx===i) return;
+            const alt = weightedPick(data.prizes);
+            const f = c.el.querySelector('.flip');
+            f.classList.add('flipped'); fillPrize(f, alt);
+          });
+          audio.win(); tg?.HapticFeedback?.impactOccurred?.('heavy');
+          hint.textContent = 'Ваш результат';
+          renderResult(); // show result buttons
+        }, 400);
+      }
+
+      function fillPrize(f, prize){
+        f.querySelector('.p-emoji').textContent = prize.emoji || '🎁';
+        f.querySelector('.p-label').textContent = prize.label || 'Приз';
+        f.querySelector('.p-rar').textContent = prize.rarity || 'rare';
+      }
+      const glowClass = p => (p.rarity==='legendary'?'glow-b-orange':p.rarity==='epic'?'glow-b-purple':p.rarity==='rare'?'glow-b-blue':'');
+
+      // controls
+      const actions = el('div'); actions.style.marginTop='12px';
+      actions.innerHTML = `<button class="btn btn-primary" id="open">Открыть за ${data.price} ⭐</button>`;
+      wrap.appendChild(actions);
+      qs('#open',actions).onclick = ()=>{ startOpen(); };
+
+      // click handlers on cards
+      cards.forEach((c,i)=> c.el.addEventListener('click',()=> flipPick(i)));
+
+      // result box
+      function renderResult(){
+        const box = el('div','result');
+        box.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:22px">${landedPrize.emoji||'🎁'}</div>
+            <div style="font-size:14px">
+              <div style="font-weight:800">${landedPrize.label}</div>
+              <div class="rar-chip">${landedPrize.rarity}</div>
+            </div>
           </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" id="sell">Продать за ${(SELL[landedPrize.rarity]||1)} ⭐</button>
+            <button class="btn btn-primary" id="claim">Забрать</button>
+          </div>`;
+        wrap.appendChild(box);
 
-          <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-            <div className="text-sm" style={{color:'var(--nardo)'}}>
-              {phase==='idle'?'Нажми «Открыть», чтобы начать':(phase==='choosing'?'Выбери одну карту':'Ваш результат')}
-            </div>
+        qs('#sell',box).onclick = ()=>{
+          const v = SELL[landedPrize.rarity]||1; stars += v; updateStars(); toast(`Продано: +${v} ⭐`);
+          selected=null; render();
+        };
+        qs('#claim',box).onclick = ()=>{
+          if(landedPrize.stars) { stars += landedPrize.stars; updateStars(); }
+          pushFeed(landedPrize,'@you'); toast('Предмет добавлен');
+          selected=null; render();
+        };
+      }
 
-            <div className="mt-3 hand">
-              {cards.map((card,idx)=>(
-                <div key={idx} className="hand-card"
-                  style={phase==='revealed'?displacedStyle(idx,cards.length,pickedIndex):(()=>{const {angle,y}=baseTransform(idx,cards.length);return{transform:`rotate(${angle}deg) translateY(${y}px)`,zIndex:5}})()}>
-                  <div className={`flip-card ${card?.flipped?'flipped':''} ${(!card?.flipped||!card?.prize)?'':glowBig(card.prize.rarity)}`}
-                       onClick={()=>phase==='choosing'&&onPick(idx)}>
-                    <div className="flip-face front"><div className="text-4xl">?</div></div>
-                    <CardFront prize={card?.prize}/>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5">
-              <button className="btn-orange w-full" onClick={onStart} disabled={opening} style={opening?{filter:'grayscale(.2) opacity(.7)'}:undefined}>
-                Открыть за {data.priceStars} ⭐
-              </button>
-            </div>
-
-            {phase==='revealed'&&landedPrize&&(
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 border"
-                   style={{borderColor:'var(--border)',background:'var(--card)'}}>
-                <div className="flex items-center gap-2">
-                  <div className="text-2xl">{landedPrize.emoji||'🎁'}</div>
-                  <div className="text-sm">
-                    <div className="font-semibold">{landedPrize.label}</div>
-                    <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px]" style={{background:'var(--nardo)',color:'#111'}}>{landedPrize.rarity}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="btn-secondary" onClick={()=>onSellPrize(landedPrize)}>Продать за {(SELL_BY_RARITY[landedPrize.rarity]||1)} ⭐</button>
-                  <button className="btn-orange" onClick={()=>{onClaimPrize(landedPrize); pushFeed(landedPrize,'@you');}}>Забрать</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      );
+      return wrap;
     }
 
-    const Toast=({text,onClose})=>{useEffect(()=>{const t=setTimeout(onClose,2000);return()=>clearTimeout(t);},[onClose]);return <div className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-orange-500 text-black shadow-xl z-[60]">{text}</div>};
+    function updateStars(){ const s=qs('#stars'); if(s) s.textContent = stars; }
 
-    /* ===== APP ===== */
-    function App(){
-      const [cases]=useState(DEFAULT_CASES);
-      const [stars,setStars]=useState(START_STARS);
-      const [opening,setOpening]=useState(false);
-      const [selected,setSelected]=useState(null);
-      const [toast,setToast]=useState(null);
-      const [page,setPage]=useState('home'); // home | profile | voting | inventory
-
-      const [feed,setFeed]=useState([
-        {user:'@dino',emoji:'💥',label:'Эпик приз',time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})},
-        {user:'@anna',emoji:'🚀',label:'Легендарка',time:new Date(Date.now()-6e4).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})},
-      ]);
-
-      useEffect(()=>{
-        const users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];
-        const all=cases.flatMap(c=>c.prizes);
-        const t=setInterval(()=>{
-          const p=all[Math.floor(Math.random()*all.length)];
-          const u=users[Math.floor(Math.random()*users.length)];
-          setFeed(f=>[...f.slice(-60),{user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}]);
-        },6500+Math.random()*1500);
-        return()=>clearInterval(t);
-      },[cases]);
-
-      useEffect(()=>{try{tg?.ready?.();tg?.expand?.();}catch(_){}} ,[]);
-
-      const pushFeed=(p,user='@you')=>setFeed(f=>[...f.slice(-60),{user,emoji:p.emoji||'🎁',label:p.label||'Приз',time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}]);
-
-      const openDetails=(c)=>{setSelected(c);window.scrollTo({top:0,behavior:'smooth'});};
-
-      const onOpenServerPrepare=async(c)=>{
-        if(opening) return false;
-        if(stars<c.priceStars){ setToast('Недостаточно ⭐'); tg?.HapticFeedback?.notificationOccurred?.('warning'); return false; }
-        setOpening(true); setStars(s=>s-c.priceStars); tg?.HapticFeedback?.impactOccurred?.('medium');
-        await new Promise(r=>setTimeout(r,180)); setOpening(false); return true;
-      };
-
-      const onSellPrize=(p)=>{const v=SELL_BY_RARITY[p.rarity]||1; setStars(s=>s+v); setToast(`Продано: +${v} ⭐`);};
-      const onClaimPrize=(p)=>{if(p.starsValue) setStars(s=>s+p.starsValue); setToast('Предмет добавлен');};
-
-      const Home=()=>(
-        <>
-          <LiveFeed events={feed}/>
-          <section className="mt-3 cases-grid">
-            {cases.map((c,i)=>(
-              <div key={c.id} className="fade-in" style={{animationDelay:`${i*60+40}ms`}}>
-                <HomeCaseCard c={c} onClick={()=>openDetails(c)}/>
-              </div>
-            ))}
-          </section>
-        </>
-      );
-
-      const Profile=()=>(
-        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-[#161a1f] flex items-center justify-center">👤</div>
-            <div><div className="font-semibold">@username</div><div className="text-sm" style={{color:'var(--nardo)'}}>⭐ {stars}</div></div>
-          </div>
-        </div>
-      );
-
-      const Voting=()=>(
-        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-          <div className="text-sm mb-3" style={{color:'var(--nardo)'}}>Голосование за фичи</div>
-          {['Новый «Ультра-кейс»','Еженедельные турниры','Обмен призов'].map((opt,i)=>(
-            <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl border mb-2" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-              <div className="text-sm">{opt}</div><button className="btn-orange px-3">Голосовать</button>
-            </div>
-          ))}
-        </div>
-      );
-
-      const Inventory=()=>(
-        <div className="rounded-2xl p-4 border" style={{borderColor:'var(--border)',background:'var(--card)'}}>
-          <div className="text-sm" style={{color:'var(--nardo)'}}>Инвентарь (демо)</div>
-        </div>
-      );
-
-      return(
-        <div className="min-h-dvh pb-20 px-4 py-5">
-          <div className="mx-auto max-w-md">
-            <header className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Кейсы за ⭐</h1>
-              <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">{stars} ⭐</div>
-            </header>
-
-            {!selected && page==='home' && <Home/>}
-            {selected && (
-              <section className="mt-4">
-                <CaseDetail
-                  data={selected}
-                  onBack={()=>setSelected(null)}
-                  onOpenServer={onOpenServerPrepare}
-                  opening={opening}
-                  onClaimPrize={(p)=>{onClaimPrize(p); pushFeed(p); setSelected(null);}}
-                  onSellPrize={onSellPrize}
-                  pushFeed={pushFeed}
-                  live={feed}
-                />
-              </section>
-            )}
-            {page==='profile' && <section className="mt-4"><Profile/></section>}
-            {page==='voting' && <section className="mt-4"><Voting/></section>}
-            {page==='inventory' && <section className="mt-4"><Inventory/></section>}
-
-            <footer className="mt-8 text-center text-xs" style={{color:'var(--nardo)'}}>
-              Деморежим. Сервер возвращает приз через <span style={{color:'#fff'}}>/api/open</span>.
-            </footer>
-          </div>
-
-          {/* TABBAR */}
-          <div className="fixed bottom-0 left-0 right-0 px-4 py-3" style={{background:'rgba(0,0,0,.72)',backdropFilter:'blur(8px)',borderTop:'1px solid var(--border)'}}>
-            <div className="mx-auto max-w-md tabbar">
-              <button className={`tab-btn ${page==='profile'?'active':''}`} onClick={()=>{setSelected(null);setPage('profile')}}>
-                <span>👤</span><span className="text-xs">Профиль</span>
-              </button>
-              <button className={`tab-btn ${page==='voting'?'active':''}`} onClick={()=>{setSelected(null);setPage('voting')}}>
-                <span>🗳️</span><span className="text-xs">Голосование</span>
-              </button>
-              <button className={`tab-btn ${page==='inventory'?'active':''}`} onClick={()=>{setSelected(null);setPage('inventory')}}>
-                <span>🎒</span><span className="text-xs">Инвентарь</span>
-              </button>
-            </div>
-          </div>
-
-          {toast && <Toast text={toast} onClose={()=>setToast(null)}/>}
-        </div>
-      );
+    function pushFeed(prize,user){
+      feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()});
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+    // toast
+    function toast(text){
+      let t = qs('#toast'); if(t) t.remove();
+      t = el('div'); t.id='toast';
+      t.style.position='fixed'; t.style.left='50%'; t.style.bottom='88px'; t.style.transform='translateX(-50%)';
+      t.style.background='var(--orange)'; t.style.color='#111'; t.style.padding='8px 12px'; t.style.borderRadius='12px';
+      t.style.boxShadow='0 8px 24px rgba(255,122,26,.25)'; t.style.fontWeight='800'; t.style.zIndex='9';
+      t.textContent=text; document.body.appendChild(t); setTimeout(()=>t.remove(),1800);
+    }
+
+    // tabbar active state (визуально)
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');});
+    });
+
+    // initial render
+    render();
   </script>
 </body>
 </html>
