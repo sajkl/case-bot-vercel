@@ -1,13 +1,12 @@
 // api/gifts/stars.js
-import { fetchAvailableGifts } from '../_engine.js';
+const core = require('../_engine');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   try {
-    const gifts = await fetchAvailableGifts();
-    const starGifts = gifts.filter(g => g.price?.currency === 'stars');
-    res.status(200).json({ gifts: starGifts });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch gifts' });
+    const by = await core.getStarsByCollection();
+    res.status(200).json({ ok: true, byCollection: by });
+  } catch (e) {
+    console.error('[gifts/stars]', e);
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
-}
+};
