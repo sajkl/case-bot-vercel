@@ -1,14 +1,18 @@
 // api/_engine.js
 // CommonJS + Node18 fetch. Dynamic case pricing for Telegram Gifts (stars, improved, resale).
-// Robust to different getAvailableGifts response shapes; second-floor pricing; 60s in-memory cache.
+// Sources: (1) Bot API getAvailableGifts -> (2) Public JSON (tg.me/gifts/available_gifts) -> (3) Demo.
+// Robust normalization; second-floor pricing; 60s in-memory cache; safe fallbacks.
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const API_BASE = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
-const REFRESH_MS = 60_000;
 
+// Публичный источник (можно переопределить в Vercel env)
+const PUBLIC_GIFTS_URL = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
+
+const REFRESH_MS = 60_000;
 const PRICING = { rtp: 0.80, markup: 0.08, roundStep: 1 };
 
-// ------- Demo CASES (replace collections with real ones or fill COLLECTION_MAP) -------
+// ------- Кейсы (можно заменить collectionId на реальные сразу здесь) -------
 const CASES = [
   {
     id: 'cheap', title: 'Дешёвый', prizes: [
@@ -47,7 +51,7 @@ const CASES = [
   }
 ];
 
-// Map “readable code” -> real Telegram collectionId (fill with live IDs from /api/gifts/stars)
+// Маппинг «читабельный код» -> реальный collectionId (заполни из /api/gifts/stars)
 const COLLECTION_MAP = {
   'col-common-a' : 'tg_collection_common_A',
   'col-common-b' : 'tg_collection_common_B',
@@ -61,7 +65,7 @@ const COLLECTION_MAP = {
   'col-ultra-a'  : 'tg_collection_ultra_A',
 };
 
-// ------- In-memory cache for warm serverless instances -------
+// ------- In-memory cache -------
 const S = globalThis.__ENGINE_STATE__ || {
   ts: 0,
   starsItems: [],
@@ -96,6 +100,20 @@ async function tgCall(method, params) {
   return json.result;
 }
 
+async function fetchPublicGifts() {
+  try {
+    const r = await fetch(PUBLIC_GIFTS_URL, { method: 'GET', headers: { 'Accept':'application/json' }});
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch {}
+    return json || {};
+  } catch (e) {
+    console.warn('[public gifts] fetch failed:', e?.message || e);
+    return {};
+  }
+}
+
+// ---- normalization helpers ----
 function extractStars(obj) {
   if (!obj) return null;
   if (typeof obj === 'number') return obj;
@@ -144,7 +162,6 @@ function normalizeGift(g) {
   const giftId = g?.gift_id ?? g?.id ?? g?.uid ?? null;
   const title  = g?.title ?? g?.name ?? g?.label ?? null;
 
-  // stars may be in price/cost/options
   const stars  = extractStars(g?.price) ?? extractStars(g?.cost) ?? extractStars(g?.stars) ?? null;
   let variantStars = null;
   const options = Array.isArray(g?.purchaseOptions) ? g.purchaseOptions
@@ -172,7 +189,6 @@ function normalizeGift(g) {
   };
 }
 
-// Robust input: array | {gifts:[]} | {items:[]} | {data:{gifts:[]}}
 function toArrayMaybe(items) {
   if (Array.isArray(items)) return items;
   if (items && Array.isArray(items.gifts)) return items.gifts;
@@ -250,7 +266,7 @@ function priceCase(prizes, floors){
   };
 }
 
-// --------------- Refresh (with demo fallback) ---------------
+// --------------- Refresh (bot -> public -> demo; keep last good) ---------------
 async function refresh() {
   if (S.refreshing) return;
   const now = Date.now();
@@ -258,44 +274,52 @@ async function refresh() {
 
   S.refreshing = true;
   try {
-    let raw;
+    let raw = [];
+    let source = 'none';
+
+    // 1) Bot API
     if (BOT_TOKEN) {
-      const r = await tgCall('getAvailableGifts'); // may be array or wrapped object
-      raw = toArrayMaybe(r);
-    } else {
-      // Demo data: ensure >=2 lots per demo collection to get non-zero prices
+      try {
+        const r = await tgCall('getAvailableGifts');
+        raw = toArrayMaybe(r);
+        source = 'bot';
+      } catch (e) {
+        console.warn('[engine] bot getAvailableGifts failed:', e?.message || e);
+      }
+    }
+
+    // 2) Public fallback
+    if ((!raw || raw.length === 0) && PUBLIC_GIFTS_URL) {
+      const r = await fetchPublicGifts();
+      const arr = toArrayMaybe(r);
+      if (arr.length > 0) {
+        raw = arr;
+        source = 'public';
+      }
+    }
+
+    // 3) Demo fallback (только если совсем пусто и раньше пусто)
+    if ((!raw || raw.length === 0) && (!S.starsItems || S.starsItems.length === 0)) {
       raw = [
         { id:'g1',  title:'Demo Common',    collection:{id:'tg_collection_common_A'}, price:{stars:5},  improved:true, resale:true },
         { id:'g2',  title:'Demo Common+',   collection:{id:'tg_collection_common_A'}, price:{stars:6},  improved:true, resale:true },
-        { id:'g2b', title:'Demo Common++',  collection:{id:'tg_collection_common_A'}, price:{stars:7},  improved:true, resale:true },
-
         { id:'g7',  title:'Demo Common B',  collection:{id:'tg_collection_common_B'}, price:{stars:8},  improved:true, resale:true },
         { id:'g8',  title:'Demo Common B+', collection:{id:'tg_collection_common_B'}, price:{stars:9},  improved:true, resale:true },
-
         { id:'g3',  title:'Demo Rare',      collection:{id:'tg_collection_rare_A'},  price:{stars:12}, improved:true, resale:true },
         { id:'g3b', title:'Demo Rare+',     collection:{id:'tg_collection_rare_A'},  price:{stars:14}, improved:true, resale:true },
-
         { id:'g9',  title:'Demo Rare B',    collection:{id:'tg_collection_rare_B'},  price:{stars:16}, improved:true, resale:true },
-        { id:'g9b', title:'Demo Rare B+',   collection:{id:'tg_collection_rare_B'},  price:{stars:18}, improved:true, resale:true },
-
         { id:'g4',  title:'Demo Epic',      collection:{id:'tg_collection_epic_A'},  price:{stars:25}, improved:true, resale:true },
-        { id:'g4b', title:'Demo Epic+',     collection:{id:'tg_collection_epic_A'},  price:{stars:28}, improved:true, resale:true },
-
         { id:'g5',  title:'Demo Epic B',    collection:{id:'tg_collection_epic_B'},  price:{stars:34}, improved:true, resale:true },
-        { id:'g5b', title:'Demo Epic B+',   collection:{id:'tg_collection_epic_B'},  price:{stars:36}, improved:true, resale:true },
-
         { id:'g6',  title:'Demo Legend',    collection:{id:'tg_collection_legend_A'},price:{stars:60}, improved:true, resale:true },
-        { id:'g6b', title:'Demo Legend+',   collection:{id:'tg_collection_legend_A'},price:{stars:64}, improved:true, resale:true },
-
-        { id:'g10', title:'Demo Legend B',  collection:{id:'tg_collection_legend_B'},price:{stars:72}, improved:true, resale:true },
-        { id:'g10b',title:'Demo Legend B+', collection:{id:'tg_collection_legend_B'},price:{stars:76}, improved:true, resale:true },
-
-        { id:'g11', title:'Demo Myth',      collection:{id:'tg_collection_myth_A'},  price:{stars:110}, improved:true, resale:true },
-        { id:'g11b',title:'Demo Myth+',     collection:{id:'tg_collection_myth_A'},  price:{stars:120}, improved:true, resale:true },
-
-        { id:'g12', title:'Demo Ultra',     collection:{id:'tg_collection_ultra_A'}, price:{stars:160}, improved:true, resale:true },
-        { id:'g12b',title:'Demo Ultra+',    collection:{id:'tg_collection_ultra_A'}, price:{stars:170}, improved:true, resale:true },
       ];
+      source = 'demo';
+    }
+
+    // Если и сейчас пусто — сохраняем предыдущий снимок и выходим
+    if (!raw || raw.length === 0) {
+      console.warn('[engine] gifts still empty; keeping previous snapshot');
+      S.ts = now; // чтобы не спамить каждый запрос
+      return;
     }
 
     const starsItems = selectStarsImprovedResale(raw);
@@ -310,6 +334,8 @@ async function refresh() {
     S.starsItems = starsItems;
     S.secondFloors = floors;
     S.casePricing = casePricing;
+
+    console.log(`[engine] source=${source}, items=${starsItems.length}, cases=${casePricing.length}`);
   } finally {
     S.refreshing = false;
   }
@@ -349,7 +375,7 @@ async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
 
   if (!userId) throw new Error('Cannot resolve recipient');
 
-  // Note: adjust sendGift params to actual API in your env if needed
+  // NOTE: скорректируй под твою среду, если метод отличается
   const out = await tgCall('sendGift', {
     user_id: userId,
     gift_id: pick.giftId,
@@ -366,4 +392,5 @@ module.exports = {
   getStarsByCollection,
   autoBuyAndSend,
 };
+
 
