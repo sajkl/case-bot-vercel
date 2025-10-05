@@ -234,3 +234,68 @@ module.exports = {
   CASES, COLLECTION_MAP,
   getCasePricing, getStarsByCollection, autoBuyAndSend,
 };
+export async function getGiftCollections() {
+  // Здесь будет запрос к Telegram API /availableGifts
+  // Пока демо-версия с фейковыми коллекциями:
+  return [
+    {
+      id: 'col-basic',
+      name: 'Бюджетная коллекция',
+      gifts: [
+        { name: 'Сердце', priceStars: 5 },
+        { name: 'Цветок', priceStars: 7 },
+        { name: 'Кофе', priceStars: 9 },
+      ]
+    },
+    {
+      id: 'col-mid',
+      name: 'Средняя коллекция',
+      gifts: [
+        { name: 'Котик', priceStars: 15 },
+        { name: 'Звезда', priceStars: 17 },
+        { name: 'Букет', priceStars: 19 },
+      ]
+    },
+    {
+      id: 'col-rare',
+      name: 'Редкая коллекция',
+      gifts: [
+        { name: 'Дракон', priceStars: 30 },
+        { name: 'Ракета', priceStars: 32 },
+        { name: 'Сова', priceStars: 35 },
+      ]
+    },
+    {
+      id: 'col-ultra',
+      name: 'Эпическая коллекция',
+      gifts: [
+        { name: 'Коронка', priceStars: 70 },
+        { name: 'Молния', priceStars: 72 },
+        { name: 'Феникс', priceStars: 80 },
+      ]
+    },
+  ];
+}
+
+export async function updateCasePrices(giftCollections) {
+  // Используем твою формулу с RTP=0.8 и +8% маржой
+  const cases = giftCollections.map((col) => {
+    const sorted = col.gifts
+      .filter(g => typeof g.priceStars === 'number')
+      .sort((a, b) => a.priceStars - b.priceStars);
+
+    const gift = sorted[1] || sorted[0]; // вторая по низкой цене
+    const base = gift.priceStars || 10;
+    const casePrice = Math.round(base / 0.8 * 1.08);
+
+    return {
+      id: col.id,
+      title: col.name,
+      baseGift: gift.name,
+      casePriceStars: casePrice,
+      gifts: sorted,
+    };
+  });
+
+  return cases;
+}
