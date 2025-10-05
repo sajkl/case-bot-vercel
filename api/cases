@@ -1,0 +1,20 @@
+import { getGiftCollections, updateCasePrices } from './_engine.js';
+
+let lastUpdate = 0;
+let cachedCases = [];
+
+export default async function handler(req, res) {
+  try {
+    const now = Date.now();
+    if (now - lastUpdate > 60_000 || cachedCases.length === 0) {
+      const gifts = await getGiftCollections(); // получает все коллекции с ценами
+      cachedCases = await updateCasePrices(gifts);
+      lastUpdate = now;
+    }
+
+    res.status(200).json({ ok: true, cases: cachedCases });
+  } catch (e) {
+    console.error('[cases]', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+}
