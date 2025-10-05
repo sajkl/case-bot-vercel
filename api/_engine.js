@@ -1,18 +1,22 @@
 // api/_engine.js
-// CommonJS + Node18 fetch. Dynamic case pricing for Telegram Gifts (stars, improved, resale).
-// Sources: (1) Bot API getAvailableGifts -> (2) Public JSON (tg.me/gifts/available_gifts) -> (3) Demo.
-// Robust normalization; second-floor pricing; 60s in-memory cache; safe fallbacks.
+// CommonJS + Node18 fetch
+// Источники: (1) Bot API getAvailableGifts → (2) PUBLIC_GIFTS_URL → (3) demo (только если нет старого снапшота)
+// Флаги окружения:
+//   TELEGRAM_BOT_TOKEN  — токен бота (для bot source)
+//   GIFTS_SOURCE_URL    — публичный JSON (по умолчанию https://tg.me/gifts/available_gifts)
+//   FORCE_PUBLIC=1      — игнорировать bot и сразу брать public
+//   STRICT_FILTER=0/1   — 1 (по умолч.) = только improved+resale+stars; 0 = любой лот, который можно купить за ⭐
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const API_BASE = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
-
-// Публичный источник (можно переопределить в Vercel env)
+const API_BASE  = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
 const PUBLIC_GIFTS_URL = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
+const FORCE_PUBLIC = String(process.env.FORCE_PUBLIC || '0') === '1';
+const STRICT_FILTER = String(process.env.STRICT_FILTER || '1') === '1';
 
 const REFRESH_MS = 60_000;
 const PRICING = { rtp: 0.80, markup: 0.08, roundStep: 1 };
 
-// ------- Кейсы (можно заменить collectionId на реальные сразу здесь) -------
+// ---- Кейсы (оставьте как есть; подставьте реальные collectionId через COLLECTION_MAP или прямо тут) ----
 const CASES = [
   {
     id: 'cheap', title: 'Дешёвый', prizes: [
@@ -51,7 +55,7 @@ const CASES = [
   }
 ];
 
-// Маппинг «читабельный код» -> реальный collectionId (заполни из /api/gifts/stars)
+// Маппинг «читабельный код» -> реальный collectionId
 const COLLECTION_MAP = {
   'col-common-a' : 'tg_collection_common_A',
   'col-common-b' : 'tg_collection_common_B',
@@ -65,7 +69,7 @@ const COLLECTION_MAP = {
   'col-ultra-a'  : 'tg_collection_ultra_A',
 };
 
-// ------- In-memory cache -------
+// ------- Кэш (живёт пока инстанс тёплый) -------
 const S = globalThis.__ENGINE_STATE__ || {
   ts: 0,
   starsItems: [],
@@ -158,6 +162,7 @@ function canBuyWithStars(g){
   return false;
 }
 
+// --- единый нормализатор карточки
 function normalizeGift(g) {
   const giftId = g?.gift_id ?? g?.id ?? g?.uid ?? null;
   const title  = g?.title ?? g?.name ?? g?.label ?? null;
@@ -189,22 +194,45 @@ function normalizeGift(g) {
   };
 }
 
+// --- расширенный извлекатель массива из любого формата
 function toArrayMaybe(items) {
   if (Array.isArray(items)) return items;
-  if (items && Array.isArray(items.gifts)) return items.gifts;
-  if (items && Array.isArray(items.items)) return items.items;
-  if (items && items.data && Array.isArray(items.data.gifts)) return items.data.gifts;
+  if (!items || typeof items !== 'object') return [];
+
+  if (Array.isArray(items.gifts)) return items.gifts;
+  if (Array.isArray(items.items)) return items.items;
+  if (items.data) {
+    if (Array.isArray(items.data.gifts)) return items.data.gifts;
+    if (Array.isArray(items.data.items)) return items.data.items;
+  }
+  if (Array.isArray(items.available_gifts)) return items.available_gifts;
+  if (Array.isArray(items.list)) return items.list;
+  if (Array.isArray(items.results)) return items.results;
+
+  // иногда ответ бывает вида {collections:[{gifts:[...]}, ...]}
+  if (Array.isArray(items.collections)) {
+    const flat = [];
+    for (const c of items.collections) {
+      if (Array.isArray(c?.gifts)) flat.push(...c.gifts);
+      if (Array.isArray(c?.items)) flat.push(...c.items);
+    }
+    return flat;
+  }
+
   return [];
 }
 
+// --- выборка «за ⭐» с учетом режима STRICT_FILTER
 function selectStarsImprovedResale(items) {
   const arr = toArrayMaybe(items);
   return arr
     .map(normalizeGift)
-    .filter(x =>
-      x.giftId && x.collectionId && x.improved && x.resale && x.starsBuyable &&
-      typeof x.stars === 'number' && x.stars > 0
-    );
+    .filter(x => {
+      const okStars = x.giftId && x.collectionId && x.starsBuyable && typeof x.stars === 'number' && x.stars > 0;
+      if (!okStars) return false;
+      if (!STRICT_FILTER) return true;
+      return x.improved && x.resale; // строгий режим (по умолчанию)
+    });
 }
 
 function buildSecondFloorsByCollection(starItems) {
@@ -226,7 +254,7 @@ function buildSecondFloorsByCollection(starItems) {
   return result;
 }
 
-// Safer pricing: ignore blocked collections; normalize weights on available ones
+// — цена кейса: игнорируем заблокированные коллекции, нормализуем веса по доступным
 function priceCase(prizes, floors){
   const detailsRaw = prizes.map(p=>{
     const real = COLLECTION_MAP[p.collectionId] || p.collectionId;
@@ -266,7 +294,7 @@ function priceCase(prizes, floors){
   };
 }
 
-// --------------- Refresh (bot -> public -> demo; keep last good) ---------------
+// --------------- Refresh ---------------
 async function refresh() {
   if (S.refreshing) return;
   const now = Date.now();
@@ -275,50 +303,52 @@ async function refresh() {
   S.refreshing = true;
   try {
     let raw = [];
-    let source = 'none';
+    let used = 'none';
 
-    // 1) Bot API
-    if (BOT_TOKEN) {
+    // FORCE_PUBLIC — сразу идём в публичный источник
+    if (!FORCE_PUBLIC && BOT_TOKEN) {
       try {
         const r = await tgCall('getAvailableGifts');
-        raw = toArrayMaybe(r);
-        source = 'bot';
+        const arr = toArrayMaybe(r);
+        console.log(`[engine] bot items=${arr.length}`);
+        if (arr.length) {
+          raw = arr;
+          used = 'bot';
+        }
       } catch (e) {
         console.warn('[engine] bot getAvailableGifts failed:', e?.message || e);
       }
     }
 
-    // 2) Public fallback
-    if ((!raw || raw.length === 0) && PUBLIC_GIFTS_URL) {
+    // public fallback (или основной, если FORCE_PUBLIC=1)
+    if (!raw.length && PUBLIC_GIFTS_URL) {
       const r = await fetchPublicGifts();
       const arr = toArrayMaybe(r);
-      if (arr.length > 0) {
+      console.log(`[engine] public items=${arr.length}`);
+      if (arr.length) {
         raw = arr;
-        source = 'public';
+        used = 'public';
       }
     }
 
-    // 3) Demo fallback (только если совсем пусто и раньше пусто)
-    if ((!raw || raw.length === 0) && (!S.starsItems || S.starsItems.length === 0)) {
+    // demo (только если вообще ничего и раньше тоже пусто)
+    if (!raw.length && (!S.starsItems || !S.starsItems.length)) {
       raw = [
         { id:'g1',  title:'Demo Common',    collection:{id:'tg_collection_common_A'}, price:{stars:5},  improved:true, resale:true },
         { id:'g2',  title:'Demo Common+',   collection:{id:'tg_collection_common_A'}, price:{stars:6},  improved:true, resale:true },
         { id:'g7',  title:'Demo Common B',  collection:{id:'tg_collection_common_B'}, price:{stars:8},  improved:true, resale:true },
         { id:'g8',  title:'Demo Common B+', collection:{id:'tg_collection_common_B'}, price:{stars:9},  improved:true, resale:true },
         { id:'g3',  title:'Demo Rare',      collection:{id:'tg_collection_rare_A'},  price:{stars:12}, improved:true, resale:true },
-        { id:'g3b', title:'Demo Rare+',     collection:{id:'tg_collection_rare_A'},  price:{stars:14}, improved:true, resale:true },
-        { id:'g9',  title:'Demo Rare B',    collection:{id:'tg_collection_rare_B'},  price:{stars:16}, improved:true, resale:true },
         { id:'g4',  title:'Demo Epic',      collection:{id:'tg_collection_epic_A'},  price:{stars:25}, improved:true, resale:true },
         { id:'g5',  title:'Demo Epic B',    collection:{id:'tg_collection_epic_B'},  price:{stars:34}, improved:true, resale:true },
         { id:'g6',  title:'Demo Legend',    collection:{id:'tg_collection_legend_A'},price:{stars:60}, improved:true, resale:true },
       ];
-      source = 'demo';
+      used = 'demo';
     }
 
-    // Если и сейчас пусто — сохраняем предыдущий снимок и выходим
-    if (!raw || raw.length === 0) {
+    if (!raw.length) {
       console.warn('[engine] gifts still empty; keeping previous snapshot');
-      S.ts = now; // чтобы не спамить каждый запрос
+      S.ts = now;
       return;
     }
 
@@ -335,7 +365,7 @@ async function refresh() {
     S.secondFloors = floors;
     S.casePricing = casePricing;
 
-    console.log(`[engine] source=${source}, items=${starsItems.length}, cases=${casePricing.length}`);
+    console.log(`[engine] used=${used}, strict=${STRICT_FILTER ? 1 : 0}, items=${starsItems.length}, cases=${casePricing.length}`);
   } finally {
     S.refreshing = false;
   }
@@ -375,7 +405,7 @@ async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
 
   if (!userId) throw new Error('Cannot resolve recipient');
 
-  // NOTE: скорректируй под твою среду, если метод отличается
+  // скорректируй метод под свою среду, если отличается
   const out = await tgCall('sendGift', {
     user_id: userId,
     gift_id: pick.giftId,
@@ -392,5 +422,4 @@ module.exports = {
   getStarsByCollection,
   autoBuyAndSend,
 };
-
 
