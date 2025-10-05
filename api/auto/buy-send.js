@@ -1,26 +1,20 @@
 // api/auto/buy-send.js
-import { getSafeGiftPrice } from '../_engine.js';
+const core = require('../_engine');
 
-export default async function handler(req, res) {
-  try {
-    const { username, collection } = req.body;
-    if (!username || !collection)
-      return res.status(400).json({ error: 'Missing username or collection' });
-
-    const gift = await getSafeGiftPrice(collection);
-    if (!gift) return res.status(404).json({ error: 'No available gifts for stars' });
-
-    // ⚙️ здесь должна быть логика покупки через Telegram Business API
-    console.log(`Buying gift "${gift.name}" for @${username}`);
-
-    res.status(200).json({
-      status: 'success',
-      sentTo: username,
-      gift: gift.name,
-      price: gift.price.amount,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Auto-buy failed' });
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow','POST');
+    return res.status(405).json({ ok:false, error:'Method Not Allowed' });
   }
-}
+  try {
+    const { collectionId, recipient } = req.body || {};
+    if (!collectionId) throw new Error('collectionId required');
+    if (!recipient) throw new Error('recipient required ("@username" or numeric user_id")');
+
+    const out = await core.autoBuyAndSend({ collectionId, recipient, payForUpgrade: true });
+    res.status(200).json({ ok: true, result: out });
+  } catch (e) {
+    console.error('[auto/buy-send]', e);
+    res.status(400).json({ ok: false, error: e?.message || String(e) });
+  }
+};
