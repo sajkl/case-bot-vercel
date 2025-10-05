@@ -1,417 +1,230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Кейсы за ⭐ — Telegram Mini App</title>
-
-  <!-- Telegram + Tailwind + React + Babel -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Кейсы за ⭐ — Mini App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: { extend: {} }
-    };
-  </script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
-
-  <!-- Ловец ошибок (исправлен: безопасные переносы строк) -->
-  <script>
-    (function () {
-      const show = (title, detail) => {
-        try {
-          const box = document.getElementById('err');
-          if (box) {
-            box.style.display = 'block';
-            box.textContent = `${title}\n${detail || ''}`;
-          }
-        } catch(_) {}
-      };
-      window.onerror = function (message, source, lineno, colno, error) {
-        const detail = [
-          'source: ' + (source || '-'),
-          'line: ' + (lineno || '-') + ', col: ' + (colno || '-'),
-          'stack: ' + (error && error.stack ? error.stack : '-')
-        ].join('\n');
-        show('JS error: ' + message, detail);
-      };
-      window.addEventListener('unhandledrejection', (e) => {
-        const reason = e && e.reason;
-        const detail = (reason && reason.stack) || JSON.stringify(reason);
-        show('Promise error', detail);
-      });
-    })();
-  </script>
-
   <style>
-    html, body, #root { height: 100%; background:#090a0b; color:#fff; }
-    /* Fade-in */
-    @keyframes fadeInUp { from { opacity:0; transform: translateY(10px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
-    .fade-in { animation: fadeInUp .38s cubic-bezier(.2,.8,.2,1) both; }
-
-    /* Карты (непрозрачные) */
-    .flip-card { width: 118px; height: 156px; position: relative; transform-style: preserve-3d; transition: transform 700ms cubic-bezier(.2,.8,.2,1); border-radius: 16px; }
-    .flip-face { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:16px; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
-    .flip-face.front { background: linear-gradient(135deg,#3f3f46,#27272a); color:#fff; border:1px solid #3f3f46; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
-    .flip-face.back  { background: #0b0b0c; border:1px solid #3f3f46; box-shadow: 0 6px 18px rgba(0,0,0,.35); transform: rotateY(180deg); }
-
-    /* Подсветка редкости */
-    .glow-common    { box-shadow: 0 0 0 2px rgba(113,113,122,.35), 0 0 18px rgba(113,113,122,.22); }
-    .glow-rare      { box-shadow: 0 0 0 2px rgba(59,130,246,.40), 0 0 22px rgba(59,130,246,.28); }
-    .glow-epic      { box-shadow: 0 0 0 2px rgba(168,85,247,.45), 0 0 24px rgba(168,85,247,.30); }
-    .glow-legendary { box-shadow: 0 0 0 2px rgba(234,88,12,.55),  0 0 26px rgba(234,88,12,.36); }
-
-    /* Кнопки */
-    .btn-orange {
-      background: linear-gradient(180deg,#f97316,#ea580c);
-      color:#111; border:none; border-radius:16px;
-      padding:.8rem 1rem; font-weight:700;
-      box-shadow: 0 6px 20px rgba(234,88,12,.35), 0 0 0 1px rgba(234,88,12,.35) inset;
-      transition: transform .06s ease, filter .15s ease;
-    }
-    .btn-orange:hover { filter: brightness(1.05); }
-    .btn-orange:active { transform: scale(.98); }
-    .btn-secondary {
-      background:#121214; color:#e4e4e7; border:1px solid #3f3f46; border-radius:14px;
-      padding:.7rem .9rem; font-weight:600;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
-    }
-    .btn-secondary:hover { background:#1d1d21; border-color:#52525b; }
-    .btn-secondary:active { transform: scale(.98); }
-
-    /* Live-лента (горизонталь) */
-    .ticker { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
-    .ticker::-webkit-scrollbar { display:none; }
-
-    /* Таббар (всегда на экране) */
-    .tabbar {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-      background: rgba(12,12,14,.9); backdrop-filter: blur(10px);
-      border-top: 1px solid #27272a;
-    }
-    .tab-item { flex: 1 1 auto; padding: 8px 0; text-align:center; font-size: 12px; color: #d4d4d8; }
-    .tab-item.active { color: #fff; }
+    :root{ --bg-dark:#0a0b0c; --bg-card:#0b0f14; --border:#272a2e; --text:#fff; --muted:#8e9492; --orange:#ff7a1a; --blue:#7bb5ff; --purple:#b68aff; --shadow-lg:0 16px 34px rgba(0,0,0,.42); --ease:cubic-bezier(.2,.8,.2,1); }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{ margin:0; color:var(--text); font-family:'Manrope',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1100px 700px at 15% -10%, #14181e 0%, transparent 60%), radial-gradient(900px 600px at 115% 0%, #191a1f 0%, transparent 55%), linear-gradient(180deg,#0b0d10 0%, #090a0c 100%);}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:960px;margin:0 auto;padding:20px 16px 96px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}} .fade{animation:fadeInUp .38s var(--ease) both}
+    .title{font-size:32px;font-weight:800;letter-spacing:-.01em;margin:0}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 10px 26px rgba(255,122,26,.28)}
+    .feed{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 2px;margin-top:12px} .feed::-webkit-scrollbar{display:none}
+    .feed-item{min-width:280px;border:1px solid var(--border);background:linear-gradient(135deg,#14171b,#0d0f12);border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+    .feed-text{display:flex;align-items:center;gap:10px;min-width:0} .feed-time{font-size:12px;color:var(--muted)} .emoji{font-size:20px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px} @media (min-width:820px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:var(--shadow-lg);transition:transform .18s var(--ease),filter .18s var(--ease);cursor:pointer}
+    .card:hover{transform:translateY(-4px);filter:brightness(1.04)}
+    .fan{position:relative;height:74px;display:flex;align-items:flex-end;justify-content:center}
+    .mini{width:58px;height:74px;border-radius:12px;background:#111418;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+    .mini.glow-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini.glow-purple{box-shadow:0 0 0 2px rgba(182,138,255,.55) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini.glow-orange{box-shadow:0 0 0 2px rgba(255,122,26,.7) inset,0 12px 26px rgba(0,0,0,.35)}
+    .mini:nth-child(1){transform:translateX(-16px) rotate(-14deg) scale(.98)} .mini:nth-child(2){transform:translateX(0) rotate(0) scale(1.06);z-index:2;margin-left:-24px} .mini:nth-child(3){transform:translateX(16px) rotate(14deg) scale(.98);margin-left:-24px}
+    .card-title{font-size:18px;font-weight:800;text-align:center;margin:12px 0 4px} .card-sub{font-size:12px;color:var(--muted);text-align:center;margin:0} .meta{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+    .detail-head{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer}
+    .btn-primary{background:linear-gradient(180deg,#ff8a2a,#ff7a1a);color:#111;border-radius:18px;padding:10px 14px;font-weight:800;box-shadow:0 8px 24px rgba(255,122,26,.28)}
+    .btn-secondary{background:#101317;color:#e4e4e7;border:1px solid var(--border);border-radius:16px;padding:8px 12px;font-weight:700}
+    .hand{position:relative;height:clamp(150px,44vw,176px);display:flex;justify-content:center;align-items:flex-end;pointer-events:none;margin-top:8px}
+    .hand-card{position:relative;pointer-events:auto;margin-left:-36px;transition:transform .35s var(--ease),filter .2s,opacity .2s} .hand-card:first-child{margin-left:0}
+    .flip{width:clamp(96px,28vw,118px);height:clamp(128px,36vw,156px);position:relative;transform-style:preserve-3d;transition:transform 700ms var(--ease);border-radius:16px;box-shadow:var(--shadow-lg)}
+    .flip.flipped{transform:rotateY(180deg)}
+    .face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+    .front{background:linear-gradient(135deg,#151920,#0f1216);color:#eaeef2} .back{background:#0f1114;transform:rotateY(180deg)}
+    .rar-chip{margin-top:6px;display:inline-block;padding:2px 6px;border-radius:999px;font-size:10px;background:var(--muted);color:#111}
+    .glow-b-blue{box-shadow:0 0 0 2px rgba(123,181,255,.55),0 0 20px rgba(123,181,255,.28)}
+    .glow-b-purple{box-shadow:0 0 0 2px rgba(182,138,255,.60),0 0 22px rgba(182,138,255,.30)}
+    .glow-b-orange{box-shadow:0 0 0 2px rgba(255,122,26,.70),0 0 24px rgba(255,122,26,.35)}
+    .result{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);background:var(--bg-card);border-radius:16px;padding:10px 12px}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);border-top:1px solid var(--border);z-index:5}
+    .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
+    .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);border-radius:14px;padding:10px 6px;font-weight:800;transition:filter .15s var(--ease),transform .12s var(--ease),border-color .25s var(--ease)}
+    .tab:active{transform:scale(.96)} .tab.active{border-color:rgba(255,122,26,.65);box-shadow:0 0 0 2px rgba(255,122,26,.28) inset} .tab small{font-size:12px;color:#cdd0d4}
+    @media (max-width:390px){ .hand{height:150px} .hand-card{margin-left:-30px} }
+    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241;color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:10px;border:1px solid #6c4;box-shadow:0 10px 20px rgba(0,0,0,.4);display:none;white-space:pre-wrap;z-index:9999}
   </style>
 </head>
+<body>
+  <main class="container" id="app"></main>
 
-<body class="min-h-dvh">
-  <div id="root"></div>
-  <pre id="err" style="display:none; position:fixed; left:8px; bottom:64px; right:8px; max-height:40vh; overflow:auto; background:#111; color:#fff; padding:8px; border-radius:8px; z-index:9999"></pre>
+  <nav class="tabbar">
+    <div class="tabs">
+      <a href="#" class="tab active" data-tab="profile"><div>👤</div><small>Профиль</small></a>
+      <a href="#" class="tab" data-tab="voting"><div>🗳️</div><small>Голосование</small></a>
+      <a href="#" class="tab" data-tab="inventory"><div>🎒</div><small>Инвентарь</small></a>
+    </div>
+  </nav>
 
-  <script type="text/babel">
-    const { useEffect, useState, useMemo } = React;
-    const tg = (typeof window !== 'undefined' ? window.Telegram : undefined);
+  <pre id="err"></pre>
 
-    // ===== Сервисные хелперы =====
-    const rarityPill = (r) => ({
-      common:   'bg-zinc-700 text-zinc-100',
-      rare:     'bg-blue-700 text-blue-100',
-      epic:     'bg-purple-700 text-purple-100',
-      legendary:'bg-amber-600 text-amber-100'
-    }[r] || 'bg-zinc-700 text-zinc-100');
+  <script>
+  (function(){
+    'use strict';
 
-    async function getJSON(url) {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return await r.json();
+    /* error box */
+    function showErr(title, detail){
+      var box=document.getElementById('err'); if(!box) return;
+      box.style.display='block'; box.textContent=title+"\n"+(detail||'');
+    }
+    window.onerror=function(message, source, lineno, colno, error){
+      var detail=['source: '+(source||'-'),'line: '+(lineno||'-')+', col: '+(colno||'-'),'stack: '+(error&&error.stack?error.stack:'-')].join('\n');
+      showErr('JS error: '+message, detail);
+    };
+    window.addEventListener('unhandledrejection', function(e){
+      var reason=e&&e.reason; var detail=(reason&&reason.stack)||String(reason);
+      showErr('Promise error', detail);
+    });
+
+    var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+    try{ tg&&tg.ready&&tg.ready(); tg&&tg.expand&&tg.expand(); }catch(_){}
+
+    function qs(s,r){return (r||document).querySelector(s)}
+    function el(t,c,h){var n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n;}
+
+    /* data */
+    var START_STARS=25;
+    var CASES=[
+      {id:'lite',title:'Лайт-кейс',price:3,sub:'Дешёвый вход',prizes:[
+        {id:'l1',label:'Стикер мини',emoji:'🐾',rarity:'common',weight:55},
+        {id:'l2',label:'1⭐ назад',emoji:'⭐',rarity:'common',weight:30,stars:1},
+        {id:'l4',label:'5⭐ джекпот',emoji:'💥',rarity:'epic',weight:3,stars:5}
+      ]},
+      {id:'starter',title:'Стартовый кейс',price:6,sub:'Для новичков',prizes:[
+        {id:'s1',label:'Стикер-пак',emoji:'😺',rarity:'common',weight:45},
+        {id:'s3',label:'Эксклюзивный бейдж',emoji:'🏅',rarity:'rare',weight:17},
+        {id:'s5',label:'Мегаприз: 20⭐',emoji:'💫',rarity:'legendary',weight:2,stars:20}
+      ]},
+      {id:'pro',title:'Про-кейс',price:12,sub:'Большой риск',prizes:[
+        {id:'p2',label:'Скин',emoji:'🎨',rarity:'rare',weight:28},
+        {id:'p4',label:'10⭐ назад',emoji:'🌟',rarity:'epic',weight:15,stars:10},
+        {id:'p5',label:'60⭐ джекпот',emoji:'🏆',rarity:'legendary',weight:5,stars:60}
+      ]},
+      {id:'ultra',title:'Ультра-кейс',price:30,sub:'Королевские награды',prizes:[
+        {id:'u2',label:'Редкий эффект',emoji:'🧿',rarity:'epic',weight:28},
+        {id:'u4',label:'120⭐',emoji:'🏆',rarity:'legendary',weight:6,stars:120},
+        {id:'u6',label:'300⭐',emoji:'🦄',rarity:'legendary',weight:2,stars:300}
+      ]}
+    ];
+    var SELL={common:1,rare:2,epic:6,legendary:20};
+    var rarityOrder={legendary:4,epic:3,rare:2,common:1};
+    function top3(a){return a.slice().sort(function(x,y){var rx=rarityOrder[x.rarity]||0,ry=rarityOrder[y.rarity]||0;if(ry!==rx)return ry-rx;var sx=x.stars||0,sy=y.stars||0;if(sy!==sx)return sy-sx;return (x.weight||0)-(y.weight||0)}).slice(0,3)}
+    function glowMiniClass(r){var m={common:'glow-blue',rare:'glow-purple',epic:'glow-orange',legendary:'glow-orange'};return m[r]||'glow-blue'}
+    function ts(){try{return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(_){var d=new Date();return (''+d.getHours()).padStart(2,'0')+':'+(''+d.getMinutes()).padStart(2,'0')}}
+
+    /* state */
+    var stars=START_STARS, selected=null, feed=[];
+    (function seed(){var users=['@max','@ivan','@lena','@art','@kira','@john','@mike'];var all=[];for(var i=0;i<CASES.length;i++)all=all.concat(CASES[i].prizes);
+      for(var j=0;j<4;j++){var p=all[Math.floor(Math.random()*all.length)],u=users[Math.floor(Math.random()*users.length)];feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()})}
+      setInterval(function(){var p=all[Math.floor(Math.random()*all.length)],u=users[Math.floor(Math.random()*users.length)];feed.push({user:u,emoji:p.emoji||'🎁',label:p.label||'Приз',time:ts()});render()},6500+Math.random()*1500)
+    })();
+
+    /* audio */
+    function SpinAudio(){this.ctx=null;this.gain=null}
+    SpinAudio.prototype.ensure=function(){if(!this.ctx){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;try{this.ctx=new AC();this.gain=this.ctx.createGain();this.gain.gain.value=0.06;this.gain.connect(this.ctx.destination)}catch(_){}}}
+    SpinAudio.prototype.flip=function(){this.ensure();if(!this.ctx||!this.gain)return;var o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='triangle';o.frequency.value=520;o.connect(g).connect(this.gain);var t=this.ctx.currentTime;g.gain.setValueAtTime(0.05,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.15);o.start(t);o.stop(t+0.16)}
+    SpinAudio.prototype.win=function(){this.ensure();if(!this.ctx||!this.gain)return;var o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type='sine';o.frequency.value=880;o.connect(g).connect(this.gain);var t=this.ctx.currentTime;g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.00001,t+0.4);o.frequency.exponentialRampToValueAtTime(1320,t+0.35);o.start(t);o.stop(t+0.4)}
+    var audio=new SpinAudio();
+
+    /* view */
+    function render(){
+      var root=qs('#app'); root.innerHTML='';
+      var header=el('div','row fade','<h1 class="title">'+(selected?'Открытие кейса':'Кейсы за ⭐')+'</h1><div class="pill"><span id="stars">'+stars+'</span><span>⭐</span></div>');
+      root.appendChild(header);
+      root.appendChild(renderFeed());
+      root.appendChild(selected?renderDetail(selected):renderHome());
+      var foot=el('div','fade'); foot.style.marginTop='16px'; foot.style.textAlign='center'; foot.style.color='var(--muted)'; foot.style.fontSize='12px';
+      foot.innerHTML='Деморежим. Сервер возвращает приз через <b style="color:#fff">/api/open</b>.'; root.appendChild(foot);
     }
 
-    async function postJSON(url, body) {
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body || {})
-      });
-      const data = await r.json().catch(()=> ({}));
-      if (!r.ok || data.ok === false) {
-        throw new Error(data?.error || `HTTP ${r.status}`);
+    function renderFeed(){
+      var wrap=el('section','feed fade'); var last=feed.slice(-20);
+      for(var i=0;i<last.length;i++){var e=last[i];wrap.appendChild(el('div','feed-item','<div class="feed-text"><div class="emoji">'+e.emoji+'</div><div class="txt"><span style="color:var(--muted)">'+e.user+'</span>&nbsp;получил&nbsp;<b>'+e.label+'</b></div></div><div class="feed-time">'+e.time+'</div>'))}
+      setTimeout(function(){wrap.scrollLeft=wrap.scrollWidth},0); return wrap;
+    }
+
+    function renderHome(){
+      var grid=el('section','grid fade');
+      for(var i=0;i<CASES.length;i++){var c=CASES[i], picks=top3(c.prizes);
+        var card=el('article','card','<div class="fan">'+picks.map(function(p){return '<div class="mini '+glowMiniClass(p.rarity)+'"><span>'+ (p.emoji||'🎁') +'</span></div>'}).join('')+'</div><h3 class="card-title">'+c.title+'</h3><p class="card-sub">'+c.sub+'</p><div class="meta">Цена: <b style="color:#fff">'+c.price+' ⭐</b></div>');
+        (function(id){card.addEventListener('click',function(){selected=id;window.scrollTo({top:0,behavior:'smooth'});render()})})(c.id);
+        grid.appendChild(card);
       }
-      return data;
+      return grid;
     }
 
-    // ===== Live-лента (демо) =====
-    function LiveTicker({ events }) {
-      return (
-        <div className="rounded-2xl border border-zinc-700 bg-[#0b0f14] p-3 fade-in">
-          <div className="text-sm text-zinc-400 mb-2">Лайв: последние выигрыши</div>
-          <div className="ticker">
-            {events.map((e, i)=>(
-              <div key={i} className="shrink-0 px-3 py-2 rounded-xl border border-zinc-700 bg-[#0e1116]">
-                <div className="text-xs text-zinc-400">{e.time}</div>
-                <div className="text-sm font-medium">{e.user}</div>
-                <div className="text-base">{e.emoji} {e.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+    function renderDetail(caseId){
+      var data=CASES.filter(function(x){return x.id===caseId})[0]; if(!data) return el('div',null,'Кейс не найден');
+      var wrap=el('section','fade');
+      var head=el('div','detail-head','<button class="btn btn-secondary" id="back">← Назад</button><div style="font-size:18px;font-weight:800">'+data.title+'</div><div style="margin-left:auto;font-size:13px;color:var(--muted)">Цена: '+data.price+' ⭐</div>');
+      wrap.appendChild(head); qs('#back',head).onclick=function(){selected=null;render()};
+      var hint=el('div'); hint.style.color='var(--muted)'; hint.style.fontSize='14px'; hint.textContent='Нажми «Открыть», чтобы начать'; wrap.appendChild(hint);
 
-    // ===== Главная: список кейсов (цены приходят с бэка) =====
-    function CasesGrid({ casesPricing, onOpenCase }) {
-      return (
-        <section className="mt-4 grid grid-cols-2 gap-4">
-          {casesPricing.map((c, i) => (
-            <div
-              key={c.caseId}
-              className="rounded-2xl p-4 bg-[#0d0e10] border border-zinc-700 hover:border-orange-500 hover:shadow-[0_0_0_2px_rgba(234,88,12,.35)] transition cursor-pointer fade-in"
-              style={{ animationDelay: `${i*45+20}ms` }}
-              onClick={() => onOpenCase(c)}
-            >
-              <div className="flex flex-col items-center">
-                {/* мини-фан с топовыми призами (демо-заглушка) */}
-                <div className="relative h-[120px] w-[140px] mt-1">
-                  <div className="absolute left-3 top-6 rotate-[-12deg] z-10">
-                    <div className="flip-card glow-rare">
-                      <div className="flip-face front"><span className="text-2xl">💠</span></div>
-                    </div>
-                  </div>
-                  <div className="absolute left-[42px] top-1 rotate-[0deg] z-20">
-                    <div className="flip-card glow-epic">
-                      <div className="flip-face front"><span className="text-2xl">✨</span></div>
-                    </div>
-                  </div>
-                  <div className="absolute left-[82px] top-6 rotate-[12deg] z-15">
-                    <div className="flip-card glow-legendary">
-                      <div className="flip-face front"><span className="text-2xl">🏆</span></div>
-                    </div>
-                  </div>
-                </div>
+      var hand=el('div','hand'); wrap.appendChild(hand); var cards=[], i;
+      for(i=0;i<5;i++){var holder=el('div','hand-card'), f=el('div','flip','<div class="face front"><div style="font-size:32px">?</div></div><div class="face back"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center"><div style="font-size:34px" class="p-emoji">🎁</div><div style="margin-top:6px;font-size:13px;font-weight:700" class="p-label">Приз</div><div class="rar-chip p-rar">rarity</div></div></div>'); holder.appendChild(f); hand.appendChild(holder); cards.push({el:holder})}
 
-                <div className="mt-3 text-center">
-                  <div className="text-base font-semibold">{c.title}</div>
-                  <div className="text-xs text-zinc-400 mt-1">Цена: <span className="text-zinc-100 font-medium">{c.pricing?.finalPrice ?? '-'}</span> ⭐</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </section>
-      );
-    }
+      function baseTransform(i,n){var narrow=(window.innerWidth||390)<=414, spread=narrow?18:24, start=-spread/2, angle=start+i*(spread/Math.max(1,n-1)), y=Math.abs(i-(n-1)/2)*(narrow?2:3); return {angle:angle,y:y}}
+      function placeIdle(){for(var k=0;k<cards.length;k++){var t=baseTransform(k,cards.length); cards[k].el.style.transform='rotate('+t.angle+'deg) translateY('+t.y+'px)'; cards[k].el.style.zIndex=5 }}
+      function placeRevealed(p){var narrow=(window.innerWidth||390)<=414; for(var k=0;k<cards.length;k++){var t=baseTransform(k,cards.length); if(k===p){cards[k].el.style.transform='rotate('+t.angle+'deg) translateY('+Math.max(0,t.y-(narrow?1:2))+'px) scale('+(narrow?1.03:1.06)+')'; cards[k].el.style.zIndex=50}else{var dir=k<p?-1:1,dist=(narrow?56:90)+Math.abs(k-p)*(narrow?8:12),lift=narrow?6:10,ang=t.angle*(narrow?0.9:0.8); cards[k].el.style.transform='rotate('+ang+'deg) translate('+(dir*dist)+'px,'+(t.y+lift)+'px) scale('+(narrow?0.965:0.96)+')'; cards[k].el.style.zIndex=5-Math.abs(k-p) } } }
+      placeIdle();
 
-    // ===== Страница открытия кейса (упрощённо, фокус на UI) =====
-    function CaseOpen({ caseInfo, onBack }) {
-      // здесь можно добавить вашу механику выбора/flip — оставил компактный макет веером
-      const cards = [0,1,2,3,4];
-      const baseTransform = (i, n) => {
-        const angle = -12 + i * (24 / Math.max(1, n - 1));
-        const y = Math.abs(i - (n - 1) / 2) * 3;
-        return { angle, y };
-      };
+      var opening=false, pickedIndex=null, landedPrize=null;
+      function weightedPick(a){var tot=0;for(var q=0;q<a.length;q++)tot+=a[q].weight||0; if(tot<=0)tot=1; var r=Math.random()*tot; for(var w=0;w<a.length;w++){r-=a[w].weight||0; if(r<=0)return a[w]} return a[a.length-1]}
 
-      return (
-        <div className="fade-in">
-          <div className="flex items-center gap-2 mb-4">
-            <button className="btn-secondary" onClick={onBack}>← Назад</button>
-            <div className="text-xl font-semibold">{caseInfo.title}</div>
-            <div className="ml-auto text-sm text-zinc-300">Цена: {caseInfo.pricing?.finalPrice ?? '-'} ⭐</div>
-          </div>
+      function startOpen(){ if(opening) return; if(stars<data.price){ toast('Недостаточно ⭐'); try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred&&tg.HapticFeedback.notificationOccurred('warning')}catch(_){ } return } opening=true; stars-=data.price; updateStars(); try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred&&tg.HapticFeedback.impactOccurred('medium')}catch(_){ } hint.textContent='Выбери одну карту' }
 
-          <div className="rounded-2xl p-4 border border-zinc-700 bg-[#0d0e10]">
-            <div className="text-sm text-zinc-400">Выбери карту</div>
-            <div className="mt-4 flex items-end justify-center h-[170px]">
-              {cards.map((_, i)=> {
-                const { angle, y } = baseTransform(i, cards.length);
-                return (
-                  <div key={i} className="mx-[-22px]" style={{ transform: `rotate(${angle}deg) translateY(${y}px)` }}>
-                    <div className="flip-card">
-                      <div className="flip-face front"><span className="text-2xl">?</span></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-4">
-              <button className="btn-orange w-full">Открыть за {caseInfo.pricing?.finalPrice ?? '-'} ⭐</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+      function flipPick(idx){
+        if(!opening||pickedIndex!==null) return;
+        pickedIndex=idx;
+        var prize=weightedPick(data.prizes);
 
-    // ===== Инвентарь =====
-    function Inventory({ items, onWithdraw }) {
-      if (!items.length) {
-        return (
-          <div className="rounded-2xl border border-zinc-700 bg-[#0d0e10] p-6 text-center text-zinc-400">
-            Пусто. Открывай кейсы, чтобы пополнять инвентарь.
-          </div>
-        );
+        try{audio.flip(); tg&&tg.HapticFeedback&&tg.HapticFeedback.selectionChanged&&tg.HapticFeedback.selectionChanged()}catch(_){}
+        var holder=cards[idx].el.querySelector('.flip'); holder.classList.add('flipped');
+        fillPrize(holder,prize);
+        // ✅ добавляем glow-класс только если он не пустой
+        var glow = prize.rarity==='legendary'?'glow-b-orange':prize.rarity==='epic'?'glow-b-purple':prize.rarity==='rare'?'glow-b-blue':'';
+        if(glow) holder.classList.add(glow);
+
+        landedPrize=prize; placeRevealed(idx);
+
+        setTimeout(function(){
+          for(var t=0;t<cards.length;t++){ if(t===idx) continue; var alt=weightedPick(data.prizes); var f=cards[t].el.querySelector('.flip'); f.classList.add('flipped'); fillPrize(f,alt); }
+          try{audio.win(); tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred&&tg.HapticFeedback.impactOccurred('heavy')}catch(_){}
+          hint.textContent='Ваш результат'; renderResult();
+        },400);
       }
-      return (
-        <div className="grid grid-cols-1 gap-3">
-          {items.map((it, i)=>(
-            <div key={it.id || i} className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-[#0d0e10] p-3">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl">{it.emoji || '🎁'}</div>
-                <div className="text-sm">
-                  <div className="font-semibold">{it.label}</div>
-                  {it.rarity && (
-                    <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] ${rarityPill(it.rarity)}`}>{it.rarity}</div>
-                  )}
-                  {it.collectionId && (
-                    <div className="text-[11px] text-zinc-400 mt-1">Коллекция: {it.collectionId}</div>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button className="btn-secondary" onClick={()=>alert('Пока заглушка: Продать внутр.рынку')}>
-                  Продать
-                </button>
-                <button className="btn-orange" onClick={()=>onWithdraw(it)}>
-                  Вывести
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+
+      function fillPrize(f,prize){ var e=f.querySelector('.p-emoji'); if(e) e.textContent=prize.emoji||'🎁'; var l=f.querySelector('.p-label'); if(l) l.textContent=prize.label||'Приз'; var r=f.querySelector('.p-rar'); if(r) r.textContent=prize.rarity||'rare' }
+
+      var actions=el('div'); actions.style.marginTop='12px'; actions.innerHTML='<button class="btn btn-primary" id="open">Открыть за '+data.price+' ⭐</button>'; wrap.appendChild(actions);
+      qs('#open',actions).onclick=function(){startOpen()};
+      for(i=0;i<cards.length;i++){(function(ii){cards[ii].el.addEventListener('click',function(){flipPick(ii)})})(i)}
+
+      function renderResult(){
+        var box=el('div','result','<div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">'+(landedPrize.emoji||'🎁')+'</div><div style="font-size:14px"><div style="font-weight:800">'+landedPrize.label+'</div><div class="rar-chip">'+landedPrize.rarity+'</div></div></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="sell">Продать за '+((SELL[landedPrize.rarity]||1))+' ⭐</button><button class="btn btn-primary" id="claim">Забрать</button></div>');
+        wrap.appendChild(box);
+        qs('#sell',box).onclick=function(){var v=SELL[landedPrize.rarity]||1; stars+=v; updateStars(); toast('Продано: +'+v+' ⭐'); selected=null; render()};
+        qs('#claim',box).onclick=function(){ if(landedPrize.stars){stars+=landedPrize.stars;updateStars()} pushFeed(landedPrize,'@you'); toast('Предмет добавлен'); selected=null; render(); };
+      }
+
+      return wrap;
     }
 
-    // ===== Табы (Главная / Голосование / Инвентарь) =====
-    const TABS = { home:'home', vote:'vote', inv:'inv' };
+    function updateStars(){var s=qs('#stars'); if(s) s.textContent=String(stars)}
+    function pushFeed(prize,user){feed.push({user:user||'@you',emoji:prize.emoji||'🎁',label:prize.label||'Приз',time:ts()})}
+    function toast(text){var t=qs('#toast'); if(t) t.remove(); t=el('div'); t.id='toast'; t.style.position='fixed'; t.style.left='50%'; t.style.bottom='88px'; t.style.transform='translateX(-50%)'; t.style.background='var(--orange)'; t.style.color='#111'; t.style.padding='8px 12px'; t.style.borderRadius='12px'; t.style.boxShadow='0 8px 24px rgba(255,122,26,.25)'; t.style.fontWeight='800'; t.style.zIndex='9'; t.textContent=text; document.body.appendChild(t); setTimeout(function(){t.remove()},1800)}
 
-    function App(){
-      const [tab, setTab] = useState(TABS.home);
-      const [initUser, setInitUser] = useState(null);
-      const [casesPricing, setCasesPricing] = useState([]); // с бэка
-      const [openingCase, setOpeningCase] = useState(null);
-      const [ticker, setTicker] = useState([
-        { time:'10:21', user:'@alex', emoji:'🏆', label:'Legend UPG' },
-        { time:'10:19', user:'@mila', emoji:'✨', label:'Epic UPG' },
-        { time:'10:17', user:'@ivan', emoji:'💠', label:'Rare UPG' },
-        { time:'10:12', user:'@kate', emoji:'🏆', label:'Legend UPG' },
-      ]);
-
-      // Демо-инвентарь (структура важна: есть collectionId для withdraw)
-      const [inventory, setInventory] = useState([
-        { id:'inv1', label:'Rare UPG', rarity:'rare', emoji:'💠', collectionId:'telegram_collection_rare_id' },
-        { id:'inv2', label:'Epic UPG', rarity:'epic', emoji:'✨', collectionId:'telegram_collection_epic_id' },
-      ]);
-
-      // Telegram init + загрузка цен с бэка
-      useEffect(()=> {
-        try { tg?.WebApp?.ready?.(); tg?.WebApp?.expand?.(); } catch(e){}
-        const u = tg?.WebApp?.initDataUnsafe?.user || null;
-        setInitUser(u || null);
-
-        // Загрузка цен кейсов (ВАЖНО: расчёт происходит на СЕРВЕРЕ)
-        // Если у тебя другой URL — замени ниже '/api/cases/price'
-        getJSON('/api/cases/price')
-          .then((data)=> {
-            const list = data?.result || data?.casePricing || [];
-            // Нормализуем: [{caseId,title,pricing:{finalPrice}}]
-            setCasesPricing(list.map(x => ({
-              caseId: x.caseId, title: x.title, pricing: x.pricing
-            })));
-          })
-          .catch((e)=> console.error('load prices error:', e));
-      },[]);
-
-      const onOpenCase = (c) => {
-        setOpeningCase(c);
-        setTab(TABS.home); // остаёмся в home, но показываем экран открытия
-      };
-
-      // ===== Withdraw (Вывести): дергаем авто-покупку и отправку на бэке =====
-      const onWithdraw = async (item) => {
-        try {
-          const userIdOrUsername =
-            (initUser && initUser.id) ? String(initUser.id)
-              : (initUser && initUser.username) ? `@${initUser.username}` : null;
-
-          if (!userIdOrUsername) {
-            alert('Не удалось определить получателя. Запустите мини-апп из Telegram, чтобы я увидел ваш user_id.');
-            return;
-          }
-          if (!item.collectionId) {
-            alert('У приза нет collectionId. Вывод доступен только для улучшённых подарков из коллекций.');
-            return;
-          }
-
-          // Если у тебя на бэке другой маршрут — замени '/api/auto/buy-send'
-          const resp = await postJSON('/api/auto/buy-send', {
-            collectionId: item.collectionId,        // реальный telegram collection id
-            recipient: userIdOrUsername,           // user_id или @username
-          });
-
-          alert(`Отправлено! Подарок "${item.label}" будет доставлен.\n\nДетали: ${JSON.stringify(resp?.result || resp, null, 2)}`);
-
-          // по факту можно удалить предмет из локального инвентаря
-          setInventory((arr)=> arr.filter(x => x.id !== item.id));
-        } catch (e) {
-          alert('Ошибка вывода: ' + (e?.message || e));
-        }
-      };
-
-      return (
-        <div className="pb-20 px-4 py-4">
-          <div className="mx-auto max-w-md">
-            <header className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold">Кейсы за ⭐</h1>
-                <p className="text-zinc-400 text-sm">Открывай кейсы и забирай призы</p>
-              </div>
-              {initUser ? (
-                <div className="px-3 py-2 rounded-xl bg-orange-500 text-black font-semibold shadow-lg">
-                  {initUser.first_name || ''}{initUser.username ? ` (@${initUser.username})` : ''}
-                </div>
-              ) : (
-                <div className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300">Гость</div>
-              )}
-            </header>
-
-            {/* Лайв-лента всегда сверху на главной */}
-            {tab === TABS.home && !openingCase && (
-              <div className="mt-4">
-                <LiveTicker events={ticker} />
-              </div>
-            )}
-
-            {/* Контент вкладок */}
-            <main className="mt-4">
-              {tab === TABS.home && !openingCase && (
-                <CasesGrid casesPricing={casesPricing} onOpenCase={onOpenCase} />
-              )}
-              {tab === TABS.home && openingCase && (
-                <CaseOpen caseInfo={openingCase} onBack={()=>setOpeningCase(null)} />
-              )}
-              {tab === TABS.vote && (
-                <div className="rounded-2xl border border-zinc-700 bg-[#0d0e10] p-4">
-                  <div className="text-sm text-zinc-400 mb-2">Голосование</div>
-                  <div className="text-sm">Здесь появятся новые предложения и апдейты (скоро).</div>
-                </div>
-              )}
-              {tab === TABS.inv && (
-                <Inventory items={inventory} onWithdraw={onWithdraw} />
-              )}
-            </main>
-          </div>
-
-          {/* Таббар — всегда виден и на главной, и на внутренних */}
-          <nav className="tabbar">
-            <div className="max-w-md mx-auto flex">
-              <button className={`tab-item ${tab===TABS.home ? 'active' : ''}`} onClick={()=>{ setOpeningCase(null); setTab(TABS.home); }}>
-                🏠<div>Главная</div>
-              </button>
-              <button className={`tab-item ${tab===TABS.vote ? 'active' : ''}`} onClick={()=>{ setOpeningCase(null); setTab(TABS.vote); }}>
-                🗳️<div>Голосование</div>
-              </button>
-              <button className={`tab-item ${tab===TABS.inv ? 'active' : ''}`} onClick={()=>{ setOpeningCase(null); setTab(TABS.inv); }}>
-                🎒<div>Инвентарь</div>
-              </button>
-            </div>
-          </nav>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(e){e.preventDefault();document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active')})});
+    render();
+  })();
   </script>
 </body>
 </html>
-
