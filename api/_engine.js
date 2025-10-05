@@ -1,5 +1,6 @@
 // api/_engine.js
-// CommonJS + Node18 fetch + безопасные заглушки без падения
+// CommonJS + Node18 fetch. Dynamic case pricing for Telegram Gifts (stars, improved, resale).
+// Robust to different getAvailableGifts response shapes; second-floor pricing; 60s in-memory cache.
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const API_BASE = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
@@ -7,7 +8,7 @@ const REFRESH_MS = 60_000;
 
 const PRICING = { rtp: 0.80, markup: 0.08, roundStep: 1 };
 
-// Демо-конфигурация кейсов: id + набор коллекций с весами
+// ------- Demo CASES (replace collections with real ones or fill COLLECTION_MAP) -------
 const CASES = [
   {
     id: 'cheap', title: 'Дешёвый', prizes: [
@@ -46,8 +47,7 @@ const CASES = [
   }
 ];
 
-// Маппинг «внутренний код коллекции» → реальный Telegram collectionId.
-// ПОМЕНЯЙ на реальные ID из /api/gifts/stars
+// Map “readable code” -> real Telegram collectionId (fill with live IDs from /api/gifts/stars)
 const COLLECTION_MAP = {
   'col-common-a' : 'tg_collection_common_A',
   'col-common-b' : 'tg_collection_common_B',
@@ -61,17 +61,17 @@ const COLLECTION_MAP = {
   'col-ultra-a'  : 'tg_collection_ultra_A',
 };
 
-// Глобальный кэш для serverless (живёт пока инстанс тёплый)
+// ------- In-memory cache for warm serverless instances -------
 const S = globalThis.__ENGINE_STATE__ || {
   ts: 0,
-  starsItems: [],          // элементы, покупаемые за ⭐ (improved+resale)
-  secondFloors: new Map(), // collectionId → { secondFloorStars, hasAtLeastTwo }
-  casePricing: [],         // массив цен кейсов
+  starsItems: [],
+  secondFloors: new Map(),
+  casePricing: [],
   refreshing: false,
 };
 globalThis.__ENGINE_STATE__ = S;
 
-// ---------- Утилиты ----------
+// ---------------- Utils ----------------
 function roundTo(n, step){ return Math.round(n/step)*step; }
 function round2(n){ return Math.round(n*100)/100; }
 function round4(n){ return Math.round(n*10000)/10000; }
@@ -103,7 +103,8 @@ function extractStars(obj) {
   if (typeof obj === 'object') {
     if (typeof obj.stars === 'number') return obj.stars;
     if (typeof obj.amount === 'number') return obj.amount;
-    if (typeof obj.value === 'number' && ((obj.currency||obj.unit)==='stars')) return obj.value;
+    if (typeof obj.value === 'number' && (obj.currency==='stars' || obj.unit==='stars')) return obj.value;
+    if (typeof obj.price === 'number') return obj.price;
   }
   return null;
 }
@@ -129,8 +130,7 @@ function canBuyWithStars(g){
                : Array.isArray(g?.variants) ? g.variants : null;
   if (options && options.length) {
     const hasStars = options.some(o =>
-      (String(o?.currency||o?.unit||'').toLowerCase()==='stars') ||
-      (typeof extractStars(o?.price) === 'number')
+      (String(o?.currency||o?.unit||'').toLowerCase()==='stars') || (typeof extractStars(o?.price) === 'number')
     );
     const tonOnly = options.every(o => String(o?.currency||o?.unit||'').toLowerCase()==='ton');
     if (hasStars) return true;
@@ -139,12 +139,13 @@ function canBuyWithStars(g){
   if (String(g?.currency||'').toLowerCase()==='ton' || g?.only_ton === true) return false;
   return false;
 }
+
 function normalizeGift(g) {
   const giftId = g?.gift_id ?? g?.id ?? g?.uid ?? null;
   const title  = g?.title ?? g?.name ?? g?.label ?? null;
-  const stars  = extractStars(g?.price) ?? extractStars(g?.cost) ?? extractStars(g?.stars) ?? null;
-  const collectionId   = g?.collection?.id ?? g?.collection_id ?? g?.collectionId ?? null;
 
+  // stars may be in price/cost/options
+  const stars  = extractStars(g?.price) ?? extractStars(g?.cost) ?? extractStars(g?.stars) ?? null;
   let variantStars = null;
   const options = Array.isArray(g?.purchaseOptions) ? g.purchaseOptions
                : Array.isArray(g?.options) ? g.options
@@ -158,6 +159,8 @@ function normalizeGift(g) {
   }
   const starsPrice = (typeof stars === 'number' && stars > 0) ? stars : variantStars;
 
+  const collectionId   = g?.collection?.id ?? g?.collection_id ?? g?.collectionId ?? null;
+
   return {
     giftId, title,
     stars: starsPrice ?? null,
@@ -168,12 +171,26 @@ function normalizeGift(g) {
     raw: g
   };
 }
-function selectStarsImprovedResale(items) {
-  return items.map(normalizeGift).filter(x =>
-    x.giftId && x.collectionId && x.improved && x.resale && x.starsBuyable &&
-    typeof x.stars === 'number' && x.stars > 0
-  );
+
+// Robust input: array | {gifts:[]} | {items:[]} | {data:{gifts:[]}}
+function toArrayMaybe(items) {
+  if (Array.isArray(items)) return items;
+  if (items && Array.isArray(items.gifts)) return items.gifts;
+  if (items && Array.isArray(items.items)) return items.items;
+  if (items && items.data && Array.isArray(items.data.gifts)) return items.data.gifts;
+  return [];
 }
+
+function selectStarsImprovedResale(items) {
+  const arr = toArrayMaybe(items);
+  return arr
+    .map(normalizeGift)
+    .filter(x =>
+      x.giftId && x.collectionId && x.improved && x.resale && x.starsBuyable &&
+      typeof x.stars === 'number' && x.stars > 0
+    );
+}
+
 function buildSecondFloorsByCollection(starItems) {
   const byCol = new Map();
   for (const it of starItems) {
@@ -187,33 +204,53 @@ function buildSecondFloorsByCollection(starItems) {
     result.set(cid, {
       hasAtLeastTwo: has2,
       secondFloorStars: has2 ? sorted[1].stars : (sorted[0]?.stars ?? null),
-      sampleSorted: sorted.slice(0, 6),
+      sampleSorted: sorted.slice(0, 8),
     });
   }
   return result;
 }
+
+// Safer pricing: ignore blocked collections; normalize weights on available ones
 function priceCase(prizes, floors){
-  const total = prizes.reduce((s,p)=> s+(p.weight||0), 0) || 1;
-  const details = prizes.map(p=>{
+  const detailsRaw = prizes.map(p=>{
     const real = COLLECTION_MAP[p.collectionId] || p.collectionId;
     const rec  = floors.get(real);
     const blocked = !(rec && rec.hasAtLeastTwo && typeof rec.secondFloorStars==='number');
     const value  = blocked ? 0 : rec.secondFloorStars;
-    return { id:p.id, label:p.label, collectionId: real, prob:(p.weight||0)/total, valueStars:value, blocked };
+    return { id:p.id, label:p.label, collectionId: real, weight:(p.weight||0), valueStars:value, blocked };
   });
-  const ev   = details.reduce((s,p)=> s + p.valueStars*p.prob, 0);
+
+  const available = detailsRaw.filter(d => !d.blocked);
+  if (!available.length) {
+    return {
+      rtp: PRICING.rtp, markup: PRICING.markup,
+      evStars: 0, basePrice: 0, finalPrice: 0,
+      blockedCollections: detailsRaw.map(d=>d.collectionId),
+      blockedRatio: 1,
+      prizes: detailsRaw.map(d => ({ ...d, prob: 0, valueStars: round2(d.valueStars) }))
+    };
+  }
+
+  const totalW = available.reduce((s,d)=> s + d.weight, 0) || 1;
+  const details = detailsRaw.map(d => ({
+    ...d,
+    prob: d.blocked ? 0 : (d.weight / totalW)
+  }));
+
+  const ev   = details.reduce((s,p)=> s + (p.blocked ? 0 : p.valueStars * p.prob), 0);
   const base = ev / Math.max(PRICING.rtp, 1e-6);
-  let final  = roundTo(base * (1 + PRICING.markup), PRICING.roundStep);
+  const final = roundTo(base * (1 + PRICING.markup), PRICING.roundStep);
+
   return {
     rtp: PRICING.rtp, markup: PRICING.markup,
     evStars: round2(ev), basePrice: round2(base), finalPrice: final,
-    blockedCollections: details.filter(d=>d.blocked).map(d=>d.collectionId),
-    blockedRatio: details.filter(d=>d.blocked).length / details.length,
+    blockedCollections: detailsRaw.filter(d=>d.blocked).map(d=>d.collectionId),
+    blockedRatio: detailsRaw.filter(d=>d.blocked).length / detailsRaw.length,
     prizes: details.map(d => ({ ...d, prob: round4(d.prob), valueStars: round2(d.valueStars) }))
   };
 }
 
-// --------- Обновление/кэш ---------
+// --------------- Refresh (with demo fallback) ---------------
 async function refresh() {
   if (S.refreshing) return;
   const now = Date.now();
@@ -223,18 +260,41 @@ async function refresh() {
   try {
     let raw;
     if (BOT_TOKEN) {
-      // Официальный метод (если доступен в вашей среде бота)
-      raw = await tgCall('getAvailableGifts');
+      const r = await tgCall('getAvailableGifts'); // may be array or wrapped object
+      raw = toArrayMaybe(r);
     } else {
-      // Без токена — демо-данные (не падаем 500)
+      // Demo data: ensure >=2 lots per demo collection to get non-zero prices
       raw = [
-        // упростим: уже нормализованные похожие объекты
-        { id:'g1', title:'Demo Common',  collection:{id:'tg_collection_common_A'}, price:{stars:5},  improved:true, resale:true },
-        { id:'g2', title:'Demo Common+', collection:{id:'tg_collection_common_A'}, price:{stars:6},  improved:true, resale:true },
-        { id:'g3', title:'Demo Rare',    collection:{id:'tg_collection_rare_A'},  price:{stars:12}, improved:true, resale:true },
-        { id:'g4', title:'Demo Epic',    collection:{id:'tg_collection_epic_A'},  price:{stars:25}, improved:true, resale:true },
-        { id:'g5', title:'Demo Epic+',   collection:{id:'tg_collection_epic_B'},  price:{stars:34}, improved:true, resale:true },
-        { id:'g6', title:'Demo Legend',  collection:{id:'tg_collection_legend_A'},price:{stars:60}, improved:true, resale:true },
+        { id:'g1',  title:'Demo Common',    collection:{id:'tg_collection_common_A'}, price:{stars:5},  improved:true, resale:true },
+        { id:'g2',  title:'Demo Common+',   collection:{id:'tg_collection_common_A'}, price:{stars:6},  improved:true, resale:true },
+        { id:'g2b', title:'Demo Common++',  collection:{id:'tg_collection_common_A'}, price:{stars:7},  improved:true, resale:true },
+
+        { id:'g7',  title:'Demo Common B',  collection:{id:'tg_collection_common_B'}, price:{stars:8},  improved:true, resale:true },
+        { id:'g8',  title:'Demo Common B+', collection:{id:'tg_collection_common_B'}, price:{stars:9},  improved:true, resale:true },
+
+        { id:'g3',  title:'Demo Rare',      collection:{id:'tg_collection_rare_A'},  price:{stars:12}, improved:true, resale:true },
+        { id:'g3b', title:'Demo Rare+',     collection:{id:'tg_collection_rare_A'},  price:{stars:14}, improved:true, resale:true },
+
+        { id:'g9',  title:'Demo Rare B',    collection:{id:'tg_collection_rare_B'},  price:{stars:16}, improved:true, resale:true },
+        { id:'g9b', title:'Demo Rare B+',   collection:{id:'tg_collection_rare_B'},  price:{stars:18}, improved:true, resale:true },
+
+        { id:'g4',  title:'Demo Epic',      collection:{id:'tg_collection_epic_A'},  price:{stars:25}, improved:true, resale:true },
+        { id:'g4b', title:'Demo Epic+',     collection:{id:'tg_collection_epic_A'},  price:{stars:28}, improved:true, resale:true },
+
+        { id:'g5',  title:'Demo Epic B',    collection:{id:'tg_collection_epic_B'},  price:{stars:34}, improved:true, resale:true },
+        { id:'g5b', title:'Demo Epic B+',   collection:{id:'tg_collection_epic_B'},  price:{stars:36}, improved:true, resale:true },
+
+        { id:'g6',  title:'Demo Legend',    collection:{id:'tg_collection_legend_A'},price:{stars:60}, improved:true, resale:true },
+        { id:'g6b', title:'Demo Legend+',   collection:{id:'tg_collection_legend_A'},price:{stars:64}, improved:true, resale:true },
+
+        { id:'g10', title:'Demo Legend B',  collection:{id:'tg_collection_legend_B'},price:{stars:72}, improved:true, resale:true },
+        { id:'g10b',title:'Demo Legend B+', collection:{id:'tg_collection_legend_B'},price:{stars:76}, improved:true, resale:true },
+
+        { id:'g11', title:'Demo Myth',      collection:{id:'tg_collection_myth_A'},  price:{stars:110}, improved:true, resale:true },
+        { id:'g11b',title:'Demo Myth+',     collection:{id:'tg_collection_myth_A'},  price:{stars:120}, improved:true, resale:true },
+
+        { id:'g12', title:'Demo Ultra',     collection:{id:'tg_collection_ultra_A'}, price:{stars:160}, improved:true, resale:true },
+        { id:'g12b',title:'Demo Ultra+',    collection:{id:'tg_collection_ultra_A'}, price:{stars:170}, improved:true, resale:true },
       ];
     }
 
@@ -255,12 +315,11 @@ async function refresh() {
   }
 }
 
-// --------- Публичные функции движка ---------
+// --------------- Public API ---------------
 async function getCasePricing() {
   await refresh();
   return S.casePricing || [];
 }
-
 async function getStarsByCollection() {
   await refresh();
   const by = {};
@@ -270,7 +329,6 @@ async function getStarsByCollection() {
   for (const k of Object.keys(by)) by[k].sort((a,b)=> a.stars - b.stars);
   return by;
 }
-
 async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
   await refresh();
   if (!collectionId) throw new Error('collectionId required');
@@ -282,7 +340,6 @@ async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
   const pick = list[0];
 
   if (!BOT_TOKEN) {
-    // демо-ответ без отправки
     return { demo:true, sentTo: recipient, giftId: pick.giftId, title: pick.title, priceStars: pick.stars };
   }
 
@@ -292,7 +349,7 @@ async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
 
   if (!userId) throw new Error('Cannot resolve recipient');
 
-  // ВНИМАНИЕ: метод sendGift/параметры могут отличаться в вашей среде.
+  // Note: adjust sendGift params to actual API in your env if needed
   const out = await tgCall('sendGift', {
     user_id: userId,
     gift_id: pick.giftId,
@@ -309,3 +366,4 @@ module.exports = {
   getStarsByCollection,
   autoBuyAndSend,
 };
+
