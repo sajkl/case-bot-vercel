@@ -1,0 +1,12 @@
+// api/debug/peek.js
+const { getPeek } = require('../_engine');
+
+module.exports = async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+    const out = await getPeek(limit);
+    res.status(200).json({ ok: true, items: out });
+  } catch (e) {
+    res.status(200).json({ ok: false, error: e?.message || String(e) });
+  }
+};
