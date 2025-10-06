@@ -1,0 +1,11 @@
+// api/debug/snapshot.js
+const { getDiagnostics } = require('../_engine');
+
+module.exports = async (req, res) => {
+  try {
+    const diag = await getDiagnostics();
+    res.status(200).json({ ok: true, ...diag });
+  } catch (e) {
+    res.status(200).json({ ok: false, error: e?.message || String(e) });
+  }
+};
