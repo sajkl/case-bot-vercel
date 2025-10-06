@@ -1,6 +1,6 @@
 // api/_engine.js
 // CommonJS + Node18 fetch
-// Источники: (1) Bot API getAvailableGifts → (2) PUBLIC_GIFTS_URL → (3) demo (только если нет старого снапшота)
+// Источники: (1) Bot API getAvailableGifts → (2) PUBLIC_GIFTS_URL → (3) demo (если пусто и нет старого снапшота)
 // Флаги окружения:
 //   TELEGRAM_BOT_TOKEN  — токен бота (для bot source)
 //   GIFTS_SOURCE_URL    — публичный JSON (по умолчанию https://tg.me/gifts/available_gifts)
@@ -16,7 +16,7 @@ const STRICT_FILTER = String(process.env.STRICT_FILTER || '1') === '1';
 const REFRESH_MS = 60_000;
 const PRICING = { rtp: 0.80, markup: 0.08, roundStep: 1 };
 
-// ---- Кейсы (оставьте как есть; подставьте реальные collectionId через COLLECTION_MAP или прямо тут) ----
+// ---- Кейсы (можно оставить читабельные id и маппить через COLLECTION_MAP) ----
 const CASES = [
   {
     id: 'cheap', title: 'Дешёвый', prizes: [
@@ -55,7 +55,7 @@ const CASES = [
   }
 ];
 
-// Маппинг «читабельный код» -> реальный collectionId
+// Маппинг «читабельный код» -> реальный collectionId (замени на реальные ID)
 const COLLECTION_MAP = {
   'col-common-a' : 'tg_collection_common_A',
   'col-common-b' : 'tg_collection_common_B',
@@ -76,6 +76,8 @@ const S = globalThis.__ENGINE_STATE__ || {
   secondFloors: new Map(),
   casePricing: [],
   refreshing: false,
+  lastSource: 'none',     // 'bot' | 'public' | 'demo'
+  lastRawCount: 0         // сколько пришло до фильтрации
 };
 globalThis.__ENGINE_STATE__ = S;
 
@@ -209,7 +211,7 @@ function toArrayMaybe(items) {
   if (Array.isArray(items.list)) return items.list;
   if (Array.isArray(items.results)) return items.results;
 
-  // иногда ответ бывает вида {collections:[{gifts:[...]}, ...]}
+  // иногда ответ вида {collections:[{gifts:[...]}, ...]}
   if (Array.isArray(items.collections)) {
     const flat = [];
     for (const c of items.collections) {
@@ -254,13 +256,30 @@ function buildSecondFloorsByCollection(starItems) {
   return result;
 }
 
+// Включить, если нужен first-floor с «подушкой безопасности» (иначе оставь false)
+/*
+const ALLOW_FIRST_FLOOR = true;
+const FIRST_FLOOR_FACTOR = 1.15;
+*/
+
 // — цена кейса: игнорируем заблокированные коллекции, нормализуем веса по доступным
 function priceCase(prizes, floors){
   const detailsRaw = prizes.map(p=>{
     const real = COLLECTION_MAP[p.collectionId] || p.collectionId;
     const rec  = floors.get(real);
-    const blocked = !(rec && rec.hasAtLeastTwo && typeof rec.secondFloorStars==='number');
-    const value  = blocked ? 0 : rec.secondFloorStars;
+
+    // базовый режим: только second-floor
+    let blocked = !(rec && rec.hasAtLeastTwo && typeof rec.secondFloorStars==='number');
+    let value   = blocked ? 0 : rec.secondFloorStars;
+
+    // если нужен безопасный first-floor — раскомментируй блок выше и этот if:
+    /*
+    if (blocked && rec && typeof rec.secondFloorStars === 'number' && rec.secondFloorStars > 0 && ALLOW_FIRST_FLOOR) {
+      blocked = false;
+      value   = Math.ceil(rec.secondFloorStars * FIRST_FLOOR_FACTOR);
+    }
+    */
+
     return { id:p.id, label:p.label, collectionId: real, weight:(p.weight||0), valueStars:value, blocked };
   });
 
@@ -305,7 +324,7 @@ async function refresh() {
     let raw = [];
     let used = 'none';
 
-    // FORCE_PUBLIC — сразу идём в публичный источник
+    // FORCE_PUBLIC=1 — сразу идём в публичный источник
     if (!FORCE_PUBLIC && BOT_TOKEN) {
       try {
         const r = await tgCall('getAvailableGifts');
@@ -364,6 +383,8 @@ async function refresh() {
     S.starsItems = starsItems;
     S.secondFloors = floors;
     S.casePricing = casePricing;
+    S.lastSource = used;
+    S.lastRawCount = raw.length;
 
     console.log(`[engine] used=${used}, strict=${STRICT_FILTER ? 1 : 0}, items=${starsItems.length}, cases=${casePricing.length}`);
   } finally {
@@ -415,11 +436,50 @@ async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
   return { sentTo: userId, giftId: pick.giftId, title: pick.title, priceStars: pick.stars, raw: out };
 }
 
+// ---------- Diagnostics ----------
+async function getDiagnostics() {
+  await refresh();
+  // список коллекций и короткие примеры цен
+  const by = {};
+  for (const it of S.starsItems) {
+    (by[it.collectionId] ||= []).push({ giftId: it.giftId, title: it.title, stars: it.stars });
+  }
+  const collections = Object.keys(by).sort();
+  const samples = {};
+  for (const k of collections) {
+    by[k].sort((a,b)=>a.stars-b.stars);
+    samples[k] = by[k].slice(0, 5); // первые 5 цен по возрастанию
+  }
+  return {
+    ts: S.ts,
+    source: S.lastSource,
+    rawCount: S.lastRawCount,
+    normalizedCount: S.starsItems.length,
+    collections,
+    samples
+  };
+}
+
+async function getPeek(limit=10) {
+  await refresh();
+  return (S.starsItems || []).slice(0, limit).map(x => ({
+    giftId: x.giftId,
+    title:  x.title,
+    collectionId: x.collectionId,
+    stars: x.stars,
+    improved: x.improved,
+    resale: x.resale,
+    starsBuyable: x.starsBuyable
+  }));
+}
+
 module.exports = {
   CASES,
   COLLECTION_MAP,
   getCasePricing,
   getStarsByCollection,
   autoBuyAndSend,
+  // diagnostics
+  getDiagnostics,
+  getPeek,
 };
-
