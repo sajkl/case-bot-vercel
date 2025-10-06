@@ -27,7 +27,6 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // на Vercel в serverless нежелательно полагаться на WHATWG URL без try/catch
   let limit = 10;
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
