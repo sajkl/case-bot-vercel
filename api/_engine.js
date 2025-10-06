@@ -1,541 +1,437 @@
 // api/_engine.js
-// Runtime: Node.js 18 (CommonJS). Централизованный движок цен/кейсов/диагностики.
+'use strict';
 
-// ====== ENV & CONSTANTS ======
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const API_BASE  = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
-const GIFTS_SOURCE_URL = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
+/**
+ * Robust engine for Telegram gifts catalog on Vercel (Node 18+).
+ * - Primary source: Bot API getAvailableGifts (TELEGRAM_BOT_TOKEN or BOT_TOKEN)
+ * - Fallback: GIFTS_SOURCE_URL (default: https://tg.me/gifts/available_gifts)
+ * - Final fallback: demo items
+ * - Wide normalization for star price / collection id variations
+ * - Transparent filter logs to understand drops
+ * - Works with or without explicit COLLECTION_MAP (auto-bucket by second floor)
+ */
 
-// Форсировать публичный источник (игнорируя Bot API)
-const FORCE_PUBLIC = String(process.env.FORCE_PUBLIC || '0') === '1';
-// Строгая фильтрация: только improved + resale + покупка за ⭐
-const STRICT_FILTER = String(process.env.STRICT_FILTER || '1') === '1';
-
-// Период автообновления снапшота с рынка
-const REFRESH_MS = 60_000;
-
-// Параметры ценообразования кейсов
-const PRICING = {
-  rtp: 0.80,            // целевой RTP
-  markup: 0.08,         // наценка сверху
-  roundStep: 1          // округление до ... (1 = ближайшее целое кол-во ⭐)
+const ENV = {
+  TOKEN: process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || '',
+  FORCE_PUBLIC: process.env.FORCE_PUBLIC === '1',
+  STRICT_FILTER: process.env.STRICT_FILTER === '1' ? 1 : 0, // default 0 for easier bootstrap
+  GIFTS_SOURCE_URL: process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts',
+  REFRESH_MS: Math.max(0, parseInt(process.env.REFRESH_MS || '60000', 10)),
+  ALLOW_FIRST_FLOOR: process.env.ALLOW_FIRST_FLOOR === '0' ? 0 : 1, // default ON
+  FIRST_FLOOR_FACTOR: parseFloat(process.env.FIRST_FLOOR_FACTOR || '1.15'),
+  PRICING_RTP: parseFloat(process.env.PRICING_RTP || '0.80'),
+  PRICING_MARKUP: parseFloat(process.env.PRICING_MARKUP || '0.08'),
+  ROUND_STEP: Math.max(0.01, parseFloat(process.env.ROUND_STEP || '1')),
+  MAX_COLLECTIONS_PER_TIER: Math.max(1, parseInt(process.env.MAX_COLLECTIONS_PER_TIER || '3', 10)),
+  COLLECTION_MAP_JSON: process.env.COLLECTION_MAP_JSON || '',
 };
 
-// (опционально) Разрешить безопасный fallback на 1-й лот (first-floor) с коэффициентом
-// Если коллекция имеет только 1 цену за ⭐, можно временно считать её как first-floor * factor,
-// чтобы не блокировать кейсы. По умолчанию выключено — используем строгий second-floor.
-// Включить — раскомментируйте две строки ниже И блок в priceCase().
-/*
-const ALLOW_FIRST_FLOOR = true;
-const FIRST_FLOOR_FACTOR = 1.15;
-*/
-
-// ====== DEFINITIONS: CASES & COLLECTION MAP ======
-// Кейсы (читаемые id коллекций) — ниже есть маппинг на реальные collectionId.
-// Замените значения в COLLECTION_MAP на реальные ID с /api/snapshot (samples/collections).
 const CASES = [
-  {
-    id: 'cheap', title: 'Дешёвый', prizes: [
-      { id:'c1', label:'Common UPG',   collectionId:'col-common-a', weight:60 },
-      { id:'c2', label:'Common UPG+',  collectionId:'col-common-b', weight:25 },
-      { id:'c3', label:'Rare UPG',     collectionId:'col-rare-a',   weight:12 },
-      { id:'c4', label:'Epic UPG',     collectionId:'col-epic-a',   weight:3  },
-    ]
-  },
-  {
-    id: 'standard', title: 'Средний', prizes: [
-      { id:'s1', label:'Common UPG+',  collectionId:'col-common-b', weight:45 },
-      { id:'s2', label:'Rare UPG',     collectionId:'col-rare-a',   weight:30 },
-      { id:'s3', label:'Rare UPG+',    collectionId:'col-rare-b',   weight:15 },
-      { id:'s4', label:'Epic UPG',     collectionId:'col-epic-a',   weight:8  },
-      { id:'s5', label:'Legend UPG',   collectionId:'col-legend-a', weight:2  },
-    ]
-  },
-  {
-    id: 'expensive', title: 'Дорогой', prizes: [
-      { id:'e1', label:'Rare UPG+',    collectionId:'col-rare-b',   weight:35 },
-      { id:'e2', label:'Epic UPG',     collectionId:'col-epic-a',   weight:28 },
-      { id:'e3', label:'Epic UPG+',    collectionId:'col-epic-b',   weight:20 },
-      { id:'e4', label:'Legend UPG',   collectionId:'col-legend-a', weight:12 },
-      { id:'e5', label:'Legend UPG+',  collectionId:'col-legend-b', weight:5  },
-    ]
-  },
-  {
-    id: 'premium', title: 'Премиум', prizes: [
-      { id:'p1', label:'Epic UPG+',    collectionId:'col-epic-b',   weight:30 },
-      { id:'p2', label:'Legend UPG',   collectionId:'col-legend-a', weight:25 },
-      { id:'p3', label:'Legend UPG+',  collectionId:'col-legend-b', weight:22 },
-      { id:'p4', label:'Myth UPG',     collectionId:'col-myth-a',   weight:15 },
-      { id:'p5', label:'Ultra UPG',    collectionId:'col-ultra-a',  weight:8  },
-    ]
-  }
+  { id: 'starter', title: 'Starter' },
+  { id: 'rare',    title: 'Rare'    },
+  { id: 'epic',    title: 'Epic'    },
+  { id: 'legend',  title: 'Legend'  },
 ];
 
-// Маппинг «локальный ключ → реальный collectionId».
-// Замените правую часть на реальные ID из /api/snapshot (samples/collections).
-const COLLECTION_MAP = {
-  'col-common-a' : 'tg_collection_common_A',
-  'col-common-b' : 'tg_collection_common_B',
-  'col-rare-a'   : 'tg_collection_rare_A',
-  'col-rare-b'   : 'tg_collection_rare_B',
-  'col-epic-a'   : 'tg_collection_epic_A',
-  'col-epic-b'   : 'tg_collection_epic_B',
-  'col-legend-a' : 'tg_collection_legend_A',
-  'col-legend-b' : 'tg_collection_legend_B',
-  'col-myth-a'   : 'tg_collection_myth_A',
-  'col-ultra-a'  : 'tg_collection_ultra_A',
+// Thresholds for auto-bucketing by second floor (in Stars)
+const FLOOR_THRESHOLDS = {
+  starterMax: 20,
+  rareMax: 100,
+  epicMax: 500, // legend => >500
 };
 
-// ====== STATE (in-memory cache) ======
-const S = globalThis.__ENGINE_STATE__ || {
-  ts: 0,                         // timestamp последнего refresh
-  lastSource: 'none',            // 'bot' | 'public' | 'demo'
-  lastRawCount: 0,               // сколько пришло от источника
-  starsItems: [],                // нормализованные лоты (за ⭐)
-  secondFloors: new Map(),       // Map<collectionId, { secondFloorStars, hasAtLeastTwo, sampleSorted[] }>
-  casePricing: [],               // рассчитанные кейсы
-  refreshing: false,
-};
-globalThis.__ENGINE_STATE__ = S;
+// ---------------------- HTTP fetchers ----------------------
 
-// ====== UTILS ======
-function roundTo(n, step){ return Math.round(n/step)*step; }
-function round2(n){ return Math.round(n*100)/100; }
-function round4(n){ return Math.round(n*10000)/10000; }
-
-async function tgCall(method, params) {
-  if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not set');
-  const url = `${API_BASE}/${method}`;
-  const init = params ? {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify(params)
-  } : { method: 'GET' };
-
-  const r = await fetch(url, init);
-  const text = await r.text();
-  let json = null; try { json = JSON.parse(text); } catch {}
-  if (!r.ok || !json || json.ok !== true) {
-    const msg = json?.description || text || `HTTP ${r.status}`;
-    throw new Error(`${method} failed: ${msg}`);
+async function fetchJson(url, opts) {
+  const r = await fetch(url, { ...opts, cache: 'no-store' });
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status} ${r.statusText}: ${text.slice(0, 300)}`);
   }
-  return json.result;
+  return r.json();
+}
+
+async function fetchBotGifts() {
+  if (!ENV.TOKEN) throw new Error('No TELEGRAM_BOT_TOKEN/BOT_TOKEN set');
+  const url = `https://api.telegram.org/bot${ENV.TOKEN}/getAvailableGifts`;
+  const j = await fetchJson(url);
+  if (!j.ok) throw new Error(`Telegram error: ${JSON.stringify(j)}`);
+  const list = j.result?.gifts || j.result?.items || j.result?.list || [];
+  return Array.isArray(list) ? list : [];
 }
 
 async function fetchPublicGifts() {
-  try {
-    const r = await fetch(GIFTS_SOURCE_URL, { headers: { 'Accept':'application/json' } });
-    const text = await r.text();
-    let json = null; try { json = JSON.parse(text); } catch {}
-    // расплющиваем популярные варианты
-    let arr =
-      (Array.isArray(json) && json) ||
-      json?.data?.gifts ||
-      json?.gifts ||
-      json?.items ||
-      json?.available_gifts ||
-      json?.list ||
-      json?.results || [];
-    if (!Array.isArray(arr)) arr = [];
-    // лог первых двух для отладки
-    if (arr.length) console.log('[engine] public.raw example:', JSON.stringify(arr.slice(0,2)).slice(0,800));
-    return arr;
-  } catch (e) {
-    console.warn('[public gifts] fetch failed:', e?.message || e);
-    return [];
-  }
+  const j = await fetchJson(ENV.GIFTS_SOURCE_URL);
+  const list = j.result?.gifts || j.result?.items || j.result?.list || j.gifts || j.items || j.list || j;
+  return Array.isArray(list) ? list : (Array.isArray(j) ? j : []);
 }
 
-function extractStars(obj) {
-  if (!obj) return null;
-  if (typeof obj === 'number') return obj > 0 ? obj : null;
-  if (typeof obj === 'string') {
-    const m = obj.match(/(\d+(?:\.\d+)?)/);
-    return m ? Number(m[1]) : null;
-  }
-  if (typeof obj === 'object') {
-    if ((obj.unit === 'stars' || obj.currency === 'stars') && typeof obj.value === 'number') {
-      return obj.value > 0 ? obj.value : null;
-    }
-    if (typeof obj.stars === 'number') return obj.stars > 0 ? obj.stars : null;
-    if (typeof obj.price === 'number') return obj.price > 0 ? obj.price : null;
-  }
-  return null;
+// ---------------------- Normalization helpers ----------------------
+
+function pick(...vals) {
+  for (const v of vals) if (v !== undefined && v !== null) return v;
+  return undefined;
 }
 
-function isImproved(g){
-  return Boolean(
-    g?.unique || g?.is_unique || g?.improved || g?.is_improved ||
-    (String(g?.kind||'').toLowerCase().includes('upgrad')) ||
-    (String(g?.type||'').toLowerCase().includes('upgrad'))
+function extractStars(g) {
+  // direct numeric
+  const direct = pick(g.star_count, g.stars, g.price_stars, g.priceStars, g.value_stars);
+  if (typeof direct === 'number' && direct > 0) return direct;
+
+  // object price
+  const price = g.price || g.cost || g.min_price || g.minPrice || g.lowest_price || g.lowestPrice;
+  if (price && typeof price === 'object') {
+    const unit = (price.unit || price.currency || '').toString().toLowerCase();
+    const val  = pick(price.value, price.amount, price.star_count, price.stars);
+    if (unit === 'stars' && typeof val === 'number' && val > 0) return val;
+  }
+
+  // arrays of prices/options
+  const prices = g.prices || g.options || g.variants;
+  if (Array.isArray(prices)) {
+    const starish = prices
+      .map(p => {
+        const unit = (p.unit || p.currency || '').toString().toLowerCase();
+        const val  = pick(p.value, p.amount, p.star_count, p.stars);
+        if (unit === 'stars' && typeof val === 'number' && val > 0) return val;
+        return undefined;
+      })
+      .filter(v => typeof v === 'number' && v > 0)
+      .sort((a, b) => a - b);
+    if (starish.length) return starish[0];
+  }
+
+  return undefined;
+}
+
+function extractCollectionId(g) {
+  return pick(
+    g.collectionId,
+    g.collection_id,
+    g.collection?.id,
+    g.pack_id,
+    g.set_id,
+    g.setId,
+    g.sticker?.set_name,
+    g.sticker_set_name,
   );
 }
-function isResale(g){
-  return Boolean(
-    g?.resale || g?.is_resale ||
-    (String(g?.market||'').toLowerCase().includes('resale')) ||
-    (String(g?.section||'').toLowerCase().includes('resale')) ||
-    (String(g?.sale_type||'').toLowerCase().includes('resale'))
-  );
+
+function isBuyableForStars(g, stars) {
+  if (!stars || stars <= 0) return false;
+  const rc = pick(g.remaining_count, g.remainingCount);
+  if (rc === 0) return false;
+  if (g.buyable === false) return false;
+  if (g.can_purchase === false) return false;
+  if (g.can_buy_with_stars === false) return false;
+  return true;
 }
-function canBuyWithStars(g){
-  // явные признаки
-  if (g?.purchaseWithStars === true || g?.starsBuyable === true) return true;
 
-  // варианты/опции
-  const options = Array.isArray(g?.purchaseOptions) ? g.purchaseOptions
-               : Array.isArray(g?.options) ? g.options
-               : Array.isArray(g?.variants) ? g.variants : null;
-  if (options && options.length) {
-    // есть вариант со звёздами?
-    const hasStars = options.some(o =>
-      (String(o?.currency||o?.unit||'').toLowerCase() === 'stars') ||
-      (typeof extractStars(o?.price ?? o?.value) === 'number')
-    );
-    if (hasStars) return true;
-    // все варианты только TON?
-    const tonOnly = options.every(o => String(o?.currency||o?.unit||'').toLowerCase() === 'ton');
-    if (tonOnly) return false;
-  }
-
-  // fallback: min_price/minStars может быть объектом {unit:'stars', value:N}
-  const minStars = extractStars(g?.min_price) ?? extractStars(g?.minPrice) ?? extractStars(g?.minStars);
-  if (typeof minStars === 'number' && minStars > 0) return true;
-
+function detectImproved(g) {
+  const t = [g.type, g.kind, g.section, g.category, g.tag]
+    .map(x => (x || '').toString().toLowerCase())
+    .join(' ');
+  if (g.upgrade_star_count > 0 || g.upgradeStars > 0) return true;
+  if (t.includes('unique') || t.includes('upgrade') || t.includes('improved')) return true;
   return false;
 }
 
+function detectResale(g) {
+  const t = [g.type, g.kind, g.section, g.sale_type, g.saleType]
+    .map(x => (x || '').toString().toLowerCase())
+    .join(' ');
+  return t.includes('resale') || t.includes('re-sale') || t.includes('secondary');
+}
+
 function normalizeGift(g) {
-  const giftId = g?.gift_id ?? g?.id ?? g?.uid ?? g?.slug ?? g?.code ?? null;
-  const title  = g?.title ?? g?.name ?? g?.label ?? 'Gift';
-  const collectionId =
-    g?.collection?.id ?? g?.collection_id ?? g?.collectionId ??
-    g?.collection ?? g?.set ?? g?.series ?? null;
+  const giftId = pick(g.id, g.gift_id, g.uid, g.slug, g.unique_id, g.short_id);
+  const collectionId = extractCollectionId(g);
+  const stars = extractStars(g);
+  const starsBuyable = isBuyableForStars(g, stars);
+  const improved = detectImproved(g);
+  const resale = detectResale(g);
 
-  // Приоритеты извлечения звёздной цены
-  // (а) прямое поле
-  let stars = extractStars(g?.price) ?? extractStars(g?.cost) ?? extractStars(g?.stars);
-
-  // (б) из options/variants
-  if (stars == null) {
-    const opts = Array.isArray(g?.purchaseOptions) ? g.purchaseOptions
-               : Array.isArray(g?.options) ? g.options
-               : Array.isArray(g?.variants) ? g.variants : null;
-    if (opts) {
-      const starList = opts
-        .filter(o => (String(o?.currency||o?.unit||'').toLowerCase()==='stars') ||
-                     (typeof extractStars(o?.price ?? o?.value) === 'number'))
-        .map(o => extractStars(o?.price ?? o?.value))
-        .filter(v => typeof v === 'number' && v > 0);
-      if (starList.length) stars = Math.min(...starList);
-    }
-  }
-
-  // (в) min_price/minStars
-  if (stars == null) {
-    stars = extractStars(g?.min_price) ?? extractStars(g?.minPrice) ?? extractStars(g?.minStars);
-  }
-
-  const improved = isImproved(g);
-  const resale   = isResale(g);
-  const starsBuyable = canBuyWithStars(g);
+  const title = pick(
+    g.title, g.name, g.label,
+    g.sticker?.emoji, g.sticker?.alt, g.description
+  );
 
   return {
     giftId,
     title,
     collectionId,
-    stars: (typeof stars === 'number' && stars > 0) ? stars : null,
+    stars,
     improved,
     resale,
     starsBuyable,
-    raw: g
+    raw: g,
   };
 }
 
-function filterUsable(items) {
-  return (items || []).filter(it => {
-    if (!it || typeof it.stars !== 'number' || it.stars <= 0) return false;
-    if (!it.collectionId || !it.giftId) return false;
-    if (!it.starsBuyable) return false;
-    if (STRICT_FILTER) {
-      // строгий режим: только улучшенные / перепродажа
-      return (it.improved === true) || (it.resale === true);
-    }
-    return true;
-  });
-}
+// Filter with transparent drop stats
+function filterUsable(items, strictMode) {
+  const out = [];
+  const drop = { noGiftId: 0, noCollection: 0, noStars: 0, notBuyable: 0, strict: 0 };
 
-function buildSecondFloorsByCollection(starItems) {
-  const byCol = new Map();
-  for (const it of starItems) {
-    if (!byCol.has(it.collectionId)) byCol.set(it.collectionId, []);
-    byCol.get(it.collectionId).push({ giftId: it.giftId, title: it.title, stars: it.stars });
+  for (const g of items) {
+    const n = normalizeGift(g);
+
+    if (!n.giftId) { drop.noGiftId++; continue; }
+    if (!n.collectionId) { drop.noCollection++; continue; }
+    if (!n.stars || n.stars <= 0) { drop.noStars++; continue; }
+    if (!n.starsBuyable) { drop.notBuyable++; continue; }
+    if (strictMode && !(n.improved || n.resale)) { drop.strict++; continue; }
+
+    out.push(n);
   }
-  const out = new Map();
-  for (const [cid, arr] of byCol.entries()) {
-    const sorted = arr.slice().sort((a,b)=> a.stars - b.stars);
-    const has2 = sorted.length >= 2;
-    out.set(cid, {
-      hasAtLeastTwo: has2,
-      secondFloorStars: has2 ? sorted[1].stars : (sorted[0]?.stars ?? null),
-      sampleSorted: sorted.slice(0, 8),
-    });
-  }
+
+  console.log('[engine] filter drop stats', drop, 'kept=', out.length);
   return out;
 }
 
-function priceCase(prizes, floors){
-  const rows = prizes.map(p=>{
-    const realCol = COLLECTION_MAP[p.collectionId] || p.collectionId;
-    const rec = floors.get(realCol);
+// ---------------------- Collections, floors, bucketing ----------------------
 
-    let blocked = !(rec && rec.hasAtLeastTwo && typeof rec.secondFloorStars === 'number');
-    let value = blocked ? 0 : rec.secondFloorStars;
+function buildByCollection(normalized) {
+  const map = new Map();
+  for (const n of normalized) {
+    if (!map.has(n.collectionId)) map.set(n.collectionId, []);
+    map.get(n.collectionId).push(n);
+  }
+  // sort each collection by stars asc, keep distinct giftIds
+  const byCollection = {};
+  for (const [col, arr] of map.entries()) {
+    const seen = new Set();
+    const cleaned = arr
+      .filter(x => x.giftId && !seen.has(x.giftId) && typeof x.stars === 'number')
+      .sort((a, b) => a.stars - b.stars)
+      .map(x => { seen.add(x.giftId); return { giftId: x.giftId, title: x.title, stars: x.stars }; });
+    if (cleaned.length) byCollection[col] = cleaned;
+  }
+  return byCollection;
+}
 
-    // Если хотите first-floor fallback — раскомментируйте ALLOW_FIRST_FLOOR вверху и блок ниже.
-    /*
-    if (blocked && rec && typeof rec.secondFloorStars === 'number' && rec.secondFloorStars > 0 && ALLOW_FIRST_FLOOR) {
-      blocked = false;
-      value = Math.ceil(rec.secondFloorStars * FIRST_FLOOR_FACTOR);
-    }
-    */
+function computeFloors(byCollection) {
+  // returns { [collectionId]: {first:number, second:number|null} }
+  const floors = {};
+  for (const [col, arr] of Object.entries(byCollection)) {
+    const prices = [...new Set(arr.map(x => x.stars))].sort((a, b) => a - b);
+    const first = prices[0];
+    const second = prices.length >= 2 ? prices[1] : null;
+    floors[col] = { first, second };
+  }
+  return floors;
+}
 
-    return { id:p.id, label:p.label, collectionId: realCol, weight:(p.weight||0), valueStars:value, blocked };
-  });
+function chooseSecondFloor(colId, floors) {
+  const f = floors[colId];
+  if (!f) return null;
+  if (f.second != null) return f.second;
+  if (ENV.ALLOW_FIRST_FLOOR && typeof f.first === 'number') {
+    return Math.ceil(f.first * ENV.FIRST_FLOOR_FACTOR);
+  }
+  return null; // blocked
+}
 
-  const available = rows.filter(r => !r.blocked);
-  if (!available.length) {
-    return {
-      rtp: PRICING.rtp, markup: PRICING.markup,
-      evStars: 0, basePrice: 0, finalPrice: 0,
-      blockedCollections: rows.map(r=>r.collectionId),
-      blockedRatio: 1,
-      prizes: rows.map(r => ({ ...r, prob: 0, valueStars: round2(r.valueStars) }))
-    };
+function autoBuckets(byCollection, floors, maxPerTier) {
+  const buckets = { starter: [], rare: [], epic: [], legend: [] };
+
+  for (const col of Object.keys(byCollection)) {
+    const second = chooseSecondFloor(col, floors);
+    if (!second) continue;
+    if (second <= FLOOR_THRESHOLDS.starterMax) buckets.starter.push([second, col]);
+    else if (second <= FLOOR_THRESHOLDS.rareMax) buckets.rare.push([second, col]);
+    else if (second <= FLOOR_THRESHOLDS.epicMax) buckets.epic.push([second, col]);
+    else buckets.legend.push([second, col]);
   }
 
-  const totalW = available.reduce((s,r)=> s + r.weight, 0) || 1;
-  const withProb = rows.map(r => ({
-    ...r,
-    prob: r.blocked ? 0 : (r.weight / totalW)
-  }));
-
-  const ev = withProb.reduce((s,r)=> s + (r.blocked ? 0 : r.valueStars * r.prob), 0);
-  const base = ev / Math.max(PRICING.rtp, 1e-6);
-  const final = roundTo(base * (1 + PRICING.markup), PRICING.roundStep);
+  const sortPick = (arr) => arr.sort((a, b) => a[0] - b[0]).slice(0, maxPerTier).map(([, id]) => id);
 
   return {
-    rtp: PRICING.rtp, markup: PRICING.markup,
-    evStars: round2(ev), basePrice: round2(base), finalPrice: final,
-    blockedCollections: rows.filter(r=>r.blocked).map(r=>r.collectionId),
-    blockedRatio: rows.filter(r=>r.blocked).length / rows.length,
-    prizes: withProb.map(r => ({ ...r, prob: round4(r.prob), valueStars: round2(r.valueStars) }))
+    'col-common-a': sortPick(buckets.starter),
+    'col-rare-a':   sortPick(buckets.rare),
+    'col-epic-a':   sortPick(buckets.epic),
+    'col-legend-a': sortPick(buckets.legend),
   };
 }
 
-// ====== REFRESH PIPELINE ======
-async function refresh() {
-  if (S.refreshing) return;
-  const now = Date.now();
-  if (now - S.ts < REFRESH_MS) return;
-
-  S.refreshing = true;
-  try {
-    let raw = [];
-    let source = 'none';
-
-    // 1) Bot API (если не форсим публичный)
-    if (!FORCE_PUBLIC && BOT_TOKEN) {
-      try {
-        const res = await tgCall('getAvailableGifts');
-        const arr =
-          (Array.isArray(res) && res) ||
-          res?.data?.gifts ||
-          res?.gifts ||
-          res?.items ||
-          res?.available_gifts ||
-          res?.list ||
-          res?.results || [];
-        if (Array.isArray(arr) && arr.length) {
-          raw = arr;
-          source = 'bot';
-          console.log('[engine] bot.items =', arr.length);
-        }
-      } catch (e) {
-        console.warn('[engine] bot getAvailableGifts failed:', e?.message || e);
-      if (Array.isArray(arr) && arr.length) {
-  raw = arr;
-  source = 'bot';
-
-  // 👇 логируем один раз за жизнь процесса, чтобы не засорять логи
-  if (!S.__loggedBotExample) {
-    console.log('[engine] bot.items =', arr.length);
-    // печатаем 1-2 объекта целиком, но обрезаем по длине для безопасности
-    const sample = JSON.stringify(arr.slice(0, 2), null, 2);
-    console.log('[engine] bot.raw example:', sample.length > 1500 ? sample.slice(0, 1500) + '…(trimmed)' : sample);
-    S.__loggedBotExample = true;
-  }
+function roundStep(x, step) {
+  if (!step || step <= 0) return Math.round(x);
+  return Math.round(x / step) * step;
 }
 
+// price cases from mapping
+function priceCases(mapping, floors) {
+  const res = [];
+  const evOfList = (cols) => {
+    const vals = cols.map(c => chooseSecondFloor(c, floors)).filter(v => typeof v === 'number');
+    if (!vals.length) return null;
+    // equal weights, simple mean by default
+    const sum = vals.reduce((a, b) => a + b, 0);
+    return sum / vals.length;
+  };
+
+  for (const tier of CASES) {
+    const key = ({
+      starter: 'col-common-a',
+      rare:    'col-rare-a',
+      epic:    'col-epic-a',
+      legend:  'col-legend-a',
+    })[tier.id];
+
+    const cols = mapping[key] || [];
+    const ev = evOfList(cols);
+    let blockedReason = null;
+
+    if (ev == null) {
+      blockedReason = 'no-usable-second-floor';
+    }
+
+    const priceRaw = ev != null ? ev * ENV.PRICING_RTP * (1 + ENV.PRICING_MARKUP) : 0;
+    const finalPrice = ev != null ? roundStep(priceRaw, ENV.ROUND_STEP) : 0;
+
+    res.push({
+      tier: tier.id,
+      title: tier.title,
+      collections: cols,
+      ev,
+      finalPrice,
+      blocked: ev == null,
+      blockedReason,
+      pricing: { rtp: ENV.PRICING_RTP, markup: ENV.PRICING_MARKUP, roundStep: ENV.ROUND_STEP },
+    });
+  }
+
+  return res;
+}
+
+// ---------------------- Engine state & API ----------------------
+
+const state = {
+  ts: 0,
+  source: 'demo', // 'bot' | 'public' | 'demo'
+  rawItems: [],
+  normalized: [],
+  byCollection: {},
+  floors: {},
+  dropStatsLast: null,
+};
+
+async function refresh() {
+  try {
+    let items = [];
+    let source = 'demo';
+
+    if (ENV.TOKEN && !ENV.FORCE_PUBLIC) {
+      try {
+        items = await fetchBotGifts();
+        source = 'bot';
+      } catch (e) {
+        console.warn('[engine] bot fetch failed, fallback to public:', e.message || e);
       }
     }
 
-    // 2) Публичный источник (если bot пуст или принудительно)
-    if (!raw.length) {
-      const arr = await fetchPublicGifts();
-      if (arr.length) {
-        raw = arr;
+    if (!items.length) {
+      try {
+        items = await fetchPublicGifts();
         source = 'public';
-        console.log('[engine] public.items =', arr.length);
+      } catch (e) {
+        console.warn('[engine] public fetch failed, fallback to demo:', e.message || e);
       }
     }
 
-    // 3) DEMO fallback (только если ничего и раньше тоже пусто)
-    if (!raw.length && (!S.starsItems || !S.starsItems.length)) {
-      raw = [
-        { id:'g1',  title:'Demo Common',    collection:{id:'tg_collection_common_A'}, price:{stars:5},  improved:true, resale:true },
-        { id:'g2',  title:'Demo Common+',   collection:{id:'tg_collection_common_A'}, price:{stars:6},  improved:true, resale:true },
-        { id:'g7',  title:'Demo Common B',  collection:{id:'tg_collection_common_B'}, price:{stars:8},  improved:true, resale:true },
-        { id:'g8',  title:'Demo Common B+', collection:{id:'tg_collection_common_B'}, price:{stars:9},  improved:true, resale:true },
-        { id:'g3',  title:'Demo Rare',      collection:{id:'tg_collection_rare_A'},  price:{stars:12}, improved:true, resale:true },
-        { id:'g4',  title:'Demo Epic',      collection:{id:'tg_collection_epic_A'},  price:{stars:25}, improved:true, resale:true },
-        { id:'g5',  title:'Demo Epic B',    collection:{id:'tg_collection_epic_B'},  price:{stars:34}, improved:true, resale:true },
-        { id:'g6',  title:'Demo Legend',    collection:{id:'tg_collection_legend_A'},price:{stars:60}, improved:true, resale:true },
+    if (!items.length) {
+      // minimal demo
+      items = [
+        { id: 'demo-1', collection_id: 'demo-col-a', star_count: 5 },
+        { id: 'demo-2', collection_id: 'demo-col-a', star_count: 8 },
+        { id: 'demo-3', collection_id: 'demo-col-b', star_count: 60 },
+        { id: 'demo-4', collection_id: 'demo-col-b', star_count: 90 },
+        { id: 'demo-5', collection_id: 'demo-col-c', star_count: 150 },
+        { id: 'demo-6', collection_id: 'demo-col-c', star_count: 300 },
+        { id: 'demo-7', collection_id: 'demo-col-d', star_count: 600 },
+        { id: 'demo-8', collection_id: 'demo-col-d', star_count: 900 },
       ];
       source = 'demo';
-      console.log('[engine] demo.items =', raw.length);
     }
 
-    if (!raw.length) {
-      console.warn('[engine] gifts still empty; keeping previous snapshot');
-      S.ts = now;
-      return;
-    }
+    const normalized = filterUsable(items, ENV.STRICT_FILTER);
+    const byCollection = buildByCollection(normalized);
+    const floors = computeFloors(byCollection);
 
-    // нормализация → фильтрация usable
-    const normalized = raw.map(normalizeGift);
-    const usable = filterUsable(normalized);
+    state.ts = Date.now();
+    state.source = source;
+    state.rawItems = items;
+    state.normalized = normalized;
+    state.byCollection = byCollection;
+    state.floors = floors;
 
-    // построение second-floor по коллекциям
-    const floors = buildSecondFloorsByCollection(usable);
-
-    // ценообразование кейсов
-    const casePricing = CASES.map(c => ({
-      caseId: c.id,
-      title: c.title,
-      pricing: priceCase(c.prizes, floors),
-    }));
-
-    // Save snapshot
-    S.ts = now;
-    S.lastSource = source;
-    S.lastRawCount = raw.length;
-    S.starsItems = usable;
-    S.secondFloors = floors;
-    S.casePricing = casePricing;
-
-    console.log(`[engine] source=${source}, strict=${STRICT_FILTER?1:0}, usable=${usable.length}, cases=${casePricing.length}`);
-  } finally {
-    S.refreshing = false;
+    console.log(`[engine] source=${source}, strict=${ENV.STRICT_FILTER}, raw=${items.length}, normalized=${normalized.length}, collections=${Object.keys(byCollection).length}`);
+  } catch (e) {
+    console.error('[engine] refresh failed:', e);
   }
 }
 
-// ====== PUBLIC API ======
-async function getCasePricing() {
-  await refresh();
-  return S.casePricing || [];
-}
-
-async function getStarsByCollection() {
-  await refresh();
-  const by = {};
-  for (const it of S.starsItems) {
-    (by[it.collectionId] ||= []).push({ giftId: it.giftId, title: it.title, stars: it.stars });
-  }
-  for (const k of Object.keys(by)) by[k].sort((a,b)=> a.stars - b.stars);
-  return by;
-}
-
-// Демоверсия автопокупки: выбирает самый дешёвый лот в коллекции и отправляет.
-// При наличии BOT_TOKEN вызывает sendGift (проверьте фактическое имя метода в Bot API вашей среды).
-async function autoBuyAndSend({ collectionId, recipient, payForUpgrade=true }) {
-  await refresh();
-  if (!collectionId) throw new Error('collectionId required');
-  if (!recipient) throw new Error('recipient required (@username or numeric user_id)');
-
-  const list = (S.starsItems || [])
-    .filter(x => x.collectionId === collectionId)
-    .sort((a,b)=> a.stars - b.stars);
-
-  if (!list.length) throw new Error('No stars-buyable lots right now in this collection');
-
-  const pick = list[0];
-
-  if (!BOT_TOKEN) {
-    return { demo:true, sentTo: recipient, giftId: pick.giftId, title: pick.title, priceStars: pick.stars };
-  }
-
-  // resolve @username → numeric id (если нужно)
-  const userId = /^\d+$/.test(String(recipient))
-    ? Number(recipient)
-    : (await tgCall('getChat', { chat_id: recipient }))?.id;
-
-  if (!userId) throw new Error('Cannot resolve recipient');
-
-  // Проверьте фактический метод Telegram на отправку gift в вашей среде.
-  const out = await tgCall('sendGift', {
-    user_id: userId,
-    gift_id: pick.giftId,
-    pay_for_upgrade: !!payForUpgrade
-  });
-
-  return { sentTo: userId, giftId: pick.giftId, title: pick.title, priceStars: pick.stars, raw: out };
-}
-
-// ====== DIAGNOSTICS ======
-async function getDiagnostics() {
-  await refresh();
-  const by = {};
-  for (const it of S.starsItems) {
-    (by[it.collectionId] ||= []).push({ giftId: it.giftId, title: it.title, stars: it.stars });
-  }
-  const collections = Object.keys(by).sort();
+function getSnapshot() {
   const samples = {};
-  for (const k of collections) {
-    by[k].sort((a,b)=> a.stars - b.stars);
-    samples[k] = by[k].slice(0, 5);
+  for (const [col, arr] of Object.entries(state.byCollection)) {
+    samples[col] = arr.slice(0, 3); // first 3 by price
   }
   return {
-    ts: S.ts,
-    source: S.lastSource,
-    rawCount: S.lastRawCount,
-    normalizedCount: S.starsItems.length,
-    collections,
-    samples
+    ok: true,
+    ts: state.ts,
+    source: state.source,
+    rawCount: state.rawItems.length,
+    normalizedCount: state.normalized.length,
+    collections: Object.keys(state.byCollection),
+    samples,
   };
 }
 
-async function getPeek(limit=10) {
-  await refresh();
-  return (S.starsItems || []).slice(0, limit).map(x => ({
-    giftId: x.giftId,
-    title:  x.title,
-    collectionId: x.collectionId,
-    stars: x.stars,
-    improved: x.improved,
-    resale: x.resale,
-    starsBuyable: x.starsBuyable
-  }));
+function getStarsByCollection() {
+  return { byCollection: state.byCollection };
 }
 
-// ====== EXPORTS ======
-module.exports = {
-  CASES,
-  COLLECTION_MAP,
-  getCasePricing,
-  getStarsByCollection,
-  autoBuyAndSend,
-  // diagnostics
-  getDiagnostics,
-  getPeek,
-};
+function getCasePricing() {
+  // try explicit mapping from env
+  let mapping = null;
+  if (ENV.COLLECTION_MAP_JSON) {
+    try {
+      mapping = JSON.parse(ENV.COLLECTION_MAP_JSON);
+    } catch (e) {
+      console.warn('[engine] invalid COLLECTION_MAP_JSON:', e.message || e);
+    }
+  }
+
+  // if no mapping => auto bucket by floors
+  if (!mapping) {
+    mapping = autoBuckets(state.byCollection, state.floors, ENV.MAX_COLLECTIONS_PER_TIER);
+  }
+
+  return {
+    ok: true,
+    ts: state.ts,
+    source: state.source,
+    mapping,
+    floors: state.floors,
+    cases: priceCases(mapping, state.floors),
+  };
+}
+
+function peek(limit = 20) {
+  return state.normalized.slice(0, Math.max(1, Math.min(200, limit)));
+}
+
+// auto-refresh loop (serverless is short-lived, but helps locally/dev)
+if (ENV.REFRESH_MS > 0) {
+  // best-effort: refresh once on module load
+  refresh().catch(() => {});
+  // periodic (will matter only locally / in long-lived runtimes)
+  setInterval(() => refresh().catch(() => {}), ENV.REFRESH_MS).unref?.();
+}
+
+// public API
+const engine = { refresh, getSnapshot, getStarsByCollection, getCasePricing, peek };
+
+// dual export style to fit either import or require
+module.exports = engine;
+module.exports.default = engine;
