@@ -6,7 +6,10 @@
 //   GIFTS_SOURCE_URL    — публичный JSON (по умолчанию https://tg.me/gifts/available_gifts)
 //   FORCE_PUBLIC=1      — игнорировать bot и сразу брать public
 //   STRICT_FILTER=0/1   — 1 (по умолч.) = только improved+resale+stars; 0 = любой лот, который можно купить за ⭐
-
+const FORCE_PUBLIC = String(process.env.FORCE_PUBLIC || '0') === '1';
+const STRICT_FILTER = String(process.env.STRICT_FILTER || '1') === '1';
+// опционально: кастомный URL публичного источника
+const GIFTS_SOURCE_URL = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const API_BASE  = BOT_TOKEN ? `https://api.telegram.org/bot${BOT_TOKEN}` : '';
 const PUBLIC_GIFTS_URL = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
