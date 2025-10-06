@@ -21,11 +21,28 @@ const ENV = {
   ALLOW_SYNTH_COLLECTION: process.env.ALLOW_SYNTH_COLLECTION === "1",
 };
 
+// ========== Helpers ==========
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Telegram API
+function isExplicitlyNotBuyable(g) {
+  if (g.buyable === false) return true;
+  if (g.can_purchase === false) return true;
+  if (g.can_buy_with_stars === false) return true;
+  if (g.is_available === false) return true;
+  const rc = g.remaining_count ?? g.remainingCount;
+  if (rc === 0) return true;
+  return false;
+}
+
+function isBuyableForStars(g, stars) {
+  if (!stars || stars <= 0) return false;
+  return !isExplicitlyNotBuyable(g);
+}
+
+// Telegram API fetchers
 async function tgCall(method) {
   if (!ENV.BOT_TOKEN) throw new Error("No TELEGRAM_BOT_TOKEN");
   const url = `https://api.telegram.org/bot${ENV.BOT_TOKEN}/${method}`;
@@ -42,33 +59,8 @@ async function fetchPublic() {
   return j?.gifts || j?.items || j?.list || [];
 }
 
-// Normalization
-function normalizeGift(g) {
-  const out = {
-    giftId:
-      g.giftId || g.id || g.gift_id || g.uid || g.uuid || g.slug || g.name || g.title,
-    collectionId: extractCollectionId(g),
-    stars:
-      g.stars ||
-      g.star_count ||
-      g.price_star_count ||
-      (g.prices && g.prices.stars) ||
-      (Array.isArray(g.prices) && g.prices.find((p) => p.currency === "stars")?.amount) ||
-      0,
-    starsBuyable:
-      g.starsBuyable ||
-      g.can_be_purchased_for_stars ||
-      g.buyable_for_stars ||
-      (g.prices && !!g.prices.stars) ||
-      (Array.isArray(g.prices) && g.prices.some((p) => p.currency === "stars")),
-    improved: g.improved || g.is_improved || g.tags?.includes("improved"),
-    resale: g.resale || g.is_resale || g.tags?.includes("resale"),
-    title: g.title || g.name || g.text || "",
-  };
-  return out;
-}
+// ========== Normalization ==========
 
-// ---- Updated extractCollectionId ----
 function extractCollectionId(g) {
   const direct =
     g.collectionId ||
@@ -92,14 +84,55 @@ function extractCollectionId(g) {
   return undefined;
 }
 
-// ---- Updated filterUsable ----
+function normalizeGift(g) {
+  const stars =
+    g.stars ??
+    g.star_count ??
+    g.price_star_count ??
+    (Array.isArray(g.prices) &&
+      g.prices.find((p) => (p.currency || p.unit) === "stars")?.amount) ??
+    0;
+
+  const out = {
+    giftId:
+      g.giftId ||
+      g.id ||
+      g.gift_id ||
+      g.uid ||
+      g.uuid ||
+      g.slug ||
+      g.name ||
+      g.title,
+    collectionId: extractCollectionId(g),
+    stars,
+    starsBuyable: isBuyableForStars(g, stars),
+    improved:
+      g.improved ||
+      g.is_improved ||
+      g.tags?.includes("improved") ||
+      false,
+    resale:
+      g.resale ||
+      g.is_resale ||
+      g.tags?.includes("resale") ||
+      false,
+    title:
+      g.title ||
+      g.name ||
+      g.text ||
+      (g.sticker?.emoji ? `Sticker ${g.sticker.emoji}` : ""),
+  };
+  return out;
+}
+
 function filterUsable(items, strictMode) {
   const out = [];
   const drop = { noGiftId: 0, noCollection: 0, noStars: 0, notBuyable: 0, strict: 0 };
 
   for (const g of items) {
     const n = normalizeGift(g);
-    if (!n.collectionId && ENV.ALLOW_SYNTH_COLLECTION) n.collectionId = extractCollectionId(g);
+    if (!n.collectionId && ENV.ALLOW_SYNTH_COLLECTION)
+      n.collectionId = extractCollectionId(g);
 
     if (!n.giftId) { drop.noGiftId++; continue; }
     if (!n.collectionId) { drop.noCollection++; continue; }
@@ -123,6 +156,8 @@ function groupByCollection(list) {
   }
   return map;
 }
+
+// ========== Main refresh cycle ==========
 
 async function refresh() {
   console.log("[engine] refresh()");
@@ -150,7 +185,8 @@ async function refresh() {
   return state;
 }
 
-// ---- Diagnostics ----
+// ========== Diagnostics / public API ==========
+
 function getDiagnostics() {
   const collections = Object.keys(state.byCollection);
   const firstRaw = state.rawItems[0] || {};
@@ -166,7 +202,10 @@ function getDiagnostics() {
     exampleRawKeys: Object.keys(firstRaw),
     stickerKeys,
     exampleNormalized: state.normalized.slice(0, 3).map((n) => ({
-      giftId: n.giftId, collectionId: n.collectionId, stars: n.stars, title: n.title,
+      giftId: n.giftId,
+      collectionId: n.collectionId,
+      stars: n.stars,
+      title: n.title,
     })),
   };
 }
