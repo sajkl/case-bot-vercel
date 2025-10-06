@@ -1,41 +1,18 @@
 // api/snapshot.js
-module.exports.config = { runtime: 'nodejs18.x' };
+const engine = require('./_engine');
 
-module.exports = async (req, res) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-
-  let engine;
+module.exports = async function handler(req, res) {
   try {
-    engine = require('./_engine');
+    // гарантируем, что состояние свежее
+    await engine.refresh();
+    const snap = engine.getDiagnostics(); // совместимо с твоей старой ручкой
+    res.status(200).json(snap);
   } catch (e) {
-    res.status(200).end(JSON.stringify({
+    res.status(500).json({
       ok: false,
-      error: 'Failed to require _engine',
-      detail: e?.message || String(e),
-      stack: e?.stack || null
-    }));
-    return;
-  }
-
-  const { getDiagnostics } = engine || {};
-  if (typeof getDiagnostics !== 'function') {
-    res.status(200).end(JSON.stringify({
-      ok: false,
-      error: 'getDiagnostics is not a function',
-      exportedKeys: Object.keys(engine || {})
-    }));
-    return;
-  }
-
-  try {
-    const data = await getDiagnostics();
-    res.status(200).end(JSON.stringify({ ok: true, ...data }));
-  } catch (e) {
-    res.status(200).end(JSON.stringify({
-      ok: false,
-      error: e?.message || String(e),
-      stack: e?.stack || null
-    }));
+      error: String(e),
+      exportedKeys: Object.keys(engine),
+    });
   }
 };
 
