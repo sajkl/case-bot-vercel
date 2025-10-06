@@ -1,29 +1,23 @@
-// api/debug-fetch-public.js
-module.exports.config = { runtime: 'nodejs18.x' };
-
-module.exports = async (req, res) => {
-  const url = process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts';
+// api/_debug/fetch-bot-gifts.js
+module.exports = async function handler(req, res) {
   try {
-    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    const text = await r.text();
-    let json = null; try { json = JSON.parse(text); } catch {}
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).end(JSON.stringify({
+    const token = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
+    if (!token) return res.status(400).json({ ok: false, error: 'No TELEGRAM_BOT_TOKEN/BOT_TOKEN' });
+
+    const r = await fetch(`https://api.telegram.org/bot${token}/getAvailableGifts`, { cache: 'no-store' });
+    const j = await r.json();
+    if (!j.ok) return res.status(502).json(j);
+
+    const arr = j.result?.gifts || j.result?.items || j.result?.list || [];
+    const first = arr[0] || {};
+    const keys = Object.keys(first);
+    res.status(200).json({
       ok: true,
-      from: url,
-      status: r.status,
-      keys: json && typeof json==='object' ? Object.keys(json) : null,
-      sample: Array.isArray(json) ? json.slice(0, 5)
-             : json?.data?.gifts?.slice?.(0, 5)
-             : json?.gifts?.slice?.(0, 5)
-             : json?.items?.slice?.(0, 5)
-             : json?.available_gifts?.slice?.(0, 5)
-             : json?.list?.slice?.(0, 5)
-             : json?.results?.slice?.(0, 5)
-             : (json ? [json] : []),
-    }));
+      count: Array.isArray(arr) ? arr.length : 0,
+      keysOfFirstItem: keys,
+      first5: Array.isArray(arr) ? arr.slice(0, 5) : [],
+    });
   } catch (e) {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).end(JSON.stringify({ ok:false, error: e?.message || String(e) }));
+    res.status(500).json({ ok: false, error: String(e) });
   }
 };
