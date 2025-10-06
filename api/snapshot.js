@@ -1,5 +1,4 @@
 // api/snapshot.js
-// ЯВНО указываем Node.js runtime (не Edge), чтобы работал CommonJS/require
 module.exports.config = { runtime: 'nodejs18.x' };
 
 module.exports = async (req, res) => {
@@ -7,7 +6,6 @@ module.exports = async (req, res) => {
 
   let engine;
   try {
-    // важно: относительный путь к api/_engine.js
     engine = require('./_engine');
   } catch (e) {
     res.status(200).end(JSON.stringify({
