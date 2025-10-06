@@ -1,20 +1,29 @@
 // api/auto/buy-send.js
-const core = require('../_engine');
+module.exports.config = { runtime: 'nodejs18.x' };
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow','POST');
-    return res.status(405).json({ ok:false, error:'Method Not Allowed' });
-  }
-  try {
-    const { collectionId, recipient } = req.body || {};
-    if (!collectionId) throw new Error('collectionId required');
-    if (!recipient) throw new Error('recipient required ("@username" or numeric user_id")');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-    const out = await core.autoBuyAndSend({ collectionId, recipient, payForUpgrade: true });
-    res.status(200).json({ ok: true, result: out });
+  let engine;
+  try { engine = require('../_engine'); } catch (e) {
+    res.status(200).end(JSON.stringify({ ok:false, error:'require _engine failed', detail:String(e) })); return;
+  }
+
+  try {
+    // ожидаем query ?giftId=...&to=username
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const giftId = url.searchParams.get('giftId');
+    const to = url.searchParams.get('to');
+    if (!giftId || !to) {
+      res.status(200).end(JSON.stringify({ ok:false, error:'giftId and to are required' }));
+      return;
+    }
+
+    // здесь должна быть реальная покупка через официальный API (пока заглушка)
+    const result = await engine.autoBuyAndSend?.(giftId, to);
+    res.status(200).end(JSON.stringify({ ok:true, result: result || { mock:true } }));
   } catch (e) {
-    console.error('[auto/buy-send]', e);
-    res.status(400).json({ ok: false, error: e?.message || String(e) });
+    res.status(200).end(JSON.stringify({ ok:false, error:String(e), stack:e?.stack || null }));
   }
 };
+
