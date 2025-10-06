@@ -363,6 +363,20 @@ async function refresh() {
         }
       } catch (e) {
         console.warn('[engine] bot getAvailableGifts failed:', e?.message || e);
+      if (Array.isArray(arr) && arr.length) {
+  raw = arr;
+  source = 'bot';
+
+  // 👇 логируем один раз за жизнь процесса, чтобы не засорять логи
+  if (!S.__loggedBotExample) {
+    console.log('[engine] bot.items =', arr.length);
+    // печатаем 1-2 объекта целиком, но обрезаем по длине для безопасности
+    const sample = JSON.stringify(arr.slice(0, 2), null, 2);
+    console.log('[engine] bot.raw example:', sample.length > 1500 ? sample.slice(0, 1500) + '…(trimmed)' : sample);
+    S.__loggedBotExample = true;
+  }
+}
+
       }
     }
 
