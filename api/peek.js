@@ -1,48 +1,12 @@
 // api/peek.js
-module.exports.config = { runtime: 'nodejs18.x' };
+const engine = require('./_engine');
 
-module.exports = async (req, res) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-
-  let engine;
+module.exports = async function handler(req, res) {
   try {
-    engine = require('./_engine');
+    await engine.refresh();
+    const limit = Number(req.query?.limit || 20);
+    res.status(200).json({ ok: true, items: engine.peek(limit) });
   } catch (e) {
-    res.status(200).end(JSON.stringify({
-      ok: false,
-      error: 'Failed to require _engine',
-      detail: e?.message || String(e),
-      stack: e?.stack || null
-    }));
-    return;
-  }
-
-  const { getPeek } = engine || {};
-  if (typeof getPeek !== 'function') {
-    res.status(200).end(JSON.stringify({
-      ok: false,
-      error: 'getPeek is not a function',
-      exportedKeys: Object.keys(engine || {})
-    }));
-    return;
-  }
-
-  let limit = 10;
-  try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const l = Number(url.searchParams.get('limit'));
-    if (Number.isFinite(l) && l > 0) limit = Math.min(50, Math.max(1, l));
-  } catch (_) {}
-
-  try {
-    const items = await getPeek(limit);
-    res.status(200).end(JSON.stringify({ ok: true, items }));
-  } catch (e) {
-    res.status(200).end(JSON.stringify({
-      ok: false,
-      error: e?.message || String(e),
-      stack: e?.stack || null
-    }));
+    res.status(500).json({ ok: false, error: String(e) });
   }
 };
-
