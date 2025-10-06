@@ -3,10 +3,13 @@ const { getPeek } = require('../_engine');
 
 module.exports = async (req, res) => {
   try {
-    const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
-    const out = await getPeek(limit);
-    res.status(200).json({ ok: true, items: out });
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const limit = Math.max(1, Math.min(50, Number(url.searchParams.get('limit')) || 10));
+    const items = await getPeek(limit);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(200).end(JSON.stringify({ ok: true, items }));
   } catch (e) {
-    res.status(200).json({ ok: false, error: e?.message || String(e) });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(200).end(JSON.stringify({ ok: false, error: e?.message || String(e) }));
   }
 };
