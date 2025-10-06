@@ -2,22 +2,40 @@
 'use strict';
 
 /**
- * Robust engine for Telegram gifts catalog on Vercel (Node 18+).
- * - Primary source: Bot API getAvailableGifts (TELEGRAM_BOT_TOKEN or BOT_TOKEN)
- * - Fallback: GIFTS_SOURCE_URL (default: https://tg.me/gifts/available_gifts)
- * - Final fallback: demo items
- * - Wide normalization for star price / collection id variations
- * - Transparent filter logs to understand drops
- * - Works with or without explicit COLLECTION_MAP (auto-bucket by second floor)
+ * Универсальный движок каталога подарков Telegram для Vercel (Node 18+).
+ * Источники:
+ *   1) Bot API getAvailableGifts (через TELEGRAM_BOT_TOKEN или BOT_TOKEN)
+ *   2) Публичный JSON GIFTS_SOURCE_URL (по умолчанию https://tg.me/gifts/available_gifts)
+ *   3) Демо-данные, если оба источника пустые
+ *
+ * Особенности:
+ *   - Расширенная нормализация полей (star_count/collection_id/... и массивы цен)
+ *   - Прозрачные логи причин отбраковки (чтобы понимать, почему normalizedCount=0)
+ *   - Авто-расклад по тиру кейсов по “второму полу” (second floor) при отсутствии ручной карты
+ *   - Совместимость с вашим кодом: есть getDiagnostics(), getSnapshot(), getStarsByCollection(), getCasePricing(), peek(), refresh()
+ *
+ * Переменные окружения (Vercel → Settings → Environment Variables):
+ *   TELEGRAM_BOT_TOKEN / BOT_TOKEN  — токен бота
+ *   FORCE_PUBLIC = 1|0              — форсировать публичный источник (по умолчанию 0)
+ *   STRICT_FILTER = 1|0             — строгий фильтр (по умолчанию 0, чтобы не «съедать» всё на старте)
+ *   GIFTS_SOURCE_URL                — URL публичного каталога (по умолчанию https://tg.me/gifts/available_gifts)
+ *   REFRESH_MS                      — период автообновления (по умолчанию 60000 мс)
+ *   ALLOW_FIRST_FLOOR = 1|0         — разрешить фоллбек на первый «пол» (по умолчанию 1)
+ *   FIRST_FLOOR_FACTOR              — множитель для первого «пола» (по умолчанию 1.15)
+ *   PRICING_RTP                     — RTP (по умолчанию 0.80)
+ *   PRICING_MARKUP                  — наценка (по умолчанию 0.08)
+ *   ROUND_STEP                      — шаг округления (по умолчанию 1)
+ *   MAX_COLLECTIONS_PER_TIER        — ограничение коллекций на тир (по умолчанию 3)
+ *   COLLECTION_MAP_JSON             — вручную заданная карта коллекций (JSON), если нужна явная фиксация
  */
 
 const ENV = {
   TOKEN: process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || '',
   FORCE_PUBLIC: process.env.FORCE_PUBLIC === '1',
-  STRICT_FILTER: process.env.STRICT_FILTER === '1' ? 1 : 0, // default 0 for easier bootstrap
+  STRICT_FILTER: process.env.STRICT_FILTER === '1' ? 1 : 0, // по умолчанию 0 — проще стартовать
   GIFTS_SOURCE_URL: process.env.GIFTS_SOURCE_URL || 'https://tg.me/gifts/available_gifts',
   REFRESH_MS: Math.max(0, parseInt(process.env.REFRESH_MS || '60000', 10)),
-  ALLOW_FIRST_FLOOR: process.env.ALLOW_FIRST_FLOOR === '0' ? 0 : 1, // default ON
+  ALLOW_FIRST_FLOOR: process.env.ALLOW_FIRST_FLOOR === '0' ? 0 : 1, // по умолчанию включен
   FIRST_FLOOR_FACTOR: parseFloat(process.env.FIRST_FLOOR_FACTOR || '1.15'),
   PRICING_RTP: parseFloat(process.env.PRICING_RTP || '0.80'),
   PRICING_MARKUP: parseFloat(process.env.PRICING_MARKUP || '0.08'),
@@ -26,6 +44,7 @@ const ENV = {
   COLLECTION_MAP_JSON: process.env.COLLECTION_MAP_JSON || '',
 };
 
+// Человеческие названия тиров (для /api/cases/price)
 const CASES = [
   { id: 'starter', title: 'Starter' },
   { id: 'rare',    title: 'Rare'    },
@@ -33,14 +52,14 @@ const CASES = [
   { id: 'legend',  title: 'Legend'  },
 ];
 
-// Thresholds for auto-bucketing by second floor (in Stars)
+// Пороги для авто-раскладки по «второму полу» (в ⭐)
 const FLOOR_THRESHOLDS = {
   starterMax: 20,
   rareMax: 100,
   epicMax: 500, // legend => >500
 };
 
-// ---------------------- HTTP fetchers ----------------------
+// ---------------------- HTTP helpers ----------------------
 
 async function fetchJson(url, opts) {
   const r = await fetch(url, { ...opts, cache: 'no-store' });
@@ -74,11 +93,11 @@ function pick(...vals) {
 }
 
 function extractStars(g) {
-  // direct numeric
+  // 1) Прямые числовые поля
   const direct = pick(g.star_count, g.stars, g.price_stars, g.priceStars, g.value_stars);
   if (typeof direct === 'number' && direct > 0) return direct;
 
-  // object price
+  // 2) Объект цены: {value, unit:'stars'} | {amount, currency:'stars'}
   const price = g.price || g.cost || g.min_price || g.minPrice || g.lowest_price || g.lowestPrice;
   if (price && typeof price === 'object') {
     const unit = (price.unit || price.currency || '').toString().toLowerCase();
@@ -86,7 +105,7 @@ function extractStars(g) {
     if (unit === 'stars' && typeof val === 'number' && val > 0) return val;
   }
 
-  // arrays of prices/options
+  // 3) Массив вариантов/опций цен
   const prices = g.prices || g.options || g.variants;
   if (Array.isArray(prices)) {
     const starish = prices
@@ -168,7 +187,7 @@ function normalizeGift(g) {
   };
 }
 
-// Filter with transparent drop stats
+// Фильтр с логами причин отбраковки
 function filterUsable(items, strictMode) {
   const out = [];
   const drop = { noGiftId: 0, noCollection: 0, noStars: 0, notBuyable: 0, strict: 0 };
@@ -176,20 +195,21 @@ function filterUsable(items, strictMode) {
   for (const g of items) {
     const n = normalizeGift(g);
 
-    if (!n.giftId) { drop.noGiftId++; continue; }
-    if (!n.collectionId) { drop.noCollection++; continue; }
-    if (!n.stars || n.stars <= 0) { drop.noStars++; continue; }
-    if (!n.starsBuyable) { drop.notBuyable++; continue; }
+    if (!n.giftId)                    { drop.noGiftId++;     continue; }
+    if (!n.collectionId)              { drop.noCollection++; continue; }
+    if (!n.stars || n.stars <= 0)     { drop.noStars++;      continue; }
+    if (!n.starsBuyable)              { drop.notBuyable++;   continue; }
     if (strictMode && !(n.improved || n.resale)) { drop.strict++; continue; }
 
     out.push(n);
   }
 
   console.log('[engine] filter drop stats', drop, 'kept=', out.length);
+  state.dropStatsLast = drop;
   return out;
 }
 
-// ---------------------- Collections, floors, bucketing ----------------------
+// ---------------------- Группировка, «полы», раскладка ----------------------
 
 function buildByCollection(normalized) {
   const map = new Map();
@@ -197,7 +217,7 @@ function buildByCollection(normalized) {
     if (!map.has(n.collectionId)) map.set(n.collectionId, []);
     map.get(n.collectionId).push(n);
   }
-  // sort each collection by stars asc, keep distinct giftIds
+  // сортируем внутри коллекции по цене, убираем дубликаты giftId
   const byCollection = {};
   for (const [col, arr] of map.entries()) {
     const seen = new Set();
@@ -211,7 +231,7 @@ function buildByCollection(normalized) {
 }
 
 function computeFloors(byCollection) {
-  // returns { [collectionId]: {first:number, second:number|null} }
+  // { [collectionId]: { first:number, second:number|null } }
   const floors = {};
   for (const [col, arr] of Object.entries(byCollection)) {
     const prices = [...new Set(arr.map(x => x.stars))].sort((a, b) => a - b);
@@ -229,7 +249,7 @@ function chooseSecondFloor(colId, floors) {
   if (ENV.ALLOW_FIRST_FLOOR && typeof f.first === 'number') {
     return Math.ceil(f.first * ENV.FIRST_FLOOR_FACTOR);
   }
-  return null; // blocked
+  return null; // заблокировано
 }
 
 function autoBuckets(byCollection, floors, maxPerTier) {
@@ -259,15 +279,14 @@ function roundStep(x, step) {
   return Math.round(x / step) * step;
 }
 
-// price cases from mapping
 function priceCases(mapping, floors) {
   const res = [];
+
   const evOfList = (cols) => {
     const vals = cols.map(c => chooseSecondFloor(c, floors)).filter(v => typeof v === 'number');
     if (!vals.length) return null;
-    // equal weights, simple mean by default
     const sum = vals.reduce((a, b) => a + b, 0);
-    return sum / vals.length;
+    return sum / vals.length; // равные веса
   };
 
   for (const tier of CASES) {
@@ -304,7 +323,7 @@ function priceCases(mapping, floors) {
   return res;
 }
 
-// ---------------------- Engine state & API ----------------------
+// ---------------------- Состояние и публичный API ----------------------
 
 const state = {
   ts: 0,
@@ -326,7 +345,7 @@ async function refresh() {
         items = await fetchBotGifts();
         source = 'bot';
       } catch (e) {
-        console.warn('[engine] bot fetch failed, fallback to public:', e.message || e);
+        console.warn('[engine] bot fetch failed, fallback to public:', e && e.message ? e.message : e);
       }
     }
 
@@ -335,12 +354,12 @@ async function refresh() {
         items = await fetchPublicGifts();
         source = 'public';
       } catch (e) {
-        console.warn('[engine] public fetch failed, fallback to demo:', e.message || e);
+        console.warn('[engine] public fetch failed, fallback to demo:', e && e.message ? e.message : e);
       }
     }
 
     if (!items.length) {
-      // minimal demo
+      // минимальные демо-данные
       items = [
         { id: 'demo-1', collection_id: 'demo-col-a', star_count: 5 },
         { id: 'demo-2', collection_id: 'demo-col-a', star_count: 8 },
@@ -367,14 +386,14 @@ async function refresh() {
 
     console.log(`[engine] source=${source}, strict=${ENV.STRICT_FILTER}, raw=${items.length}, normalized=${normalized.length}, collections=${Object.keys(byCollection).length}`);
   } catch (e) {
-    console.error('[engine] refresh failed:', e);
+    console.error('[engine] refresh failed:', e && e.stack ? e.stack : e);
   }
 }
 
 function getSnapshot() {
   const samples = {};
   for (const [col, arr] of Object.entries(state.byCollection)) {
-    samples[col] = arr.slice(0, 3); // first 3 by price
+    samples[col] = arr.slice(0, 3); // первые 3 по цене
   }
   return {
     ok: true,
@@ -387,22 +406,43 @@ function getSnapshot() {
   };
 }
 
+// Совместимость с вашим /api/snapshot (он вызывает getDiagnostics)
+function getDiagnostics() {
+  const collections = Object.keys(state.byCollection);
+  return {
+    ok: true,
+    ts: state.ts,
+    source: state.source,                    // 'bot' | 'public' | 'demo'
+    rawCount: state.rawItems.length,         // сколько пришло из источника
+    normalizedCount: state.normalized.length,// сколько прошло нормализацию/фильтры
+    collections,                             // id коллекций
+    dropStats: state.dropStatsLast || null,  // причины отбраковки последнего фильтра
+    exampleRawKeys: Object.keys(state.rawItems[0] || {}),
+    exampleNormalized: state.normalized.slice(0, 3).map(n => ({
+      giftId: n.giftId,
+      collectionId: n.collectionId,
+      stars: n.stars,
+      title: n.title,
+    })),
+  };
+}
+
 function getStarsByCollection() {
   return { byCollection: state.byCollection };
 }
 
 function getCasePricing() {
-  // try explicit mapping from env
+  // 1) Если задана явная карта из ENV — используем её
   let mapping = null;
   if (ENV.COLLECTION_MAP_JSON) {
     try {
       mapping = JSON.parse(ENV.COLLECTION_MAP_JSON);
     } catch (e) {
-      console.warn('[engine] invalid COLLECTION_MAP_JSON:', e.message || e);
+      console.warn('[engine] invalid COLLECTION_MAP_JSON:', e && e.message ? e.message : e);
     }
   }
 
-  // if no mapping => auto bucket by floors
+  // 2) Иначе авто-расклад по «полам»
   if (!mapping) {
     mapping = autoBuckets(state.byCollection, state.floors, ENV.MAX_COLLECTIONS_PER_TIER);
   }
@@ -418,20 +458,27 @@ function getCasePricing() {
 }
 
 function peek(limit = 20) {
-  return state.normalized.slice(0, Math.max(1, Math.min(200, limit)));
+  return state.normalized.slice(0, Math.max(1, Math.min(200, +limit || 20)));
 }
 
-// auto-refresh loop (serverless is short-lived, but helps locally/dev)
+// авто-обновление (на серверлес живёт недолго, но помогает локально)
 if (ENV.REFRESH_MS > 0) {
-  // best-effort: refresh once on module load
+  // один прогон при загрузке модуля (best-effort)
   refresh().catch(() => {});
-  // periodic (will matter only locally / in long-lived runtimes)
-  setInterval(() => refresh().catch(() => {}), ENV.REFRESH_MS).unref?.();
+  // периодическое обновление (в длительных рантаймах/локально)
+  const t = setInterval(() => refresh().catch(() => {}), ENV.REFRESH_MS);
+  if (typeof t.unref === 'function') { try { t.unref(); } catch {} }
 }
 
-// public API
-const engine = { refresh, getSnapshot, getStarsByCollection, getCasePricing, peek };
+// Публичный API движка (CommonJS)
+const engine = {
+  refresh,
+  getSnapshot,
+  getDiagnostics,        // << добавлено для совместимости с вашим /api/snapshot
+  getStarsByCollection,
+  getCasePricing,
+  peek,
+};
 
-// dual export style to fit either import or require
 module.exports = engine;
 module.exports.default = engine;
