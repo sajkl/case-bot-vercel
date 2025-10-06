@@ -1,4 +1,3 @@
-// api/peek.js
 const engine = require('./_engine');
 
 module.exports = async function handler(req, res) {
