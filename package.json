@@ -1,8 +1,0 @@
-{
-  "name": "case-bot",
-  "version": "1.0.0",
-  "scripts": {
-    "vercel-build": "echo \"Build step not required\""
-  },
-  "dependencies": {}
-}
