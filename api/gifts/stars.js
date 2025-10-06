@@ -1,4 +1,3 @@
-// api/gifts/stars.js
 const engine = require('../_engine');
 
 module.exports = async function handler(req, res) {
@@ -9,4 +8,3 @@ module.exports = async function handler(req, res) {
     res.status(500).json({ ok: false, error: String(e) });
   }
 };
-
