@@ -1,36 +1,95 @@
-(function(){
-  const balEl = document.querySelector('#balance .value');
+:root{
+  --bg:#0b0d12;
+  --text:#f7f8fb;
+  --muted:#a5abb8;
+  --accent:#ffd400;
+  --panel:#232734;
+  --border:#363c4a;
+  --chip:#6e6a63;
+  --shadow:0 18px 40px rgba(0,0,0,.38);
 
-  // Подтягиваем баланс
-  fetch('/api/profile')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
-    .catch(() => {});
+  --b-gray:#bfc5d2;
+  --b-green:#2ad06c;
+  --b-red:#ff4d4d;
+  --b-yellow:#ffcc00;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:
+  radial-gradient(900px 520px at 15% -10%, #171b27 0%, #0b0d12 55%) no-repeat,
+  #0b0d12; color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
+img{display:block;max-width:100%}
+button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:pointer}
 
-  const disable = (btn, state)=>{ btn.disabled = state; btn.classList.toggle('loading', state); };
-  const toast = (msg)=>{ 
-    let t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-    document.body.appendChild(t); setTimeout(()=>t.classList.add('show')); 
-    setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.remove(),300)}, 2000);
-  };
+.container{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
+.logo{height:32px}
 
-  // Клик по карточке → /api/open
-  document.querySelectorAll('.card').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const caseId = btn.dataset.caseid; // jiga | camry | bmw | lambo
-      disable(btn, true);
-      fetch('/api/open', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ caseId })
-      })
-      .then(r => r.json())
-      .then(res => {
-        if (res && res.stars != null) balEl.textContent = res.stars;
-        toast(res?.prize?.title ? `Вы выиграли: ${res.prize.title}` : 'Кейс открыт!');
-      })
-      .catch(e => { toast('Ошибка открытия кейса'); console.error(e); })
-      .finally(()=>disable(btn,false));
-    });
-  });
-})();
+.balance{background:var(--accent);color:#191919;font-weight:900;border-radius:999px;padding:10px 16px;display:flex;gap:8px;align-items:center;box-shadow:var(--shadow)}
+.balance .star{font-size:18px}
+
+/* LIVE полоса */
+.live{margin:8px 16px 18px;background:linear-gradient(180deg,#2c313f,#252a37);border:1px solid var(--border);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;overflow-x:auto}
+.live-title{font-size:20px;font-weight:860;letter-spacing:.4px}
+.live img{height:36px;flex:0 0 auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
+
+/* Сетка 2×2, точные отступы */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:0 16px 16px}
+
+/* Карточка с цветной рамкой, как в референсе */
+.card{
+  position:relative;background:#2a2f3d;border-radius:26px;
+  border:4px solid transparent; padding:14px 14px 76px;
+  box-shadow:var(--shadow); transition:transform .12s ease;
+}
+.card:active{transform:translateY(1px)}
+.card.gray{border-color:var(--b-gray)}
+.card.green{border-color:var(--b-green)}
+.card.red{border-color:var(--b-red)}
+.card.yellow{border-color:var(--b-yellow)}
+
+/* Иллюстрация: выезжает за рамку, индивидуальные коррекции по data-k */
+.art{position:relative;height:166px;margin-top:-8px;pointer-events:none;overflow:visible}
+.art img{position:absolute;left:50%;top:-24px;width:118%;transform:translateX(-50%);}
+
+/* Точные смещения под каждую карточку — как на скрине */
+.card[data-k="1"] .art img{ width:128%; left:49%; top:-18px }  /* Жига — крупнее, чуть левее */
+.card[data-k="2"] .art img{ width:116%; left:51%; top:-22px }  /* Камри — аккуратно по центру, меньше вылет */
+.card[data-k="3"] .art img{ width:120%; left:50%; top:-16px }  /* Бэха */
+.card[data-k="4"] .art img{ width:118%; left:50%; top:-18px }  /* Ламбо */
+
+/* Заголовок и цена — слева снизу */
+.title{position:absolute;left:20px;bottom:60px;font-size:24px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.55)}
+.price{
+  position:absolute;left:20px;bottom:16px;
+  background:rgba(110,106,99,.95); color:#fff;
+  display:inline-flex;gap:10px;align-items:center;
+  padding:12px 18px;border-radius:34px;
+  font-weight:900;font-size:18px; letter-spacing:.2px;
+}
+.price .star{color:var(--accent)}
+
+/* Лоадер-состояние при open */
+.card.loading{opacity:.65;pointer-events:none}
+.card.loading::after{
+  content:""; position:absolute; inset:0; border-radius:26px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation:shimmer 1.2s infinite;
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* Низ */
+.checker{margin-top:auto}
+.checker img{width:100%;display:block}
+.yellow-divider{height:6px;background:#ffd000;width:100%}
+
+/* Навбар */
+.nav{position:sticky;bottom:0;background:rgba(10,11,16,.9);backdrop-filter:blur(8px);display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px 16px;border-top:1px solid #141824}
+.nav .btn{background:#12141b;border:1px solid #1b1e26;color:#e7e9ee;border-radius:22px;padding:14px 10px;text-align:center;font-weight:750;box-shadow:var(--shadow)}
+.nav .btn.active{outline:2px solid rgba(255,200,0,.4)}
+
+/* Бордеры слева/справа как в мини-аппе при ширине >560 */
+@media (min-width:560px){
+  .container{border-left:1px solid #141824;border-right:1px solid #141824}
+}
 
