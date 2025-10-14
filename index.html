@@ -9,50 +9,56 @@
 </head>
 <body>
   <div class="container">
+    <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.svg" alt="LAMBO DROP">
-      <div class="balance" id="balance"><span class="star">★</span><span class="value">0</span></div>
+      <div class="balance" id="balance"><span class="star">★</span><span class="value">25</span></div>
     </header>
 
+    <!-- LIVE -->
     <section class="live">
       <div class="live-title">LIVE</div>
       <img src="/assets/live-strip.svg" alt="Live strip">
     </section>
 
+    <!-- Сетка 2×2 как в референсе -->
     <main class="grid">
-      <!-- Жига -->
-      <button class="card gray" data-caseid="jiga" data-price="249" aria-label="Жига">
+      <!-- 1: Жига (серый бордер) -->
+      <button class="card gray" data-k="1" data-caseid="jiga" data-price="249" aria-label="Жига">
         <div class="art"><img src="/assets/case-1.svg" alt="Кейс Жига"></div>
         <div class="title">Жига</div>
         <div class="price"><span class="star">★</span> 249</div>
       </button>
 
-      <!-- Камри -->
-      <button class="card green" data-caseid="camry" data-price="499" aria-label="Камри">
+      <!-- 2: Камри (зелёный бордер) -->
+      <button class="card green" data-k="2" data-caseid="camry" data-price="499" aria-label="Камри">
         <div class="art"><img src="/assets/case-2.svg" alt="Кейс Камри"></div>
         <div class="title">Камри</div>
         <div class="price"><span class="star">★</span> 499</div>
       </button>
 
-      <!-- Бэха -->
-      <button class="card red" data-caseid="bmw" data-price="999" aria-label="Бэха">
+      <!-- 3: Бэха (красный бордер) -->
+      <button class="card red" data-k="3" data-caseid="bmw" data-price="999" aria-label="Бэха">
         <div class="art"><img src="/assets/case-3.svg" alt="Кейс Бэха"></div>
         <div class="title">Бэха</div>
         <div class="price"><span class="star">★</span> 999</div>
       </button>
 
-      <!-- Ламбо -->
-      <button class="card yellow" data-caseid="lambo" data-price="2999" aria-label="Ламбо">
+      <!-- 4: Ламбо (жёлтый бордер) -->
+      <button class="card yellow" data-k="4" data-caseid="lambo" data-price="2999" aria-label="Ламбо">
         <div class="art"><img src="/assets/case-4.svg" alt="Кейс Ламбо"></div>
         <div class="title">Ламбо</div>
         <div class="price"><span class="star">★</span> 2999</div>
       </button>
     </main>
 
+    <!-- Шахматка -->
     <div class="checker">
       <img src="/assets/checker.svg" alt="checkerboard">
+      <div class="yellow-divider"></div>
     </div>
 
+    <!-- Нав -->
     <nav class="nav">
       <a class="btn active" href="#profile">Профиль</a>
       <a class="btn" href="#vote">Голосование</a>
@@ -60,41 +66,39 @@
     </nav>
   </div>
 
-  <script src="/script.js"></script>
-  <!--
   <script>
-    (function(){
-      const balEl = document.querySelector('#balance .value');
-      fetch('/api/profile').then(r=>r.ok?r.json():{}).then(d=>{
-        if(d && typeof d.stars!=='undefined') balEl.textContent = d.stars;
-      }).catch(()=>{});
+    // Баланс
+    const balEl = document.querySelector('#balance .value');
+    fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+      if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
+    }).catch(()=>{});
 
-      const disable = (btn, state)=>{ btn.disabled = state; btn.classList.toggle('loading', state); };
-      const toast = (msg)=>{ 
-        let t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-        document.body.appendChild(t); setTimeout(()=>t.classList.add('show')); 
-        setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.remove(),300)}, 2000);
-      };
+    // Хелперы
+    const disable=(el,s)=>{el.disabled=s; el.classList.toggle('loading',s)};
+    const toast=(msg)=>{
+      const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+      document.body.appendChild(t); requestAnimationFrame(()=>t.classList.add('show'));
+      setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.remove(),250)}, 1800);
+    };
 
-      document.querySelectorAll('.card').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const caseId = btn.dataset.caseid;
-          disable(btn, true);
-          fetch('/api/open', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ caseId })
-          }).then(r=>r.json()).then(res=>{
-            // ожидаем { ok:true, prize: {...}, stars: number }
-            if(res && res.stars!=null) balEl.textContent = res.stars;
-            toast(res?.prize?.title ? `Вы выиграли: ${res.prize.title}` : 'Кейс открыт!');
-          }).catch(e=>{
-            toast('Ошибка открытия кейса');
-            console.error(e);
-          }).finally(()=>disable(btn,false));
-        });
+    // Открытие кейса
+    document.querySelectorAll('.card').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        disable(btn,true);
+        fetch('/api/open',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({caseId:btn.dataset.caseid})
+        })
+        .then(r=>r.json())
+        .then(res=>{
+          if(res && res.stars!=null) balEl.textContent=res.stars;
+          toast(res?.prize?.title ? `Вы выиграли: ${res.prize.title}` : 'Кейс открыт!');
+        })
+        .catch(()=>toast('Ошибка открытия кейса'))
+        .finally(()=>disable(btn,false));
       });
-    })();
+    });
   </script>
-  -->
 </body>
 </html>
