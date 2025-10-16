@@ -49,14 +49,42 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .art img{position:absolute;max-width:none;width:var(--w,160%);left:var(--left,50%);top:var(--top,-56px);transform:translateX(-50%);image-rendering:auto}
 
 /* Текст и цена по центру */
-.title{position:absolute;left:50%;transform:translateX(-50%);bottom:62px;width:92%;text-align:center;font-size:21px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.5);z-index:3}
+/* ↓ только изменилась позиция у title и price ↓ */
+.title{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:42px;                 /* было 62px */
+  width:92%;
+  text-align:center;
+  font-size:21px;
+  font-weight:900;
+  text-shadow:0 2px 10px rgba(0,0,0,.5);
+  z-index:3;
+}
 .price{
-  position:absolute;left:50%;transform:translateX(-50%);bottom:18px;
-  background:#ffd400;color:#181a1f;display:inline-flex;gap:10px;align-items:center;
-  padding:11px 20px;border-radius:28px;font-weight:900;font-size:17px;letter-spacing:.2px;z-index:4;
-  box-shadow:0 0 18px rgba(255,212,0,.55), inset 0 -2px 0 rgba(0,0,0,.08), inset 0 2px 0 rgba(255,255,255,.18)
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:-4px;                 /* было 18px */
+  background:#ffd400;
+  color:#181a1f;
+  display:inline-flex;
+  gap:10px;
+  align-items:center;
+  padding:11px 20px;
+  border-radius:28px;
+  font-weight:900;
+  font-size:17px;
+  letter-spacing:.2px;
+  z-index:4;
+  box-shadow:
+    0 0 18px rgba(255,212,0,.55),
+    inset 0 -2px 0 rgba(0,0,0,.08),
+    inset 0  2px 0 rgba(255,255,255,.18);
 }
 .price .star{color:#b07b00}
+
 
 /* Навбар поверх всего */
 .nav-spacer{height:8px}
