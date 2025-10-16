@@ -4,27 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
-  <link rel="preload" href="/assets/logo.svg" as="image" type="image/svg+xml">
+  <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="container">
     <!-- Шапка -->
     <header class="header">
-      <img class="logo" src="/assets/logo.svg" alt="LAMBO DROP">
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
       <div class="balance" id="balance"><span class="star">★</span><span class="value">25</span></div>
     </header>
 
-    <!-- LIVE (без дублирования текста) -->
+    <!-- LIVE (один элемент без дублирования текста) -->
     <section class="live">
       <img src="/assets/live-strip.svg" alt="Live strip">
     </section>
 
-    <!-- Сетка 2×2 -->
+    <!-- Сетка 2×2 (плитки компактнее ~20%) -->
     <main class="grid">
       <!-- Жига -->
       <button class="card gray" data-caseid="jiga" aria-label="Жига"
-              style="--w:126%; --top:-18px; --left:49%;">
+              style="--w:130%; --top:-26px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
         <div class="title">Жига</div>
         <div class="price"><span class="star">★</span> 249</div>
@@ -32,7 +32,7 @@
 
       <!-- Камри -->
       <button class="card green" data-caseid="camry" aria-label="Камри"
-              style="--w:114%; --top:-18px; --left:51%;">
+              style="--w:118%; --top:-24px; --left:51%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div>
         <div class="price"><span class="star">★</span> 499</div>
@@ -40,7 +40,7 @@
 
       <!-- Бэха -->
       <button class="card red" data-caseid="bmw" aria-label="Бэха"
-              style="--w:118%; --top:-14px; --left:51%;">
+              style="--w:122%; --top:-22px; --left:51%;">
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
         <div class="title">Бэха</div>
         <div class="price"><span class="star">★</span> 999</div>
@@ -48,14 +48,14 @@
 
       <!-- Ламбо -->
       <button class="card yellow" data-caseid="lambo" aria-label="Ламбо"
-              style="--w:118%; --top:-20px; --left:52%;">
+              style="--w:122%; --top:-28px; --left:52%;">
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
         <div class="title">Ламбо</div>
         <div class="price"><span class="star">★</span> 2999</div>
       </button>
     </main>
 
-    <!-- Низ -->
+    <!-- Низ (шахматка меньше) -->
     <div class="checker">
       <img src="/assets/checker.svg" alt="checkerboard">
       <div class="yellow-divider"></div>
@@ -68,7 +68,7 @@
     </nav>
   </div>
 
-  <!-- Поведение: баланс + /api/open -->
+  <!-- JS: баланс + /api/open -->
   <script>
     const balEl = document.querySelector('#balance .value');
     fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
