@@ -2,21 +2,28 @@
  * Futura PT — коммерческий шрифт. Положи свои файлы в /assets/fonts/
  * и оставь те же названия — либо поправь пути ниже.
 */
-@font-face{
-  font-family:"Futura PT";
-  src:url("/assets/fonts/futura-pt-book.woff2") format("woff2");
-  font-weight:400; font-style:normal; font-display:swap;
+@font-face {
+  font-family: "Futura PT";
+  src: url("/assets/fonts/futura-pt-book.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
-@font-face{
-  font-family:"Futura PT";
-  src:url("/assets/fonts/futura-pt-demi.woff2") format("woff2");
-  font-weight:700; font-style:normal; font-display:swap;
+@font-face {
+  font-family: "Futura PT";
+  src: url("/assets/fonts/futura-pt-demi.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
-@font-face{
-  font-family:"Futura PT";
-  src:url("/assets/fonts/futura-pt-heavy.woff2") format("woff2");
-  font-weight:900; font-style:normal; font-display:swap;
+@font-face {
+  font-family: "Futura PT";
+  src: url("/assets/fonts/futura-pt-heavy.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
 }
+
 
 :root{
   --bg:#0b0d12;
