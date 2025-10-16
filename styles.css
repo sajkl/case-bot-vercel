@@ -47,6 +47,24 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .card.green{border-color:var(--b-green)}
 .card.red{border-color:var(--b-red)}
 .card.yellow{border-color:var(--b-yellow)}
+/* Арт внутри карточки: выезжает за края */
+.art{
+  position:relative;
+  height:166px;            /* при необходимости = 170–176px, ориентируйся по скрину */
+  margin-top:-8px;
+  overflow:visible;
+  pointer-events:none;
+}
+.art img{
+  position:absolute;
+  left:var(--left, 50%);
+  top:var(--top, -24px);
+  width:var(--w, 118%);
+  transform:translateX(-50%);
+  max-width:none;          /* важно для процентов >100% */
+  image-rendering:auto;    /* без резкости на PNG */
+}
+
 
 /* Иллюстрация: выезжает за рамку, индивидуальные коррекции по data-k */
 .art{position:relative;height:166px;margin-top:-8px;pointer-events:none;overflow:visible}
