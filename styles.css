@@ -36,22 +36,24 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 }
 .balance .star{font-size:18px}
 
-/* LIVE полоса */
+/* LIVE */
 .live{
-  margin:8px 16px 18px;background:linear-gradient(180deg,#2c313f,#252a37);
-  border:1px solid var(--border);border-radius:18px;padding:12px 14px;
-  display:flex;align-items:center;gap:12px;overflow-x:auto
+  margin:8px 16px 16px;
+  background:linear-gradient(180deg,#2c313f,#252a37);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:8px 12px;
+  display:flex; align-items:center; overflow:hidden;
 }
-.live-title{font-size:20px;font-weight:860;letter-spacing:.4px}
-.live img{height:36px;flex:0 0 auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
+.live img{height:40px}
 
-/* Сетка 2×2, точные отступы */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:0 16px 16px}
+/* Сетка 2×2 */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 16px 16px}
 
-/* Карточка с цветной рамкой, как в референсе */
+/* Карточка */
 .card{
-  position:relative;background:#2a2f3d;border-radius:26px;
-  border:4px solid transparent;padding:14px 14px 76px;
+  position:relative;background:#2a2f3d;border-radius:24px;
+  border:3px solid transparent;padding:12px 12px 64px;
   box-shadow:var(--shadow);transition:transform .12s ease
 }
 .card:active{transform:translateY(1px)}
@@ -60,33 +62,36 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .card.red{border-color:var(--b-red)}
 .card.yellow{border-color:var(--b-yellow)}
 
-/* Арт внутри карточки: выезжает за края (позиции через CSS-переменные) */
+/* Арт: позиционирование через CSS-переменные */
 .art{
-  position:relative;height:166px;margin-top:-8px;
-  overflow:visible;pointer-events:none
+  position:relative;
+  height:clamp(140px, 30vw, 166px);
+  margin-top:-6px;
+  overflow:visible; pointer-events:none;
 }
 .art img{
-  position:absolute;
-  left:var(--left,50%); top:var(--top,-24px); width:var(--w,118%);
-  transform:translateX(-50%); max-width:none; image-rendering:auto
+  position:absolute; max-width:none;
+  width:var(--w,118%); left:var(--left,50%); top:var(--top,-22px);
+  transform:translateX(-50%); image-rendering:auto;
 }
 
-/* Заголовок и цена — слева снизу */
+/* Текст и цена */
 .title{
-  position:absolute;left:20px;bottom:60px;font-size:24px;font-weight:900;
-  text-shadow:0 2px 10px rgba(0,0,0,.55)
+  position:absolute;left:18px;bottom:52px;font-size:22px;font-weight:900;
+  text-shadow:0 2px 10px rgba(0,0,0,.5)
 }
 .price{
-  position:absolute;left:20px;bottom:16px;background:rgba(110,106,99,.95);
-  color:#fff;display:inline-flex;gap:10px;align-items:center;
-  padding:12px 18px;border-radius:34px;font-weight:900;font-size:18px;letter-spacing:.2px
+  position:absolute;left:18px;bottom:14px;
+  background:rgba(110,106,99,.95); color:#fff;
+  display:inline-flex;gap:10px;align-items:center;
+  padding:10px 16px;border-radius:30px;font-weight:900;font-size:17px
 }
 .price .star{color:var(--accent)}
 
-/* Лоадер-состояние при open */
+/* Лоадер при открытии */
 .card.loading{opacity:.65;pointer-events:none}
 .card.loading::after{
-  content:"";position:absolute;inset:0;border-radius:26px;
+  content:"";position:absolute;inset:0;border-radius:24px;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
   animation:shimmer 1.2s infinite
 }
@@ -103,14 +108,24 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px 16px;
   border-top:1px solid #141824
 }
+.nav .btn,
+.nav .btn:visited,
+.nav .btn:focus{ text-decoration:none; }
 .nav .btn{
   background:#12141b;border:1px solid #1b1e26;color:#e7e9ee;border-radius:22px;
   padding:14px 10px;text-align:center;font-weight:750;box-shadow:var(--shadow)
 }
 .nav .btn.active{outline:2px solid rgba(255,200,0,.4)}
 
-/* Бордеры слева/справа как в мини-аппе при ширине >560 */
+/* Боковые бордеры на широких */
 @media (min-width:560px){
   .container{border-left:1px solid #141824;border-right:1px solid #141824}
+}
+
+/* Узкие экраны */
+@media (max-width:390px){
+  .grid{gap:14px}
+  .title{bottom:48px;font-size:21px}
+  .price{bottom:12px;padding:9px 14px;font-size:16px}
 }
 
