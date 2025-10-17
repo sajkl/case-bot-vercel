@@ -53,10 +53,11 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 /* Машины: снова вылезают наружу (как раньше) */
 /* Машины: опустили ниже на ~15–20% */
 /* Машины: чуть подняли (~5%) */
+/* Машины: подняты ещё на 5% (итого ~10% выше исходного положения) */
 .art {
   position: relative;
   height: 160px;
-  margin-top: 4px;          /* было 12px → чуть выше */
+  margin-top: -4px;          /* было 4px → чуть выше */
   overflow: visible;
   pointer-events: none;
 }
@@ -64,18 +65,17 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   position: absolute;
   max-width: none;
   left: var(--left, 50%);
-  top: -4px;                /* было 10px → подняли примерно на 5% */
+  top: -16px;                /* было -4px → подняли ещё на 12px ≈ +5% */
   width: var(--w, 140%);
   transform: translateX(-50%);
   image-rendering: auto;
 }
 
-/* Индивидуальная тонкая подстройка под каждую машину */
-.card[data-k="1"] .art img { width: 148%; left: 49%; top: -28px; } /* Жига */
-.card[data-k="2"] .art img { width: 136%; left: 52%; top: -25px; } /* Камри */
-.card[data-k="3"] .art img { width: 142%; left: 51%; top: -22px; } /* Бэха */
-.card[data-k="4"] .art img { width: 144%; left: 53%; top: -26px; } /* Ламбо */
-
+/* Индивидуальные корректировки для каждой машины */
+.card[data-k="1"] .art img { width: 148%; left: 49%; top: -38px; } /* Жига */
+.card[data-k="2"] .art img { width: 136%; left: 52%; top: -34px; } /* Камри */
+.card[data-k="3"] .art img { width: 142%; left: 51%; top: -32px; } /* Бэха */
+.card[data-k="4"] .art img { width: 144%; left: 53%; top: -36px; } /* Ламбо */
 
 
 /* Текст — подняли немного, цена оставлена близко к низу */
