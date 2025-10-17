@@ -50,11 +50,26 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   overflow:visible;
 }
 
-/* Машины: подняли ещё на 3%, уменьшили размер на 3% */
+/* Название кейса — подняли на 5% */
+.title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 72px;            /* было 62px → выше на 10px ≈ +5% */
+  width: 92%;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  z-index: 6;
+}
+
+/* Фото машин (глобально) */
 .art {
   position: relative;
   height: 160px;
-  margin-top: -6px;          /* немного выше */
+  margin-top: -6px;
   overflow: visible;
   pointer-events: none;
 }
@@ -62,30 +77,23 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   position: absolute;
   max-width: none;
   left: var(--left, 50%);
-  top: -22px;                /* было -16px → подняли ещё на 3% (~6px) */
-  width: var(--w, 136%);     /* было 140% → уменьшили на 3% */
+  top: -22px;
+  width: var(--w, 136%);
   transform: translateX(-50%);
   image-rendering: auto;
 }
 
-/* Индивидуальные настройки под каждый кейс */
-.card[data-k="1"] .art img { width: 144%; left: 49%; top: -44px; } /* Жига */
+/* Индивидуальные подстройки */
+.card[data-k="1"] .art img { 
+  width: 137%;  /* было 144% → −5% */
+  left: 49%; 
+  top: -42px;   /* чуть ниже, чтобы центр остался на месте */
+} /* Жига */
+
 .card[data-k="2"] .art img { width: 132%; left: 52%; top: -40px; } /* Камри */
 .card[data-k="3"] .art img { width: 138%; left: 51%; top: -38px; } /* Бэха */
 .card[data-k="4"] .art img { width: 140%; left: 53%; top: -42px; } /* Ламбо */
 
-
-
-/* Текст — подняли немного, цена оставлена близко к низу */
-.title{
-  position:absolute;
-  left:50%; transform:translateX(-50%);
-  bottom:62px;                  /* было 52 → подняли */
-  width:92%; text-align:center;
-  font-size:20px; font-weight:900;
-  color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5);
-  z-index:6;
-}
 .price{
   position:absolute;
   left:50%; transform:translateX(-50%);
