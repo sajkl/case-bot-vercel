@@ -30,37 +30,67 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 }
 
 /* Grid (ещё компактнее) */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 16px}
-
-/* Card — прямоугольная и маленькая */
-.card{
-  position:relative; background:#2a2f3d; border-radius:14px;
-  border:3px solid transparent; padding:10px 10px 78px;
-  box-shadow:var(--shadow); transition:.12s ease; overflow:visible;
+/* Сетка: немного увеличим высоту карточек */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 0 16px 16px;
 }
-.card:active{transform:translateY(1px)}
-.card.gray{border-color:var(--b-gray)}
-.card.green{border-color:var(--b-green)}
-.card.red{border-color:var(--b-red)}
-.card.yellow{border-color:var(--b-yellow)}
 
-/* Арт — сильный вылет */
-.art{position:relative;height:clamp(118px, 26vw, 140px);margin-top:-6px;overflow:visible;pointer-events:none;z-index:2}
-.art img{position:absolute;max-width:none;width:var(--w,160%);left:var(--left,50%);top:var(--top,-56px);transform:translateX(-50%);image-rendering:auto}
+/* Плитка кейса — делаем более вытянутой */
+.card {
+  position: relative;
+  background: #2a2f3d;
+  border-radius: 26px;
+  border: 4px solid transparent;
+  padding: 14px 14px 110px; /* было 76px → вытягиваем вниз */
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease;
+  overflow: visible;
+}
+.card:active { transform: translateY(1px); }
 
-/* Текст и цена по центру */
-/* ↓ только изменилась позиция у title и price ↓ */
+.card.gray { border-color: var(--b-gray); }
+.card.green { border-color: var(--b-green); }
+.card.red { border-color: var(--b-red); }
+.card.yellow { border-color: var(--b-yellow); }
+
+/* Машины — чуть ниже внутри карточки */
+.art {
+  position: relative;
+  height: 166px;
+  margin-top: 10px;       /* было -8px → теперь опустили */
+  overflow: visible;
+  pointer-events: none;
+}
+.art img {
+  position: absolute;
+  left: 50%;
+  top: -10px;             /* было -24px → ниже */
+  width: 118%;
+  transform: translateX(-50%);
+  max-width: none;
+}
+
+/* Точные смещения под каждую машину */
+.card[data-k="1"] .art img { width: 128%; left: 49%; top: -6px; }
+.card[data-k="2"] .art img { width: 116%; left: 51%; top: -10px; }
+.card[data-k="3"] .art img { width: 120%; left: 50%; top: -8px; }
+.card[data-k="4"] .art img { width: 118%; left: 50%; top: -6px; }
+
+/* Название и цена — ближе к нижней границе карточки */
 .title {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 64px;            /* немного выше, чтобы остался зазор над ценой */
+  bottom: 52px;           /* ближе к низу, но не вплотную */
   width: 92%;
   text-align: center;
   font-size: 20px;
   font-weight: 900;
   color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
   z-index: 6;
 }
 
@@ -68,7 +98,7 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 16px;            /* было 34px → опускаем ниже */
+  bottom: 22px;           /* чуть выше нижней границы */
   background: #ffd400;
   color: #181a1f;
   display: inline-flex;
@@ -85,10 +115,8 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
     inset 0 -2px 0 rgba(0, 0, 0, 0.08),
     inset 0 2px 0 rgba(255, 255, 255, 0.18);
 }
-.price .star {
-  color: #b07b00;
-  font-size: 15px;
-}
+.price .star { color: #b07b00; font-size: 15px; }
+
 
 
 
