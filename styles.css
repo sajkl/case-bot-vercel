@@ -51,28 +51,30 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 }
 
 /* Машины: снова вылезают наружу (как раньше) */
-.art{
-  position:relative;
-  height:160px;                 /* было 166 */
-  margin-top:-6px;              /* чуть выше */
-  overflow:visible;
-  pointer-events:none;
+/* Машины: опустили ниже на ~15–20% */
+.art {
+  position: relative;
+  height: 160px;
+  margin-top: 12px;         /* было -6px → ниже */
+  overflow: visible;
+  pointer-events: none;
 }
-.art img{
-  position:absolute;
-  max-width:none;
-  left:var(--left,50%);
-  top:var(--top,-44px);         /* сильнее вверх = вылезает */
-  width:var(--w,140%);          /* крупнее по умолчанию */
-  transform:translateX(-50%);
-  image-rendering:auto;
+.art img {
+  position: absolute;
+  max-width: none;
+  left: var(--left, 50%);
+  top: 10px;                /* было -44px → опустили ниже */
+  width: var(--w, 140%);
+  transform: translateX(-50%);
+  image-rendering: auto;
 }
 
-/* Если не используешь inline-переменные — можно оставить тонкую подстройку по data-k */
-.card[data-k="1"] .art img{ width:148%; left:49%; top:-46px; } /* Жига   */
-.card[data-k="2"] .art img{ width:136%; left:52%; top:-42px; } /* Камри  */
-.card[data-k="3"] .art img{ width:142%; left:51%; top:-40px; } /* Бэха   */
-.card[data-k="4"] .art img{ width:144%; left:53%; top:-48px; } /* Ламбо  */
+/* Индивидуальные корректировки для каждой машины */
+.card[data-k="1"] .art img { width: 148%; left: 49%; top: -20px; } /* Жига */
+.card[data-k="2"] .art img { width: 136%; left: 52%; top: -18px; } /* Камри */
+.card[data-k="3"] .art img { width: 142%; left: 51%; top: -16px; } /* Бэха */
+.card[data-k="4"] .art img { width: 144%; left: 53%; top: -20px; } /* Ламбо */
+
 
 /* Текст — подняли немного, цена оставлена близко к низу */
 .title{
