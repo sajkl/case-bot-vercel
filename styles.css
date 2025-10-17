@@ -83,12 +83,13 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   image-rendering: auto;
 }
 
-/* Индивидуальные подстройки */
-.card[data-k="1"] .art img { 
-  width: 137%;  /* было 144% → −5% */
-  left: 49%; 
-  top: -42px;   /* чуть ниже, чтобы центр остался на месте */
-} /* Жига */
+/* Жига — уменьшили ещё на 5% и чуть опустили */
+.card[data-k="1"] .art img {
+  width: 130%;   /* было 137% → ещё −5 % */
+  left: 49%;
+  top: -38px;    /* чуть ниже, чтобы осталась вровень с плиткой */
+}
+
 
 .card[data-k="2"] .art img { width: 132%; left: 52%; top: -40px; } /* Камри */
 .card[data-k="3"] .art img { width: 138%; left: 51%; top: -38px; } /* Бэха */
