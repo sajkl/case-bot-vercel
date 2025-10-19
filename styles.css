@@ -239,3 +239,13 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   to{ transform:translateY(0) scale(1); opacity:1 }
 }
 
+/* --- EMERGENCY styles: чтоб overlay гарантированно видно --- */
+.open-case{position:fixed;inset:0;z-index:10002;display:grid;place-items:center}
+.open-case[hidden]{display:none}
+.open-case__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.open-case__stage{position:relative;width:min(520px,92vw);height:62vh;max-height:560px;background:#0a0c12;border:1px solid #1b2130;border-radius:20px;overflow:hidden}
+.prize{position:absolute;inset:0;display:grid;place-items:center;padding:16px;text-align:center;opacity:1}
+.prize__img{max-width:75%;max-height:58%}
+.prize__title{margin-top:10px;font-weight:900;font-size:24px}
+.prize__btn{margin-top:12px;background:#ffd400;color:#171a1f;border:none;border-radius:12px;padding:10px 16px;font-weight:900}
+
