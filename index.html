@@ -9,50 +9,24 @@
 </head>
 <body>
   <div class="container">
-    <!-- Overlay открытия кейса -->
-<div id="openCase" class="open-case" hidden>
-  <div class="open-case__backdrop"></div>
-
-  <div class="open-case__stage">
-    <!-- Двери -->
-    <div class="door door--left"></div>
-    <div class="door door--right"></div>
-
-    <!-- Замок -->
-    <div class="lock">
-      <div class="lock__body"></div>
-      <div class="lock__u"></div>
-      <div class="spark spark--1"></div>
-      <div class="spark spark--2"></div>
-      <div class="spark spark--3"></div>
-    </div>
-
-    <!-- Приз -->
-    <div class="prize" aria-live="polite">
-      <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
-      <div class="prize__title">Ваш приз!</div>
-      <button class="prize__btn">Забрать</button>
-    </div>
-  </div>
-</div>
-
     <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
-      <div class="balance" id="balance"><span class="star">★</span><span class="value">25</span></div>
+      <div class="balance" id="balance">
+        <span class="star">★</span><span class="value">25</span>
+      </div>
     </header>
 
-    <!-- LIVE: только надпись -->
+    <!-- LIVE -->
     <section class="live-bar">
       <span>LIVE</span>
     </section>
 
-    <!-- Сетка 2×2 (плитки компактнее, арт вылезает сильнее) -->
+    <!-- Сетка 2×2 -->
     <main class="grid">
       <!-- Жига -->
-     <button class="card gray" data-caseid="jiga" aria-label="Жига"
+      <button class="card gray" data-caseid="jiga" aria-label="Жига"
         style="--w:150%; --top:-48px; --left:49%;">
-
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
         <div class="title">Жига</div>
         <div class="price"><span class="star">★</span> 249</div>
@@ -60,7 +34,7 @@
 
       <!-- Камри -->
       <button class="card green" data-caseid="camry" aria-label="Камри"
-              style="--w:152%; --top:-54px; --left:52%;">
+        style="--w:152%; --top:-54px; --left:52%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div>
         <div class="price"><span class="star">★</span> 499</div>
@@ -68,7 +42,7 @@
 
       <!-- Бэха -->
       <button class="card red" data-caseid="bmw" aria-label="Бэха"
-              style="--w:158%; --top:-52px; --left:51%;">
+        style="--w:158%; --top:-52px; --left:51%;">
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
         <div class="title">Бэха</div>
         <div class="price"><span class="star">★</span> 999</div>
@@ -76,17 +50,17 @@
 
       <!-- Ламбо -->
       <button class="card yellow" data-caseid="lambo" aria-label="Ламбо"
-              style="--w:160%; --top:-64px; --left:53%;">
+        style="--w:160%; --top:-64px; --left:53%;">
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
         <div class="title">Ламбо</div>
         <div class="price"><span class="star">★</span> 2999</div>
       </button>
     </main>
 
-    <!-- Спейсер, чтобы контент не уезжал под навбар -->
+    <!-- Спейсер -->
     <div class="nav-spacer" aria-hidden="true"></div>
 
-    <!-- Навбар (поверх всего) -->
+    <!-- Навигация -->
     <nav class="nav">
       <a class="btn active" data-tab="profile" href="#profile">Профиль</a>
       <a class="btn" data-tab="vote" href="#vote">Голосование</a>
@@ -94,7 +68,34 @@
     </nav>
   </div>
 
-  <!-- Простая заглушка-дин.панель -->
+  <!-- ===== Overlay открытия кейса ===== -->
+  <div id="openCase" class="open-case" hidden>
+    <div class="open-case__backdrop"></div>
+
+    <div class="open-case__stage">
+      <!-- Двери -->
+      <div class="door door--left"></div>
+      <div class="door door--right"></div>
+
+      <!-- Замок -->
+      <div class="lock">
+        <div class="lock__body"></div>
+        <div class="lock__u"></div>
+        <div class="spark spark--1"></div>
+        <div class="spark spark--2"></div>
+        <div class="spark spark--3"></div>
+      </div>
+
+      <!-- Приз -->
+      <div class="prize" aria-live="polite">
+        <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
+        <div class="prize__title">Ваш приз!</div>
+        <button class="prize__btn">Забрать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Панель-заглушка для вкладок ===== -->
   <div id="sheet" class="sheet" hidden>
     <div class="sheet-body">
       <div class="sheet-title" id="sheet-title">Заглушка</div>
@@ -106,17 +107,13 @@
   <script>
     // Баланс
     const balEl = document.querySelector('#balance .value');
-    fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
-      if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
-    }).catch(()=>{});
+    fetch('/api/profile')
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars; })
+      .catch(()=>{});
 
-    // Открытие кейса
-    const disable=(el,s)=>{ el.disabled=s; el.classList.toggle('loading',s); };
-    const toast=(msg)=>{
-      const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-      document.body.appendChild(t); requestAnimationFrame(()=>t.classList.add('show'));
-      setTimeout(()=>{t.classList.remove('show'); setTimeout(()=>t.remove(),220)}, 1600);
-    };
+    // Клики по карточкам (открытие кейса)
+    const disable = (el,s)=>{ el.disabled=s; el.classList.toggle('loading',s); };
     document.querySelectorAll('.card').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         disable(btn,true);
@@ -128,14 +125,45 @@
         .then(r=>r.json())
         .then(res=>{
           if(res && res.stars!=null) balEl.textContent=res.stars;
-          toast(res?.prize?.title ? `Вы выиграли: ${res.prize.title}` : 'Кейс открыт!');
+
+          const prizeImg = res?.prize?.image || "/assets/prizes/sample.png";
+          const prizeTitle = res?.prize?.title || "Секретный приз";
+
+          const oc = document.getElementById('openCase');
+          const pImg = oc.querySelector('.prize__img');
+          const pTitle = oc.querySelector('.prize__title');
+
+          pImg.src = prizeImg;
+          pImg.alt = prizeTitle;
+          pTitle.textContent = prizeTitle;
+
+          oc.hidden = false;
+          oc.classList.remove('break','shatter','open','reveal');
+          oc.classList.add('enter');
+
+          setTimeout(()=> oc.classList.add('break'),   180);
+          setTimeout(()=> oc.classList.add('shatter'), 520);
+          setTimeout(()=> oc.classList.add('open'),    820);
+          setTimeout(()=> oc.classList.add('reveal'),  1220);
         })
-        .catch(()=> toast('Ошибка открытия кейса'))
+        .catch(()=> console.log('Ошибка открытия кейса'))
         .finally(()=> disable(btn,false));
       });
     });
 
-    // Заглушки для вкладок
+    // Закрытие overlay по клику на фон или кнопку "Забрать"
+    (() => {
+      const oc = document.getElementById('openCase');
+      oc.addEventListener('click', (e) => {
+        if (e.target.classList.contains('open-case__backdrop') ||
+            e.target.classList.contains('prize__btn')) {
+          oc.classList.remove('enter','break','shatter','open','reveal');
+          oc.hidden = true;
+        }
+      });
+    })();
+
+    // Заглушки вкладок
     const sheet = document.getElementById('sheet');
     const title = document.getElementById('sheet-title');
     const text  = document.getElementById('sheet-text');
@@ -155,12 +183,14 @@
         document.querySelectorAll('.nav .btn').forEach(x=>x.classList.remove('active'));
         b.classList.add('active');
         const tab = b.dataset.tab;
-        if(tab==='profile')   openSheet('Профиль', 'Личный кабинет в разработке.');
-        if(tab==='vote')      openSheet('Голосование', 'Скоро сможете голосовать за кейсы.');
-        if(tab==='inv')       openSheet('Инвентарь', 'Ваши призы появятся здесь позже.');
+        if(tab==='profile') openSheet('Профиль', 'Личный кабинет в разработке.');
+        if(tab==='vote')    openSheet('Голосование', 'Скоро сможете голосовать за кейсы.');
+        if(tab==='inv')     openSheet('Инвентарь', 'Ваши призы появятся здесь позже.');
       });
     });
-    sheet.addEventListener('click', (e)=>{ if(e.target===sheet || e.target.classList.contains('sheet-close')) closeSheet(); });
+    sheet.addEventListener('click', (e)=>{
+      if(e.target===sheet || e.target.classList.contains('sheet-close')) closeSheet();
+    });
   </script>
 </body>
 </html>
