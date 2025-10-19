@@ -21,12 +21,44 @@
         body: JSON.stringify({ caseId })
       })
       .then(r => r.json())
-      .then(res => {
-        if (res && res.stars != null) balEl.textContent = res.stars;
-        toast(res?.prize?.title ? `Вы выиграли: ${res.prize.title}` : 'Кейс открыт!');
-      })
-      .catch(()=> toast('Ошибка открытия кейса'))
-      .finally(()=> disable(btn,false));
+    .then(res=>{
+  if(res && res.stars!=null) balEl.textContent=res.stars;
+
+  // 1) определяем приз (картинка и заголовок)
+  const prizeImg = res?.prize?.image || "/assets/prizes/sample.png";
+  const prizeTitle = res?.prize?.title || "Секретный приз";
+
+  // 2) показываем оверлей и запускаем анимации по стадиям
+  const oc = document.getElementById('openCase');
+  const pImg = oc.querySelector('.prize__img');
+  const pTitle = oc.querySelector('.prize__title');
+
+  pImg.src = prizeImg;
+  pImg.alt = prizeTitle;
+  pTitle.textContent = prizeTitle;
+
+  oc.hidden = false;
+  oc.classList.remove('break','shatter','open','reveal');
+  oc.classList.add('enter');
+
+  // тайминг: удар → крошка → двери → приз
+  setTimeout(()=> oc.classList.add('break'),   180);
+  setTimeout(()=> oc.classList.add('shatter'), 520);
+  setTimeout(()=> oc.classList.add('open'),    820);
+  setTimeout(()=> oc.classList.add('reveal'),  1220);
+})
+// Закрытие «Забрать» или тап по затемнению
+(() => {
+  const oc = document.getElementById('openCase');
+  oc.addEventListener('click', (e) => {
+    if (e.target.classList.contains('open-case__backdrop') ||
+        e.target.classList.contains('prize__btn')) {
+      oc.classList.remove('enter','break','shatter','open','reveal');
+      oc.hidden = true;
+    }
+  });
+})();
+
     });
   });
 })();
