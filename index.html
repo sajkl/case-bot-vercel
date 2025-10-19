@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
-  <link rel="stylesheet" href="/styles.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
 </head>
 <body>
   <div class="container">
@@ -20,25 +20,25 @@
 
     <!-- Сетка кейсов -->
     <main class="grid">
-      <a class="card gray" data-k="1" href="/case/?case=jiga" aria-label="Жига" style="--w:150%; --top:-48px; --left:49%;">
+      <a class="card gray" data-k="1" data-caseid="jiga"  href="/case/?case=jiga"  aria-label="Жига"  style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
         <div class="title">Жига</div>
         <div class="price"><span class="star">★</span> 249</div>
       </a>
 
-      <a class="card green" data-k="2" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
+      <a class="card green" data-k="2" data-caseid="camry" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div>
         <div class="price"><span class="star">★</span> 499</div>
       </a>
 
-      <a class="card red" data-k="3" href="/case/?case=bmw" aria-label="Бэха" style="--w:158%; --top:-52px; --left:51%;">
+      <a class="card red" data-k="3" data-caseid="bmw"   href="/case/?case=bmw"   aria-label="Бэха"  style="--w:158%; --top:-52px; --left:51%;">
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
         <div class="title">Бэха</div>
         <div class="price"><span class="star">★</span> 999</div>
       </a>
 
-      <a class="card yellow" data-k="4" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
+      <a class="card yellow" data-k="4" data-caseid="lambo" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
         <div class="title">Ламбо</div>
         <div class="price"><span class="star">★</span> 2999</div>
@@ -65,11 +65,33 @@
   </div>
 
   <script>
+  (function () {
     // Баланс
     const balEl = document.querySelector('#balance .value');
     fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
       if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
     }).catch(()=>{});
+
+    // Жёсткая навигация на /case/?case=...
+    const goCase = (id) => {
+      const url = '/case/?case=' + encodeURIComponent(id || 'lambo');
+      // если открыто внутри Telegram Mini App — используем их API
+      if (window.Telegram && Telegram.WebApp && typeof Telegram.WebApp.openLink === 'function') {
+        Telegram.WebApp.openLink(url, { try_instant_view: false });
+      } else {
+        window.location.href = url;
+      }
+    };
+
+    // Перехватываем клик по карточкам и уходим программно
+    document.querySelectorAll('.card').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = a.dataset.caseid || new URL(a.href).searchParams.get('case') || 'lambo';
+        goCase(id);
+      }, { passive: false });
+    });
 
     // Заглушки вкладок
     const sheet = document.getElementById('sheet');
@@ -99,7 +121,7 @@
     sheet.addEventListener('click', (e)=>{
       if(e.target===sheet || e.target.classList.contains('sheet-close')) closeSheet();
     });
+  })();
   </script>
 </body>
 </html>
-
