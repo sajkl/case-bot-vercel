@@ -1,6 +1,17 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+
+    // Явно отдаем страницу кейса
+    { "source": "/case", "destination": "/case.html" },
+    { "source": "/case.html", "destination": "/case.html" },
+
+    // Главная
+    { "source": "/", "destination": "/index.html" },
+
+    // Все остальные пути (если очень нужно SPA) — на индекс,
+    // но исключаем /api и /case(.html)
+    { "source": "/((?!api|case(?:\\.html)?).*)", "destination": "/index.html" }
   ]
 }
