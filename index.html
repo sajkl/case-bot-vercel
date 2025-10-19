@@ -9,6 +9,33 @@
 </head>
 <body>
   <div class="container">
+    <!-- Overlay открытия кейса -->
+<div id="openCase" class="open-case" hidden>
+  <div class="open-case__backdrop"></div>
+
+  <div class="open-case__stage">
+    <!-- Двери -->
+    <div class="door door--left"></div>
+    <div class="door door--right"></div>
+
+    <!-- Замок -->
+    <div class="lock">
+      <div class="lock__body"></div>
+      <div class="lock__u"></div>
+      <div class="spark spark--1"></div>
+      <div class="spark spark--2"></div>
+      <div class="spark spark--3"></div>
+    </div>
+
+    <!-- Приз -->
+    <div class="prize" aria-live="polite">
+      <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
+      <div class="prize__title">Ваш приз!</div>
+      <button class="prize__btn">Забрать</button>
+    </div>
+  </div>
+</div>
+
     <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
