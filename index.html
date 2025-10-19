@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
-  <link rel="stylesheet" href="/styles.css?v=122">
+  <link rel="stylesheet" href="/styles.css?v=8">
 </head>
 <body>
   <div class="container">
     <!-- Шапка -->
     <header class="header">
-      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
       <div class="balance" id="balance"><span class="star">★</span><span class="value">25</span></div>
     </header>
 
@@ -20,40 +20,32 @@
 
     <!-- Сетка кейсов -->
     <main class="grid">
-      <!-- Жига -->
-      <a class="card gray" data-k="1" href="/case.html?case=jiga"
-         style="--w:150%; --top:-48px; --left:49%;">
+      <a class="card gray" data-k="1" href="/case/?case=jiga" aria-label="Жига" style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
         <div class="title">Жига</div>
         <div class="price"><span class="star">★</span> 249</div>
       </a>
 
-      <!-- Камри -->
-      <a class="card green" data-k="2" href="/case.html?case=camry"
-         style="--w:152%; --top:-54px; --left:52%;">
+      <a class="card green" data-k="2" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div>
         <div class="price"><span class="star">★</span> 499</div>
       </a>
 
-      <!-- Бэха -->
-      <a class="card red" data-k="3" href="/case.html?case=bmw"
-         style="--w:158%; --top:-52px; --left:51%;">
+      <a class="card red" data-k="3" href="/case/?case=bmw" aria-label="Бэха" style="--w:158%; --top:-52px; --left:51%;">
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
         <div class="title">Бэха</div>
         <div class="price"><span class="star">★</span> 999</div>
       </a>
 
-      <!-- Ламбо -->
-      <a class="card yellow" data-k="4" href="/case.html?case=lambo"
-         style="--w:160%; --top:-64px; --left:53%;">
+      <a class="card yellow" data-k="4" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
         <div class="title">Ламбо</div>
         <div class="price"><span class="star">★</span> 2999</div>
       </a>
     </main>
 
-    <div class="nav-spacer"></div>
+    <div class="nav-spacer" aria-hidden="true"></div>
 
     <!-- Навигация -->
     <nav class="nav">
@@ -63,7 +55,7 @@
     </nav>
   </div>
 
-  <!-- Панель заглушки -->
+  <!-- Панель заглушек -->
   <div id="sheet" class="sheet" hidden>
     <div class="sheet-body">
       <div class="sheet-title" id="sheet-title">Заглушка</div>
@@ -73,13 +65,11 @@
   </div>
 
   <script>
-  (function () {
     // Баланс
     const balEl = document.querySelector('#balance .value');
-    fetch('/api/profile')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
-      .catch(() => {});
+    fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+      if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
+    }).catch(()=>{});
 
     // Заглушки вкладок
     const sheet = document.getElementById('sheet');
@@ -93,25 +83,23 @@
     };
     const closeSheet = () => {
       sheet.classList.remove('show');
-      setTimeout(() => sheet.hidden = true, 200);
+      setTimeout(()=>sheet.hidden = true, 200);
     };
-
-    document.querySelectorAll('.nav .btn').forEach(b => {
-      b.addEventListener('click', (e) => {
+    document.querySelectorAll('.nav .btn').forEach(b=>{
+      b.addEventListener('click', (e)=>{
         e.preventDefault();
-        document.querySelectorAll('.nav .btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.nav .btn').forEach(x=>x.classList.remove('active'));
         b.classList.add('active');
         const tab = b.dataset.tab;
-        if (tab === 'profile') openSheet('Профиль', 'Личный кабинет в разработке.');
-        if (tab === 'vote')    openSheet('Голосование', 'Скоро сможете голосовать за кейсы.');
-        if (tab === 'inv')     openSheet('Инвентарь', 'Ваши призы появятся здесь позже.');
+        if(tab==='profile') openSheet('Профиль', 'Личный кабинет в разработке.');
+        if(tab==='vote')    openSheet('Голосование', 'Скоро сможете голосовать за кейсы.');
+        if(tab==='inv')     openSheet('Инвентарь', 'Ваши призы появятся здесь позже.');
       });
     });
-
-    sheet.addEventListener('click', (e) => {
-      if (e.target === sheet || e.target.classList.contains('sheet-close')) closeSheet();
+    sheet.addEventListener('click', (e)=>{
+      if(e.target===sheet || e.target.classList.contains('sheet-close')) closeSheet();
     });
-  })();
   </script>
 </body>
 </html>
+
