@@ -151,4 +151,91 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 @media (min-width:560px){
   .container{border-left:1px solid #141824;border-right:1px solid #141824}
 }
+/* ===== OPEN CASE OVERLAY ===== */
+.open-case{position:fixed;inset:0;z-index:10002;display:grid;place-items:center}
+.open-case[hidden]{display:none}
+.open-case__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px)}
+
+.open-case__stage{
+  position:relative; width:min(520px, 92vw); height:62vh;
+  max-height:560px; border-radius:20px; overflow:hidden;
+  background:#0a0c12; border:1px solid #1b2130; box-shadow:0 25px 60px rgba(0,0,0,.55);
+}
+
+/* Двери контейнера */
+.door{
+  position:absolute; top:10%; bottom:14%;
+  width:52%; background:linear-gradient(180deg,#e7b900,#c89d00);
+  border:4px solid #f5d249; border-radius:18px; box-shadow:inset 0 0 0 4px rgba(255,255,255,.08);
+}
+.door--left{ left:3%; transform-origin:left center }
+.door--right{ right:3%; transform-origin:right center }
+
+/* Замок */
+.lock{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:120px; height:120px; pointer-events:none; }
+.lock__body{
+  position:absolute; inset:auto 0 0 0; margin:auto; width:120px; height:80px; border-radius:18px;
+  background:#2c313f; border:6px solid #11161f; box-shadow:0 14px 28px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.06);
+}
+.lock__u{
+  position:absolute; left:50%; top:-36px; width:78px; height:78px; transform:translateX(-50%);
+  border:10px solid #2c313f; border-bottom:none; border-radius:40px 40px 0 0; box-shadow:0 6px 0 #11161f inset;
+}
+
+/* Искры при «ломании» */
+.spark{position:absolute; width:8px; height:8px; background:#ffd400; border-radius:50%; opacity:0}
+.spark--1{left:20%; top:20%}
+.spark--2{left:70%; top:35%}
+.spark--3{left:45%; top:10%}
+
+/* Приз */
+.prize{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:16px; opacity:0; pointer-events:none }
+.prize__img{ max-width:75%; max-height:58%; filter:drop-shadow(0 20px 40px rgba(0,0,0,.45)) }
+.prize__title{ margin-top:10px; font-weight:900; font-size:24px; text-shadow:0 2px 10px rgba(0,0,0,.5) }
+.prize__btn{
+  margin-top:12px; background:#ffd400; color:#171a1f; border-radius:16px; padding:12px 18px; font-weight:900;
+  box-shadow:0 0 18px rgba(255,212,0,.45), inset 0 -2px 0 rgba(0,0,0,.08), inset 0 2px 0 rgba(255,255,255,.18)
+}
+
+/* === СТАДИИ АНИМАЦИИ === */
+/* 1) вход сцены */
+.open-case.enter .open-case__stage{ animation:oc-enter .25s ease both }
+@keyframes oc-enter{ from{ transform:scale(.96); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+/* 2) удар по замку */
+.open-case.break .lock{ animation:lock-shake .45s ease both }
+@keyframes lock-shake{
+  0%{ transform:translate(-50%,-50%) rotate(0) }
+  25%{ transform:translate(calc(-50% - 4px),calc(-50% + 2px)) rotate(-8deg) }
+  50%{ transform:translate(calc(-50% + 5px),calc(-50% - 2px)) rotate(10deg) }
+  75%{ transform:translate(calc(-50% - 2px),calc(-50% + 1px)) rotate(-5deg) }
+  100%{ transform:translate(-50%,-50%) rotate(0) }
+}
+.open-case.break .spark{ animation:spark .55s ease-out both }
+@keyframes spark{
+  0%{ transform:scale(.4); opacity:0 }
+  40%{ transform:translate(-8px,-10px) scale(1.1); opacity:1 }
+  100%{ transform:translate(-18px,-22px) scale(.7); opacity:0 }
+}
+
+/* 3) разрушение замка */
+.open-case.shatter .lock__body,
+.open-case.shatter .lock__u{ animation:lock-pop .35s ease-in both }
+@keyframes lock-pop{
+  0%{ transform:translateZ(0) scale(1); opacity:1 }
+  100%{ transform:translateY(16px) scale(.6) rotate(18deg); opacity:0 }
+}
+
+/* 4) двери открываются */
+.open-case.open .door--left{ animation:doorL .55s cubic-bezier(.2,.9,.2,1) both }
+.open-case.open .door--right{ animation:doorR .55s cubic-bezier(.2,.9,.2,1) both }
+@keyframes doorL{ from{ transform:perspective(800px) rotateY(0) } to{ transform:perspective(800px) rotateY(-70deg) translateX(-8%) } }
+@keyframes doorR{ from{ transform:perspective(800px) rotateY(0) } to{ transform:perspective(800px) rotateY(70deg) translateX(8%) } }
+
+/* 5) показ приза */
+.open-case.reveal .prize{ animation:prize-in .38s .05s ease-out both }
+@keyframes prize-in{
+  from{ transform:translateY(12px) scale(.95); opacity:0 }
+  to{ transform:translateY(0) scale(1); opacity:1 }
+}
 
