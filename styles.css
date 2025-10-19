@@ -249,10 +249,20 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .prize__title{margin-top:10px;font-weight:900;font-size:24px}
 .prize__btn{margin-top:12px;background:#ffd400;color:#171a1f;border:none;border-radius:12px;padding:10px 16px;font-weight:900}
 
-/* Горячее исправление: скрытые панели не блокируют клики */
+/* Исправление: скрытые оверлеи не блокируют клики */
 .open-case[hidden],
 .sheet[hidden] {
   display: none !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+
+/* Активное состояние снова кликабельно */
+.open-case,
+.sheet {
+  pointer-events: none;
+}
+.open-case.show,
+.sheet.show {
+  pointer-events: all;
 }
