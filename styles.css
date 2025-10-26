@@ -315,7 +315,7 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .open-case,.sheet{pointer-events:none}
 .open-case.show,.sheet.show{pointer-events:auto}
 
-/* Центровка SVG контейнера и смещение цены */
+/* Плитка контейнера */
 .tile {
   position: relative;
   background: #181b22;
@@ -330,36 +330,36 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   transition: transform .12s ease;
 }
 
-/* Сам SVG контейнера (изображение) */
+/* SVG — увеличен на 15% и идеально центрирован */
 .case-img {
-  width: 88%;
+  width: 100%;
+  max-width: 105%;
   height: auto;
   object-fit: contain;
   display: block;
   margin: 0 auto;
-  transform: translateY(-4px);
+  transform: translateY(-6px);
 }
 
-/* Цена ниже по центру */
+/* Цена — фон уменьшен, текст и звезда остаются крупными */
 .price-badge {
   position: absolute;
   left: 50%;
-  bottom: 8px;
+  bottom: 10px;
   transform: translateX(-50%);
   background: #ffd400;
   color: #111;
   font-weight: 900;
   border-radius: 999px;
-  padding: 10px 18px;
-  font-size: 15px;
+  padding: 6px 14px; /* было 10px 18px */
+  font-size: 14px;
   box-shadow:
-    0 0 18px rgba(255,212,0,.45),
-    inset 0 -2px 0 rgba(0,0,0,.08),
-    inset 0 2px 0 rgba(255,255,255,.18);
+    0 0 12px rgba(255,212,0,.45),
+    inset 0 -1px 0 rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.18);
 }
 .price-badge .star {
   color: #9a6c00;
-  margin-right: 6px;
+  margin-right: 4px;
   font-size: 15px;
 }
-
