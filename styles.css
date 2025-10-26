@@ -314,3 +314,52 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .open-case[hidden]{display:none!important;pointer-events:none!important;opacity:0!important}
 .open-case,.sheet{pointer-events:none}
 .open-case.show,.sheet.show{pointer-events:auto}
+
+/* Центровка SVG контейнера и смещение цены */
+.tile {
+  position: relative;
+  background: #181b22;
+  border-radius: 28px;
+  border: 6px solid #f2c300;
+  aspect-ratio: 1 / 1;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .12s ease;
+}
+
+/* Сам SVG контейнера (изображение) */
+.case-img {
+  width: 88%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  transform: translateY(-4px);
+}
+
+/* Цена ниже по центру */
+.price-badge {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  background: #ffd400;
+  color: #111;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 15px;
+  box-shadow:
+    0 0 18px rgba(255,212,0,.45),
+    inset 0 -2px 0 rgba(0,0,0,.08),
+    inset 0 2px 0 rgba(255,255,255,.18);
+}
+.price-badge .star {
+  color: #9a6c00;
+  margin-right: 6px;
+  font-size: 15px;
+}
+
