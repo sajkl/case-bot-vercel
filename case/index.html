@@ -53,84 +53,126 @@
   </div>
 
   <script>
-  (function(){
-    const params = new URLSearchParams(location.search);
-    const CASE = (params.get('case') || 'jiga').toLowerCase();
-    const titles = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
-    const titleEl = document.getElementById('caseTitle');
-    if (titleEl) titleEl.textContent = titles[CASE] || 'Кейс';
+(function(){
+  const params = new URLSearchParams(location.search);
+  const CASE = (params.get('case') || 'jiga').toLowerCase();
 
-    const p = (name) => '/assets/cases/' + encodeURIComponent(name);
-    const FRAMES = {
-      jiga:  [p('Case Lada P1.svg'), p('Case Lada P2.svg'), p('Case Lada P3.svg'), p('Case Lada P4.svg')],
-      camry: [p('Case Cam P1.svg'), p('Case Cam P2.svg'), p('Case Cam P3.svg'), p('Case Cam P4.svg')],
-      bmw:   [p('Case BMW P1.svg'), p('Case BMW P2.svg'), p('Case BMW P3.svg'), p('Case BMW P4.svg')],
-      lambo: [p('Case Lambo P1.svg'), p('Case Lambo P2.svg'), p('Case Lambo P3.svg'), p('Case Lambo P4.svg')]
-    };
+  // заголовок
+  const titles = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
+  const titleEl = document.getElementById('caseTitle');
+  if (titleEl) titleEl.textContent = titles[CASE] || 'Кейс';
 
-    const frames = FRAMES[CASE] || FRAMES.jiga;
-    frames.forEach(src => { const img = new Image(); img.src = src; });
+  // кандидаты директорий и имён (с пробелами и с %20)
+  const DIRS = ['/assets/cases/', '/assets/'];
+  const candidates = (name) => {
+    const enc = encodeURIComponent(name);
+    return DIRS.flatMap(dir => [dir + name, dir + enc]);
+  };
 
-    document.querySelectorAll('[data-box]').forEach((box)=>{
-      box.dataset.step = '0';
-      const img = box.querySelector('.case-img');
-      img.src = frames[0];
-      box.addEventListener('click', ()=> onBoxClick(box, img));
-    });
+  // карта кадров
+  const MAP = {
+    jiga : ['Case Lada P1.svg','Case Lada P2.svg','Case Lada P3.svg','Case Lada P4.svg'],
+    camry: ['Case Cam P1.svg','Case Cam P2.svg','Case Cam P3.svg','Case Cam P4.svg'],
+    bmw  : ['Case BMW P1.svg','Case BMW P2.svg','Case BMW P3.svg','Case BMW P4.svg'],
+    lambo: ['Case Lambo P1.svg','Case Lambo P2.svg','Case Lambo P3.svg','Case Lambo P4.svg'],
+  };
+  const names = MAP[CASE] || MAP.jiga;
 
-    function onBoxClick(box, imgEl){
+  // HEAD-проверка и надёжная установка src
+  async function resolveUrl(name){
+    for (const url of candidates(name)){
+      try {
+        const res = await fetch(url, { method:'HEAD' });
+        if (res.ok) return url;
+      } catch(_) {}
+    }
+    console.warn('[cases] not found:', name);
+    return '/assets/prizes/sample.png';
+  }
+  async function setImg(el, name){
+    el.src = await resolveUrl(name);
+    el.onerror = () => { el.onerror=null; el.src='/assets/prizes/sample.png'; };
+  }
+
+  // прелоадим все кадры
+  (async ()=>{
+    for (const n of names){
+      const url = await resolveUrl(n);
+      const img = new Image(); img.src = url;
+    }
+  })();
+
+  // инициализация 4 тайлов
+  document.querySelectorAll('[data-box]').forEach(async (box)=>{
+    box.dataset.step = '0';
+    const img = box.querySelector('.case-img');
+    await setImg(img, names[0]);
+
+    box.addEventListener('click', async ()=>{
       let step = +box.dataset.step;
-      try { navigator.vibrate && navigator.vibrate(15); } catch(_){ }
-      box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'),180);
+
+      try { navigator.vibrate && navigator.vibrate(15); } catch(_){}
+      box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'), 180);
 
       if (step < 3){
-        step += 1; box.dataset.step = step; imgEl.src = frames[step]; return;
+        step += 1; box.dataset.step = String(step);
+        await setImg(img, names[step]);
+        return;
       }
 
-      openPrize().finally(()=>{ box.dataset.step='0'; imgEl.src=frames[0]; });
-    }
-
-    async function openPrize(){
-      const oc = document.getElementById('openCase');
-      const pImg = oc.querySelector('.prize__img');
-      const pTitle = oc.querySelector('.prize__title');
-      let result;
-      try {
-        const alias = { jiga:'lite', camry:'starter', bmw:'pro', lambo:'ultra' }[CASE] || 'lite';
-        const res = await fetch('/api/open', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ caseId: alias })
-        });
-        result = await res.json();
-      } catch(_){ result = {}; }
-
-      const prizeTitle = result?.prize?.label || 'Секретный приз';
-      pTitle.textContent = prizeTitle;
-      pImg.src = result?.prize?.image || '/assets/prizes/sample.png';
-
-      oc.hidden = false;
-      oc.classList.remove('break','shatter','open','reveal','show');
-      oc.classList.add('enter','show');
-      setTimeout(()=>oc.classList.add('break'),180);
-      setTimeout(()=>oc.classList.add('shatter'),520);
-      setTimeout(()=>oc.classList.add('open'),820);
-      setTimeout(()=>oc.classList.add('reveal'),1220);
-
-      const onClose = (e)=>{
-        if (e.target.classList.contains('open-case__backdrop') || e.target.classList.contains('prize__btn')){
-          oc.classList.remove('enter','break','shatter','open','reveal','show');
-          oc.hidden = true;
-          oc.removeEventListener('click', onClose);
-        }
-      };
-      oc.addEventListener('click', onClose);
-    }
-
-    const balEl = document.querySelector('.balance .value');
-    fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
-      if(d && typeof d.stars!=='undefined') balEl.textContent = d.stars;
+      // step===3 → приз (+ возврат на P1)
+      await openPrize();
+      box.dataset.step = '0';
+      await setImg(img, names[0]);
     });
-  })();
-  </script>
-</body>
+  });
+
+  // Открытие приза (осталось как было)
+  async function openPrize(){
+    const oc = document.getElementById('openCase');
+    const pImg = oc.querySelector('.prize__img');
+    const pTitle = oc.querySelector('.prize__title');
+
+    let result;
+    try{
+      const alias = { jiga:'lite', camry:'starter', bmw:'pro', lambo:'ultra' }[CASE] || 'lite';
+      const res = await fetch('/api/open', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ caseId: alias })
+      });
+      result = await res.json();
+    }catch(_){ result = {}; }
+
+    const prizeTitle = result?.prize?.label || 'Секретный приз';
+    pTitle.textContent = prizeTitle;
+    pImg.src = result?.prize?.image || '/assets/prizes/sample.png';
+    pImg.alt = prizeTitle;
+
+    oc.hidden = false;
+    oc.classList.remove('break','shatter','open','reveal','show');
+    oc.classList.add('enter','show');
+    setTimeout(()=> oc.classList.add('break'),   180);
+    setTimeout(()=> oc.classList.add('shatter'), 520);
+    setTimeout(()=> oc.classList.add('open'),    820);
+    setTimeout(()=> oc.classList.add('reveal'), 1220);
+
+    const onClose = (e)=>{
+      if (e.target.classList.contains('open-case__backdrop') ||
+          e.target.classList.contains('prize__btn')) {
+        oc.classList.remove('enter','break','shatter','open','reveal','show');
+        oc.hidden = true;
+        oc.removeEventListener('click', onClose);
+      }
+    };
+    oc.addEventListener('click', onClose);
+  }
+
+  // баланс (если есть API)
+  const balEl = document.querySelector('.balance .value');
+  fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+    if(d && typeof d.stars!=='undefined' && balEl) balEl.textContent = d.stars;
+  }).catch(()=>{});
+})();
+</script>
+
 </html>
