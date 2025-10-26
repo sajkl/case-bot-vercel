@@ -4,80 +4,47 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Открытие кейса — Lambo Drop</title>
-  <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
-  <link rel="stylesheet" href="/styles.css?v=130">
-  <style>
-    .case-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
-    .case-title{font-weight:900;font-size:40px;text-align:center;margin:6px 0 12px}
-    .back-btn{background:#ffd400;border-radius:14px;padding:10px 16px;font-weight:900;color:#121212;display:inline-flex;gap:8px;align-items:center}
-    .box-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:0 16px 16px}
-    .box{background:#d9b000;border-radius:22px;padding:16px;position:relative;overflow:hidden;transition:opacity .22s ease, transform .22s ease}
-    .box.disabled{opacity:.6;pointer-events:none}
-    .box-inner{background:#b88f00;border-radius:14px;height:220px;display:grid;place-items:center;position:relative;overflow:hidden}
-    .box-art{width:92%;max-width:380px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.45))}
-    .box .price{position:absolute;left:16px;bottom:16px;transform:none}
-    .lock-badge{position:absolute;inset:auto 0 0 0;margin:auto;width:125px;height:58px;background:#333942;color:#fff;border-radius:28px;display:flex;align-items:center;justify-content:center;font-weight:900;gap:8px;border:2px solid rgba(255,255,255,.08)}
-
-    /* Тряска контейнера */
-    @keyframes shake {
-      0%{ transform:translate3d(0,0,0) rotate(0) }
-      20%{ transform:translate3d(-2px,1px,0) rotate(-1.5deg) }
-      40%{ transform:translate3d(2px,-2px,0) rotate(1.2deg) }
-      60%{ transform:translate3d(-1px,1px,0) rotate(-1deg) }
-      80%{ transform:translate3d(1px,0,0) rotate(.8deg) }
-      100%{ transform:translate3d(0,0,0) rotate(0) }
-    }
-    .shake { animation: shake .22s ease both }
-
-    /* Чтобы скрытые слои не блокировали клики (как мы уже пофиксили) */
-    .open-case[hidden], .sheet[hidden]{display:none!important;pointer-events:none!important;opacity:0!important}
-    .open-case,.sheet{pointer-events:none}
-    .open-case.show,.sheet.show{pointer-events:all}
-  </style>
+  <link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body>
-  <div class="container">
-    <!-- Шапка -->
-    <header class="case-header">
-      <button class="back-btn" id="backBtn">← Назад</button>
-      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:34px;">
-      <div class="balance" id="balance"><span class="star">★</span><span class="value">25</span></div>
-    </header>
+  <!-- Шапка страницы кейса -->
+  <header class="case-header">
+    <a class="back" href="/" onclick="event.preventDefault(); history.back(); return false;">← Назад</a>
+    <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+    <div class="balance mini" id="balance"><span class="star">★</span><span class="value">25</span></div>
+  </header>
 
-    <!-- LIVE -->
-    <section class="live-bar"><span>LIVE</span></section>
+  <section class="live-bar"><span>LIVE</span></section>
+  <h1 class="case-title" id="caseTitle">Жига</h1>
 
-    <!-- Заголовок -->
-    <h1 class="case-title" id="caseTitle">Кейс</h1>
+  <!-- Сетка контейнеров 2x2 -->
+  <section class="case-grid">
+    <button class="tile" data-box>
+      <img class="case-img" alt="Контейнер">
+      <div class="price-badge"><span class="star">★</span> 2999</div>
+    </button>
+    <button class="tile" data-box>
+      <img class="case-img" alt="Контейнер">
+      <div class="price-badge"><span class="star">★</span> 2999</div>
+    </button>
+    <button class="tile" data-box>
+      <img class="case-img" alt="Контейнер">
+      <div class="price-badge"><span class="star">★</span> 2999</div>
+    </button>
+    <button class="tile" data-box>
+      <img class="case-img" alt="Контейнер">
+      <div class="price-badge"><span class="star">★</span> 2999</div>
+    </button>
+  </section>
 
-    <!-- 4 контейнера -->
-    <section class="box-grid" id="boxGrid"></section>
-
-    <div class="checker"><img src="/assets/checker.png" alt=""></div>
-    <div class="yellow-divider"></div>
-
-    <!-- Навбар -->
-    <nav class="nav">
-      <a class="btn active" data-tab="profile" href="/profile/">Профиль</a>
-      <a class="btn" data-tab="vote"    href="/vote/">Голосование</a>
-      <a class="btn" data-tab="inv"     href="/inv/">Инвентарь</a>
-    </nav>
-  </div>
-
-  <!-- Overlay открытия -->
+  <!-- Overlay открытия приза -->
   <div id="openCase" class="open-case" hidden>
     <div class="open-case__backdrop"></div>
     <div class="open-case__stage">
       <div class="door door--left"></div>
       <div class="door door--right"></div>
-      <div class="lock">
-        <div class="lock__body"></div>
-        <div class="lock__u"></div>
-        <div class="spark spark--1"></div>
-        <div class="spark spark--2"></div>
-        <div class="spark spark--3"></div>
-      </div>
-      <div class="prize" aria-live="polite">
+      <div class="lock"><div class="lock__body"></div><div class="lock__u"></div></div>
+      <div class="prize">
         <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
         <div class="prize__title">Ваш приз!</div>
         <button class="prize__btn">Забрать</button>
@@ -87,157 +54,83 @@
 
   <script>
   (function(){
-    const qs = (s,el=document)=>el.querySelector(s);
-    const qsa = (s,el=document)=>[...el.querySelectorAll(s)];
     const params = new URLSearchParams(location.search);
-    const caseIdFront = params.get('case') || 'lambo'; // jiga|camry|bmw|lambo
+    const CASE = (params.get('case') || 'jiga').toLowerCase();
+    const titles = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
+    const titleEl = document.getElementById('caseTitle');
+    if (titleEl) titleEl.textContent = titles[CASE] || 'Кейс';
 
-    const MAP = { jiga:'lite', camry:'starter', bmw:'pro', lambo:'ultra' };
-    const TITLES = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
-
-    // === Маппинг на SVG-файлы (с пробелами в именах — URL-кодируем пробел как %20)
+    const p = (name) => '/assets/cases/' + encodeURIComponent(name);
     const FRAMES = {
-      jiga:  [
-        '/assets/Case%20Lada%20P1.svg',
-        '/assets/Case%20Lada%20P2.svg',
-        '/assets/Case%20Lada%20P3.svg',   // если файла нет — пропустим
-        '/assets/Case%20Lada%20P4.svg'
-      ],
-      camry: [
-        '/assets/Case%20Cam%20P1.svg',
-        '/assets/Case%20Cam%20P2.svg',
-        '/assets/Case%20Cam%20P3.svg',
-        '/assets/Case%20Cam%20P4.svg'
-      ],
-      bmw:   [
-        '/assets/Case%20BMW%20P1.svg',
-        '/assets/Case%20BMW%20P2.svg',
-        '/assets/Case%20BMW%20P3.svg',
-        '/assets/Case%20BMW%20P4.svg'
-      ],
-      lambo: [
-        '/assets/Case%20Lambo%20P1.svg',
-        '/assets/Case%20Lambo%20P2.svg',
-        '/assets/Case%20Lambo%20P3.svg',
-        '/assets/Case%20Lambo%20P4.svg'
-      ]
+      jiga:  [p('Case Lada P1.svg'), p('Case Lada P2.svg'), p('Case Lada P3.svg'), p('Case Lada P4.svg')],
+      camry: [p('Case Cam P1.svg'), p('Case Cam P2.svg'), p('Case Cam P3.svg'), p('Case Cam P4.svg')],
+      bmw:   [p('Case BMW P1.svg'), p('Case BMW P2.svg'), p('Case BMW P3.svg'), p('Case BMW P4.svg')],
+      lambo: [p('Case Lambo P1.svg'), p('Case Lambo P2.svg'), p('Case Lambo P3.svg'), p('Case Lambo P4.svg')]
     };
 
-    // Заголовок
-    qs('#caseTitle').textContent = TITLES[caseIdFront] || 'Кейс';
+    const frames = FRAMES[CASE] || FRAMES.jiga;
+    frames.forEach(src => { const img = new Image(); img.src = src; });
 
-    // Баланс (не критично)
-    const balEl = qs('#balance .value');
-    fetch('/api/profile').then(r=>r.ok?r.json():null)
-      .then(d=>{ if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars; })
-      .catch(()=>{});
-
-    // Рендер 4 одинаковых коробок (как в референсе)
-    const grid = qs('#boxGrid');
-    for(let i=0;i<4;i++){
-      const box = document.createElement('button');
-      box.className = 'box';
-      box.innerHTML = `
-        <div class="box-inner">
-          <img class="box-art" src="${(FRAMES[caseIdFront]||[])[0] || '/assets/prizes/sample.png'}" alt="">
-          <div class="lock-badge"><span class="star">★</span> 2999</div>
-        </div>
-        <div class="price"><span class="star">★</span> 2999</div>
-      `;
-      box.addEventListener('click', ()=> openSequence(box));
-      grid.appendChild(box);
-    }
-
-    // Вибрация (мягкая) если доступна
-    const vibe = (pattern)=>{ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(_){} };
-
-    // Предзагрузка кадров (чтобы анимация шла без мигания)
-    function preload(src){ const img = new Image(); img.src = src; }
-    (FRAMES[caseIdFront]||[]).forEach(src => preload(src));
-
-    // Overlay (наш уже готовый)
-    const oc = qs('#openCase');
-    const pImg = qs('.prize__img', oc);
-    const pTitle = qs('.prize__title', oc);
-    const setPrize = (img, title)=>{ pImg.src=img; pImg.alt=title||'Приз'; pTitle.textContent=title||'Приз'; };
-    const runOpen = ()=>{
-      oc.hidden = false;
-      oc.classList.remove('enter','break','shatter','open','reveal');
-      requestAnimationFrame(()=>{
-        oc.classList.add('enter');
-        setTimeout(()=> oc.classList.add('break'),   180);
-        setTimeout(()=> oc.classList.add('shatter'), 520);
-        setTimeout(()=> oc.classList.add('open'),    820);
-        setTimeout(()=> oc.classList.add('reveal'),  1220);
-      });
-    };
-    oc.addEventListener('click',(e)=>{
-      if(e.target.classList.contains('open-case__backdrop')||e.target.classList.contains('prize__btn')){
-        oc.classList.remove('enter','break','shatter','open','reveal');
-        oc.hidden=true;
-      }
+    document.querySelectorAll('[data-box]').forEach((box)=>{
+      box.dataset.step = '0';
+      const img = box.querySelector('.case-img');
+      img.src = frames[0];
+      box.addEventListener('click', ()=> onBoxClick(box, img));
     });
 
-    let busy = false; // защита от повторных кликов
-    async function openSequence(boxEl){
-      if(busy) return; busy = true;
-      boxEl.classList.add('disabled');
+    function onBoxClick(box, imgEl){
+      let step = +box.dataset.step;
+      try { navigator.vibrate && navigator.vibrate(15); } catch(_){ }
+      box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'),180);
 
-      const art = qs('.box-art', boxEl);
-      const frames = (FRAMES[caseIdFront]||[]).filter(Boolean);
-      const caseId = MAP[caseIdFront] || caseIdFront;
-
-      // helper: показ кадра + тряска + лёгкая вибрация
-      const showFrame = (src, delay=220)=>{
-        return new Promise(res=>{
-          if(src) art.src = src;
-          boxEl.querySelector('.box-inner').classList.add('shake');
-          vibe([12,30,12]); // короткая вибрация
-          setTimeout(()=>{
-            boxEl.querySelector('.box-inner').classList.remove('shake');
-            res();
-          }, delay);
-        });
-      };
-
-      // P1 (уже на экране), затем P2→P3→P4 (где файлы есть)
-      // пропускаем отсутствующие кадры — просто идём дальше
-      for(let i=1;i<frames.length;i++){
-        try{ await showFrame(frames[i], 230); } catch(_){}
+      if (step < 3){
+        step += 1; box.dataset.step = step; imgEl.src = frames[step]; return;
       }
 
-      // После последнего кадра — прячем коробку и открываем оверлей приза
-      boxEl.style.transform = 'scale(.98)';
-      boxEl.style.opacity = '0';
-      setTimeout(()=> boxEl.remove(), 240);
-
-      // Запускаем наш overlay + грузим приз
-      setPrize('/assets/prizes/sample.png', 'Открываем…');
-      runOpen();
-
-      try{
-        const r = await fetch('/api/open', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ caseId })
-        });
-        const res = await r.json().catch(()=>null);
-        if(res && res.stars!=null) balEl.textContent = res.stars;
-        setPrize(res?.prize?.image || '/assets/prizes/sample.png',
-                 res?.prize?.title || res?.prize?.label || 'Секретный приз');
-      }catch(e){
-        setPrize('/assets/prizes/sample.png','Тестовый приз');
-      }finally{
-        busy = false;
-      }
+      openPrize().finally(()=>{ box.dataset.step='0'; imgEl.src=frames[0]; });
     }
 
-    // Назад
-    qs('#backBtn').addEventListener('click',()=> history.length>1?history.back():location.href='/');
+    async function openPrize(){
+      const oc = document.getElementById('openCase');
+      const pImg = oc.querySelector('.prize__img');
+      const pTitle = oc.querySelector('.prize__title');
+      let result;
+      try {
+        const alias = { jiga:'lite', camry:'starter', bmw:'pro', lambo:'ultra' }[CASE] || 'lite';
+        const res = await fetch('/api/open', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ caseId: alias })
+        });
+        result = await res.json();
+      } catch(_){ result = {}; }
+
+      const prizeTitle = result?.prize?.label || 'Секретный приз';
+      pTitle.textContent = prizeTitle;
+      pImg.src = result?.prize?.image || '/assets/prizes/sample.png';
+
+      oc.hidden = false;
+      oc.classList.remove('break','shatter','open','reveal','show');
+      oc.classList.add('enter','show');
+      setTimeout(()=>oc.classList.add('break'),180);
+      setTimeout(()=>oc.classList.add('shatter'),520);
+      setTimeout(()=>oc.classList.add('open'),820);
+      setTimeout(()=>oc.classList.add('reveal'),1220);
+
+      const onClose = (e)=>{
+        if (e.target.classList.contains('open-case__backdrop') || e.target.classList.contains('prize__btn')){
+          oc.classList.remove('enter','break','shatter','open','reveal','show');
+          oc.hidden = true;
+          oc.removeEventListener('click', onClose);
+        }
+      };
+      oc.addEventListener('click', onClose);
+    }
+
+    const balEl = document.querySelector('.balance .value');
+    fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+      if(d && typeof d.stars!=='undefined') balEl.textContent = d.stars;
+    });
   })();
   </script>
-</body>
-</html>
-
 </body>
 </html>
