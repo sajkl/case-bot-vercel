@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Bot Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Основные стили — из стабильной версии */
+    :root {
+      --bg: #0e1013;
+      --bg-card: #121417;
+      --border: #2b2f34;
+      --muted: #7f8389;
+      --shadow-lg: 0 10px 30px rgba(0,0,0,.4);
+      --ease: cubic-bezier(.22,.68,0,1.02);
+    }
+    body { background: var(--bg); color:#fff; font-family: system-ui,sans-serif; margin:0; padding:0; }
+    .container { padding: 16px; padding-bottom: 100px; max-width: 960px; margin:0 auto; }
+    .fade { animation: fadeInUp .38s var(--ease) both; }
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,72);backdrop-filter:blur(8px);border-top:1px solid var(--border);z-index:5}
+    .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);border-radius:14px;padding:10px 6px;font-weight:800;cursor:pointer}
+    .tab.active{border-color:rgba(255,122,26,65);box-shadow:0 0 0 2px rgba(255,122,26,28) inset}
+    .tab small{font-size:12px;color:#cdd0d4}
+    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241;color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:10px;border:1px solid #6c4;box-shadow:0 10px 20px rgba(0,0,0,.4);display:none;white-space:pre-wrap;z-index:9999}
+  </style>
+</head>
+<body>
+  <main class="container" id="app"></main>
+
+  <nav class="tabbar">
+    <div class="tabs">
+      <a href="/profile.html" class="tab" data-tab="profile"><div>👤</div><small>Профиль</small></a>
+      <a href="/vote.html" class="tab" data-tab="voting"><div>🗳️</div><small>Голосование</small></a>
+      <a href="/inventory.html" class="tab" data-tab="inventory"><div>🎒</div><small>Инвентарь</small></a>
+    </div>
+  </nav>
+
+  <pre id="err"></pre>
+
+  <script>
+  (function(){
+    'use strict';
+
+    /* обработчик ошибок */
+    function showErr(title, detail){
+      var box=document.getElementById('err'); if(!box) return;
+      box.style.display='block'; box.textContent=title+"\n"+(detail||'');
+    }
+    window.onerror=function(message, source, lineno, colno, error){
+      var detail=['source: '+(source||'-'),'line: '+(lineno||'-')+', col: '+(colno||'-'),'stack: '+(error&&error.stack?error.stack:'-')].join('\n');
+      showErr('JS error: '+message, detail);
+    };
+    window.addEventListener('unhandledrejection', function(e){
+      var reason=e&&e.reason; var detail=(reason&&reason.stack)||String(reason);
+      showErr('Promise error', detail);
+    });
+
+    const tg = window.Telegram?.WebApp || null;
+    try { tg?.ready?.(); tg?.expand?.(); } catch(_){}
+
+    function qs(s,r){return (r||document).querySelector(s)}
+    function el(t,c,h){var n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n;}
+
+    /* данные */
+    var START_STARS=25;
+    var CASES=[
+      {id:'lite',title:'Лайт-кейс',price:3,sub:'Дешёвый вход'},
+      {id:'starter',title:'Стартовый кейс',price:6,sub:'Для новичков'},
+      {id:'pro',title:'Про-кейс',price:12,sub:'Большой риск'},
+      {id:'ultra',title:'Ультра-кейс',price:30,sub:'Королевские награды'},
+    ];
+    var stars=START_STARS;
+
+    /* рендер главной */
+    function render(){
+      var app=qs('#app');
+      app.innerHTML='<h1 class="fade">Кейсы за ⭐</h1>';
+      var grid=el('section','grid fade');
+      for(let c of CASES){
+        var card=el('article','card','<h3>'+c.title+'</h3><p>'+c.sub+'</p><div class="meta">Цена: '+c.price+' ⭐</div>');
+        card.onclick=function(){
+          try{tg?.HapticFeedback?.impactOccurred?.("light");}catch(_){}
+          window.location.href='/case.html?case='+c.id;
+        };
+        grid.appendChild(card);
+      }
+      app.appendChild(grid);
+    }
+
+    render();
+  })();
+  </script>
+</body>
+</html>
