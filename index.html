@@ -1,97 +1,197 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Case Bot Demo</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* Основные стили — из стабильной версии */
-    :root {
-      --bg: #0e1013;
-      --bg-card: #121417;
-      --border: #2b2f34;
-      --muted: #7f8389;
-      --shadow-lg: 0 10px 30px rgba(0,0,0,.4);
-      --ease: cubic-bezier(.22,.68,0,1.02);
-    }
-    body { background: var(--bg); color:#fff; font-family: system-ui,sans-serif; margin:0; padding:0; }
-    .container { padding: 16px; padding-bottom: 100px; max-width: 960px; margin:0 auto; }
-    .fade { animation: fadeInUp .38s var(--ease) both; }
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
-    .tabbar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:rgba(0,0,0,72);backdrop-filter:blur(8px);border-top:1px solid var(--border);z-index:5}
-    .tabs{max-width:960px;margin:0 auto;display:flex;gap:12px}
-    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:#0f1216;border:1px solid var(--border);border-radius:14px;padding:10px 6px;font-weight:800;cursor:pointer}
-    .tab.active{border-color:rgba(255,122,26,65);box-shadow:0 0 0 2px rgba(255,122,26,28) inset}
-    .tab small{font-size:12px;color:#cdd0d4}
-    #err{position:fixed;left:8px;right:8px;bottom:88px;background:#241;color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:10px;border:1px solid #6c4;box-shadow:0 10px 20px rgba(0,0,0,.4);display:none;white-space:pre-wrap;z-index:9999}
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lambo Drop — Gift Wins</title>
+  <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
+  <link rel="stylesheet" href="/styles.css?v=7">
+
 </head>
 <body>
-  <main class="container" id="app"></main>
+  <div class="container">
+    <!-- Шапка -->
+    <header class="header">
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
+      <div class="balance" id="balance">
+        <span class="star">★</span><span class="value">25</span>
+      </div>
+    </header>
 
-  <nav class="tabbar">
-    <div class="tabs">
-      <a href="/profile.html" class="tab" data-tab="profile"><div>👤</div><small>Профиль</small></a>
-      <a href="/vote.html" class="tab" data-tab="voting"><div>🗳️</div><small>Голосование</small></a>
-      <a href="/inventory.html" class="tab" data-tab="inventory"><div>🎒</div><small>Инвентарь</small></a>
+    <!-- LIVE -->
+    <section class="live-bar">
+      <span>LIVE</span>
+    </section>
+
+    <!-- Сетка 2×2 -->
+    <main class="grid">
+      <!-- Жига -->
+      <button class="card gray" data-caseid="jiga" aria-label="Жига"
+        style="--w:150%; --top:-48px; --left:49%;">
+        <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
+        <div class="title">Жига</div>
+        <div class="price"><span class="star">★</span> 249</div>
+      </button>
+
+      <!-- Камри -->
+      <button class="card green" data-caseid="camry" aria-label="Камри"
+        style="--w:152%; --top:-54px; --left:52%;">
+        <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
+        <div class="title">Камри</div>
+        <div class="price"><span class="star">★</span> 499</div>
+      </button>
+
+      <!-- Бэха -->
+      <button class="card red" data-caseid="bmw" aria-label="Бэха"
+        style="--w:158%; --top:-52px; --left:51%;">
+        <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
+        <div class="title">Бэха</div>
+        <div class="price"><span class="star">★</span> 999</div>
+      </button>
+
+      <!-- Ламбо -->
+      <button class="card yellow" data-caseid="lambo" aria-label="Ламбо"
+        style="--w:160%; --top:-64px; --left:53%;">
+        <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
+        <div class="title">Ламбо</div>
+        <div class="price"><span class="star">★</span> 2999</div>
+      </button>
+    </main>
+
+    <!-- Спейсер -->
+    <div class="nav-spacer" aria-hidden="true"></div>
+
+    <!-- Навигация -->
+    <nav class="nav">
+      <a class="btn active" data-tab="profile" href="#profile">Профиль</a>
+      <a class="btn" data-tab="vote" href="#vote">Голосование</a>
+      <a class="btn" data-tab="inv" href="#inv">Инвентарь</a>
+    </nav>
+  </div>
+
+  <!-- ===== Overlay открытия кейса ===== -->
+  <div id="openCase" class="open-case" hidden>
+    <div class="open-case__backdrop"></div>
+
+    <div class="open-case__stage">
+      <!-- Двери -->
+      <div class="door door--left"></div>
+      <div class="door door--right"></div>
+
+      <!-- Замок -->
+      <div class="lock">
+        <div class="lock__body"></div>
+        <div class="lock__u"></div>
+        <div class="spark spark--1"></div>
+        <div class="spark spark--2"></div>
+        <div class="spark spark--3"></div>
+      </div>
+
+      <!-- Приз -->
+      <div class="prize" aria-live="polite">
+        <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
+        <div class="prize__title">Ваш приз!</div>
+        <button class="prize__btn">Забрать</button>
+      </div>
     </div>
-  </nav>
+  </div>
 
-  <pre id="err"></pre>
+  <!-- ===== Панель-заглушка для вкладок ===== -->
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-body">
+      <div class="sheet-title" id="sheet-title">Заглушка</div>
+      <p class="sheet-text" id="sheet-text">Раздел в разработке.</p>
+      <button class="sheet-close">Ок</button>
+    </div>
+  </div>
 
   <script>
-  (function(){
-    'use strict';
+    // Баланс
+    const balEl = document.querySelector('#balance .value');
+    fetch('/api/profile')
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars; })
+      .catch(()=>{});
 
-    /* обработчик ошибок */
-    function showErr(title, detail){
-      var box=document.getElementById('err'); if(!box) return;
-      box.style.display='block'; box.textContent=title+"\n"+(detail||'');
-    }
-    window.onerror=function(message, source, lineno, colno, error){
-      var detail=['source: '+(source||'-'),'line: '+(lineno||'-')+', col: '+(colno||'-'),'stack: '+(error&&error.stack?error.stack:'-')].join('\n');
-      showErr('JS error: '+message, detail);
-    };
-    window.addEventListener('unhandledrejection', function(e){
-      var reason=e&&e.reason; var detail=(reason&&reason.stack)||String(reason);
-      showErr('Promise error', detail);
+    // Клики по карточкам (открытие кейса)
+    const disable = (el,s)=>{ el.disabled=s; el.classList.toggle('loading',s); };
+    document.querySelectorAll('.card').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        disable(btn,true);
+        fetch('/api/open',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ caseId: btn.dataset.caseid })
+        })
+        .then(r=>r.json())
+        .then(res=>{
+          if(res && res.stars!=null) balEl.textContent=res.stars;
+
+          const prizeImg = res?.prize?.image || "/assets/prizes/sample.png";
+          const prizeTitle = res?.prize?.title || "Секретный приз";
+
+          const oc = document.getElementById('openCase');
+          const pImg = oc.querySelector('.prize__img');
+          const pTitle = oc.querySelector('.prize__title');
+
+          pImg.src = prizeImg;
+          pImg.alt = prizeTitle;
+          pTitle.textContent = prizeTitle;
+
+          oc.hidden = false;
+          oc.classList.remove('break','shatter','open','reveal');
+          oc.classList.add('enter');
+
+          setTimeout(()=> oc.classList.add('break'),   180);
+          setTimeout(()=> oc.classList.add('shatter'), 520);
+          setTimeout(()=> oc.classList.add('open'),    820);
+          setTimeout(()=> oc.classList.add('reveal'),  1220);
+        })
+        .catch(()=> console.log('Ошибка открытия кейса'))
+        .finally(()=> disable(btn,false));
+      });
     });
 
-    const tg = window.Telegram?.WebApp || null;
-    try { tg?.ready?.(); tg?.expand?.(); } catch(_){}
+    // Закрытие overlay по клику на фон или кнопку "Забрать"
+    (() => {
+      const oc = document.getElementById('openCase');
+      oc.addEventListener('click', (e) => {
+        if (e.target.classList.contains('open-case__backdrop') ||
+            e.target.classList.contains('prize__btn')) {
+          oc.classList.remove('enter','break','shatter','open','reveal');
+          oc.hidden = true;
+        }
+      });
+    })();
 
-    function qs(s,r){return (r||document).querySelector(s)}
-    function el(t,c,h){var n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n;}
-
-    /* данные */
-    var START_STARS=25;
-    var CASES=[
-      {id:'lite',title:'Лайт-кейс',price:3,sub:'Дешёвый вход'},
-      {id:'starter',title:'Стартовый кейс',price:6,sub:'Для новичков'},
-      {id:'pro',title:'Про-кейс',price:12,sub:'Большой риск'},
-      {id:'ultra',title:'Ультра-кейс',price:30,sub:'Королевские награды'},
-    ];
-    var stars=START_STARS;
-
-    /* рендер главной */
-    function render(){
-      var app=qs('#app');
-      app.innerHTML='<h1 class="fade">Кейсы за ⭐</h1>';
-      var grid=el('section','grid fade');
-      for(let c of CASES){
-        var card=el('article','card','<h3>'+c.title+'</h3><p>'+c.sub+'</p><div class="meta">Цена: '+c.price+' ⭐</div>');
-        card.onclick=function(){
-          try{tg?.HapticFeedback?.impactOccurred?.("light");}catch(_){}
-          window.location.href='/case.html?case='+c.id;
-        };
-        grid.appendChild(card);
-      }
-      app.appendChild(grid);
-    }
-
-    render();
-  })();
+    // Заглушки вкладок
+    const sheet = document.getElementById('sheet');
+    const title = document.getElementById('sheet-title');
+    const text  = document.getElementById('sheet-text');
+    const openSheet = (t, msg) => {
+      title.textContent = t;
+      text.textContent  = msg;
+      sheet.hidden = false;
+      sheet.classList.add('show');
+    };
+    const closeSheet = () => {
+      sheet.classList.remove('show');
+      setTimeout(()=>sheet.hidden = true, 200);
+    };
+    document.querySelectorAll('.nav .btn').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        e.preventDefault();
+        document.querySelectorAll('.nav .btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        const tab = b.dataset.tab;
+        if(tab==='profile') openSheet('Профиль', 'Личный кабинет в разработке.');
+        if(tab==='vote')    openSheet('Голосование', 'Скоро сможете голосовать за кейсы.');
+        if(tab==='inv')     openSheet('Инвентарь', 'Ваши призы появятся здесь позже.');
+      });
+    });
+    sheet.addEventListener('click', (e)=>{
+      if(e.target===sheet || e.target.classList.contains('sheet-close')) closeSheet();
+    });
   </script>
 </body>
 </html>
