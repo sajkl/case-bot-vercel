@@ -1,178 +1,134 @@
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Открытие кейса — Lambo Drop</title>
-  <link rel="stylesheet" href="/styles.css?v=12">
-</head>
-<body>
-  <!-- Шапка страницы кейса -->
-  <header class="case-header">
-    <a class="back" href="/" onclick="event.preventDefault(); history.back(); return false;">← Назад</a>
-    <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
-    <div class="balance mini" id="balance"><span class="star">★</span><span class="value">25</span></div>
-  </header>
-
-  <section class="live-bar"><span>LIVE</span></section>
-  <h1 class="case-title" id="caseTitle">Жига</h1>
-
-  <!-- Сетка контейнеров 2x2 -->
-  <section class="case-grid">
-    <button class="tile" data-box>
-      <img class="case-img" alt="Контейнер">
-      <div class="price-badge"><span class="star">★</span> 2999</div>
-    </button>
-    <button class="tile" data-box>
-      <img class="case-img" alt="Контейнер">
-      <div class="price-badge"><span class="star">★</span> 2999</div>
-    </button>
-    <button class="tile" data-box>
-      <img class="case-img" alt="Контейнер">
-      <div class="price-badge"><span class="star">★</span> 2999</div>
-    </button>
-    <button class="tile" data-box>
-      <img class="case-img" alt="Контейнер">
-      <div class="price-badge"><span class="star">★</span> 2999</div>
-    </button>
-  </section>
-
-  <!-- Overlay открытия приза -->
-  <div id="openCase" class="open-case" hidden>
-    <div class="open-case__backdrop"></div>
-    <div class="open-case__stage">
-      <div class="door door--left"></div>
-      <div class="door door--right"></div>
-      <div class="lock"><div class="lock__body"></div><div class="lock__u"></div></div>
-      <div class="prize">
-        <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
-        <div class="prize__title">Ваш приз!</div>
-        <button class="prize__btn">Забрать</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
+<script>
 (function(){
-  const params = new URLSearchParams(location.search);
-  const CASE = (params.get('case') || 'jiga').toLowerCase();
+  // --- helpers ---
+  const qs = new URLSearchParams(location.search);
+  const id = (qs.get('id') || 'jiga').toLowerCase(); // jiga|camry|bmw|lambo
+  const buzz = ms => { try{ navigator.vibrate && navigator.vibrate(ms||15) }catch(_){} };
+  const flashHint = cell => { const h=cell.querySelector('.tap-hint'); h.classList.add('show'); setTimeout(()=>h.classList.remove('show'),520) };
 
-  // заголовок
-  const titles = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
-  const titleEl = document.getElementById('caseTitle');
-  if (titleEl) titleEl.textContent = titles[CASE] || 'Кейс';
-
-  // кандидаты директорий и имён (с пробелами и с %20)
-  const DIRS = ['/assets/cases/', '/assets/'];
-  const candidates = (name) => {
-    const enc = encodeURIComponent(name);
-    return DIRS.flatMap(dir => [dir + name, dir + enc]);
+  const CASE_META = {
+    jiga:{name:'Жига',price:249}, camry:{name:'Камри',price:499},
+    bmw:{name:'Бэха',price:999},  lambo:{name:'Ламбо',price:2999}
+  };
+  const STAGES = {
+    jiga:  ['/assets/Case Lada P1.png','/assets/Case Lada P2.png','/assets/Case Lada P3.png'],
+    camry: ['/assets/Case Cam P1.png', '/assets/Case Cam P2.png', '/assets/Case Cam P3.png'],
+    bmw:   ['/assets/Case BMW P1.png','/assets/Case BMW P2.png','/assets/Case BMW P3.png'],
+    lambo: ['/assets/Case Lambo P1.png','/assets/Case Lambo P2.png','/assets/Case Lambo P3.png'],
   };
 
-  // карта кадров
-  const MAP = {
-    jiga : ['Case Lada P1.svg','Case Lada P2.svg','Case Lada P3.svg','Case Lada P4.svg'],
-    camry: ['Case Cam P1.svg','Case Cam P2.svg','Case Cam P3.svg','Case Cam P4.svg'],
-    bmw  : ['Case BMW P1.svg','Case BMW P2.svg','Case BMW P3.svg','Case BMW P4.svg'],
-    lambo: ['Case Lambo P1.svg','Case Lambo P2.svg','Case Lambo P3.svg','Case Lambo P4.svg'],
-  };
-  const names = MAP[CASE] || MAP.jiga;
+  // заголовок/цена
+  const meta = CASE_META[id] || CASE_META.jiga;
+  document.getElementById('caseName').textContent = meta.name;
+  document.getElementById('priceVal').textContent = meta.price;
 
-  // HEAD-проверка и надёжная установка src
-  async function resolveUrl(name){
-    for (const url of candidates(name)){
-      try {
-        const res = await fetch(url, { method:'HEAD' });
-        if (res.ok) return url;
-      } catch(_) {}
-    }
-    console.warn('[cases] not found:', name);
-    return '/assets/prizes/sample.png';
-  }
-  async function setImg(el, name){
-    el.src = await resolveUrl(name);
-    el.onerror = () => { el.onerror=null; el.src='/assets/prizes/sample.png'; };
-  }
+  // баланс
+  const balEl = document.querySelector('#balance .value');
+  fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+    if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
+  }).catch(()=>{});
 
-  // прелоадим все кадры
-  (async ()=>{
-    for (const n of names){
-      const url = await resolveUrl(n);
-      const img = new Image(); img.src = url;
-    }
-  })();
+  // прелоад PNG
+  (STAGES[id]||[]).forEach(s=>{ const i=new Image(); i.src=s; });
 
-  // инициализация 4 тайлов
-  document.querySelectorAll('[data-box]').forEach(async (box)=>{
-    box.dataset.step = '0';
-    const img = box.querySelector('.case-img');
-    await setImg(img, names[0]);
-
-    box.addEventListener('click', async ()=>{
-      let step = +box.dataset.step;
-
-      try { navigator.vibrate && navigator.vibrate(15); } catch(_){}
-      box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'), 180);
-
-      if (step < 3){
-        step += 1; box.dataset.step = String(step);
-        await setImg(img, names[step]);
-        return;
-      }
-
-      // step===3 → приз (+ возврат на P1)
-      await openPrize();
-      box.dataset.step = '0';
-      await setImg(img, names[0]);
-    });
+  // подготовили сетку
+  const cells = [...document.querySelectorAll('.case-cell')];
+  cells.forEach(c=>{
+    c.dataset.stage='0';
+    c.querySelector('.case-cell__img').src = STAGES[id][0];
   });
 
-  // Открытие приза (осталось как было)
-  async function openPrize(){
-    const oc = document.getElementById('openCase');
-    const pImg = oc.querySelector('.prize__img');
-    const pTitle = oc.querySelector('.prize__title');
-
-    let result;
-    try{
-      const alias = { jiga:'lite', camry:'starter', bmw:'pro', lambo:'ultra' }[CASE] || 'lite';
-      const res = await fetch('/api/open', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ caseId: alias })
-      });
-      result = await res.json();
-    }catch(_){ result = {}; }
-
-    const prizeTitle = result?.prize?.label || 'Секретный приз';
-    pTitle.textContent = prizeTitle;
-    pImg.src = result?.prize?.image || '/assets/prizes/sample.png';
-    pImg.alt = prizeTitle;
-
-    oc.hidden = false;
-    oc.classList.remove('break','shatter','open','reveal','show');
-    oc.classList.add('enter','show');
-    setTimeout(()=> oc.classList.add('break'),   180);
-    setTimeout(()=> oc.classList.add('shatter'), 520);
-    setTimeout(()=> oc.classList.add('open'),    820);
-    setTimeout(()=> oc.classList.add('reveal'), 1220);
-
-    const onClose = (e)=>{
-      if (e.target.classList.contains('open-case__backdrop') ||
-          e.target.classList.contains('prize__btn')) {
-        oc.classList.remove('enter','break','shatter','open','reveal','show');
-        oc.hidden = true;
-        oc.removeEventListener('click', onClose);
-      }
-    };
-    oc.addEventListener('click', onClose);
+  // переход стадии P1->P2->P3->OPEN (локально в ячейке)
+  function stepCell(cell){
+    let s = +cell.dataset.stage;
+    if (s < 2){
+      s += 1;
+      cell.dataset.stage = String(s);
+      cell.querySelector('.case-cell__img').src = STAGES[id][s];
+      flashHint(cell);
+      buzz(12);
+    } else {
+      openPrizeInCell(cell);
+    }
   }
 
-  // баланс (если есть API)
-  const balEl = document.querySelector('.balance .value');
-  fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
-    if(d && typeof d.stars!=='undefined' && balEl) balEl.textContent = d.stars;
-  }).catch(()=>{});
+  // кнопка общей цены = нажимаем первую плитку
+  document.getElementById('openAny').addEventListener('click', ()=> stepCell(cells[0]));
+  // клики по плиткам
+  cells.forEach(c=> c.addEventListener('click', ()=> stepCell(c)));
+
+  // «Назад»
+  document.getElementById('backBtn').addEventListener('click', ()=> history.back());
+
+  // ==== ОТКРЫТИЕ ВНУТРИ ПЛИТКИ ====
+  function buildDoorsDOM(){
+    const wrap = document.createElement('div');
+    wrap.className = 'cell-doors';
+    wrap.innerHTML = `
+      <div class="door door--left"></div>
+      <div class="door door--right"></div>
+      <div class="lock">
+        <div class="lock__body"></div>
+        <div class="lock__u"></div>
+        <div class="spark spark--1"></div>
+        <div class="spark spark--2"></div>
+        <div class="spark spark--3"></div>
+      </div>
+      <div class="prize" aria-live="polite">
+        <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
+        <div class="prize__title">Ваш приз!</div>
+        <button class="prize__btn" type="button">Забрать</button>
+      </div>
+    `;
+    return wrap;
+  }
+
+  function openPrizeInCell(cell){
+    // 1) скрываем PNG контейнера
+    const img = cell.querySelector('.case-cell__img');
+    img.style.visibility = 'hidden';
+
+    // 2) вставляем двери в эту ячейку
+    let doors = cell.querySelector('.cell-doors');
+    if (!doors){
+      doors = buildDoorsDOM();
+      cell.appendChild(doors);
+    }
+
+    // 3) дергаем API, подменяем текст/картинку приза
+    fetch('/api/open', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ caseId:id })
+    })
+    .then(r=>r.json())
+    .then(res=>{
+      if(res && res.stars!=null) balEl.textContent = res.stars;
+      const prizeImg   = res?.prize?.image || "/assets/prizes/sample.png";
+      const prizeTitle = res?.prize?.label || res?.prize?.title || "Секретный приз";
+      doors.querySelector('.prize__img').src = prizeImg;
+      doors.querySelector('.prize__img').alt = prizeTitle;
+      doors.querySelector('.prize__title').textContent = prizeTitle;
+    })
+    .catch(()=>{}); // даже если сеть, анимацию всё равно показываем
+
+    // 4) анимации (локально в двери)
+    doors.classList.remove('break','shatter','open','reveal');
+    doors.classList.add('enter');
+    setTimeout(()=>doors.classList.add('break'),   160);
+    setTimeout(()=>doors.classList.add('shatter'), 500);
+    setTimeout(()=>doors.classList.add('open'),    800);
+    setTimeout(()=>doors.classList.add('reveal'), 1200);
+    buzz(20);
+
+    // 5) закрытие: вернуть плитку в P1
+    const close = () => {
+      doors.remove();                        // убрать ворота
+      img.style.visibility = 'visible';      // вернуть контейнер
+      cell.dataset.stage='0';
+      img.src = STAGES[id][0];
+    };
+    doors.querySelector('.prize__btn').addEventListener('click', (e)=>{ e.stopPropagation(); close(); }, {once:true});
+  }
 })();
 </script>
-
-</html>
