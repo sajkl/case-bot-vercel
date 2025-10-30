@@ -1,134 +1,230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Открытие кейса</title>
+  <link rel="stylesheet" href="/styles.css">
+
+<style>
+body{
+  background:#07090e;
+  color:#fff;
+  font-family:-apple-system,system-ui,Roboto,Arial;
+  margin:0; padding:0;
+}
+
+.header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:18px 20px;
+}
+.header .back{
+  background:#ffd400; color:#111; border-radius:14px; padding:12px 18px;
+  font-weight:900; font-size:16px;
+}
+
+.balance{
+  background:#ffd400; color:#111; border-radius:18px; padding:8px 14px;
+  display:flex; align-items:center; font-weight:900;
+}
+.balance .star{ margin-right:6px; }
+
+.case-title{
+  font-size:32px; font-weight:900; padding:0 20px; margin-top:6px;
+}
+
+.price-box{
+  text-align:center; margin:8px 0 18px;
+}
+.price-btn{
+  background:#ffd400; color:#111; border-radius:20px; padding:12px 22px;
+  font-size:20px; font-weight:900; display:inline-flex; align-items:center; gap:6px;
+  box-shadow:0 0 18px rgba(255,212,0,.45);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+  padding:0 20px 40px;
+}
+
+.case-cell{
+  position:relative;
+  background:#10131a;
+  border:3px solid #ffd400;
+  border-radius:22px;
+  padding:12px;
+  display:flex; align-items:center; justify-content:center;
+  height:150px;
+}
+.case-cell img{
+  max-width:100%; max-height:100%;
+}
+
+.tap-hint{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:900; opacity:0;
+  pointer-events:none;
+  text-shadow:0 0 12px rgba(255,255,255,.6);
+}
+.tap-hint.show{ animation:hint .45s ease both }
+@keyframes hint{ from{opacity:0} 30%{opacity:1} to{opacity:0} }
+
+/* --- ВОРОТА ВНУТРИ ПЛИТКИ --- */
+.case-cell{ overflow:hidden }
+.cell-doors{
+  position:absolute; inset:6%; border-radius:18px; overflow:hidden;
+  background:#0a0c12; border:1px solid #1b2130;
+}
+.cell-doors .door{
+  position:absolute; top:8%; bottom:10%; width:52%;
+  background:linear-gradient(180deg,#e7b900,#c89d00);
+  border:4px solid #f5d249; border-radius:16px;
+}
+.cell-doors .door--left{ left:2%; transform-origin:left center }
+.cell-doors .door--right{ right:2%; transform-origin:right center }
+
+.cell-doors .lock{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:90px; height:90px }
+.cell-doors .lock__body{
+  position:absolute; inset:auto 0 0 0; margin:auto; width:100%; height:60px; border-radius:16px;
+  background:#2c313f; border:6px solid #11161f;
+}
+.cell-doors .lock__u{
+  position:absolute; left:50%; top:-28px; width:60px; height:60px; transform:translateX(-50%);
+  border:10px solid #2c313f; border-bottom:none; border-radius:36px 36px 0 0;
+}
+.cell-doors .spark{position:absolute; width:7px; height:7px; background:#ffd400; border-radius:50%; opacity:0}
+
+.cell-doors .prize{
+  position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:8px;
+  opacity:0;
+}
+.cell-doors .prize__img{ max-width:76%; max-height:56%; }
+.cell-doors .prize__title{ margin-top:6px; font-weight:900; font-size:18px }
+.cell-doors .prize__btn{
+  margin-top:10px; background:#ffd400; color:#171a1f; border-radius:14px; padding:10px 16px; font-weight:900;
+}
+
+/* АНИМАЦИИ */
+.cell-doors.enter      { animation:cd-enter .22s ease both }
+@keyframes cd-enter    { from{transform:scale(.98);opacity:0} to{transform:scale(1);opacity:1} }
+.cell-doors.break .lock{ animation:cd-lock-shake .45s ease both }
+@keyframes cd-lock-shake{
+  0%{ transform:translate(-50%,-50%) rotate(0) }
+  50%{ transform:translate(calc(-50% + 6px),calc(-50% + 4px)) rotate(5deg) }
+  100%{ transform:translate(-50%,-50%) rotate(0) }
+}
+.cell-doors.shatter .lock__body,
+.cell-doors.shatter .lock__u{ animation:cd-lock-pop .35s ease-in both }
+@keyframes cd-lock-pop{ to{transform:translateY(12px) scale(.6) rotate(18deg);opacity:0} }
+.cell-doors.open .door--left { animation:cd-doorL .55s both }
+.cell-doors.open .door--right{ animation:cd-doorR .55s both }
+@keyframes cd-doorL{ to{ transform:perspective(700px) rotateY(-70deg) translateX(-6%) } }
+@keyframes cd-doorR{ to{ transform:perspective(700px) rotateY(70deg) translateX(6%) } }
+.cell-doors.reveal .prize{ animation:cd-prize .36s .04s ease-out both }
+@keyframes cd-prize{ from{transform:translateY(10px) scale(.96); opacity:0} to{opacity:1} }
+
+</style>
+</head>
+
+<body>
+<header class="header">
+  <button id="backBtn" class="back">Назад</button>
+  <div class="balance"><span class="star">★</span><span class="value">0</span></div>
+</header>
+
+<div class="case-title" id="caseName"></div>
+
+<div class="price-box">
+  <button id="openAny" class="price-btn"><span class="star">★</span><span id="priceVal"></span></button>
+</div>
+
+<div class="grid">
+  <div class="case-cell"><img class="case-cell__img"><div class="tap-hint">Жми</div></div>
+  <div class="case-cell"><img class="case-cell__img"><div class="tap-hint">Жми</div></div>
+  <div class="case-cell"><img class="case-cell__img"><div class="tap-hint">Жми</div></div>
+  <div class="case-cell"><img class="case-cell__img"><div class="tap-hint">Жми</div></div>
+</div>
+
 <script>
 (function(){
-  // --- helpers ---
   const qs = new URLSearchParams(location.search);
-  const id = (qs.get('id') || 'jiga').toLowerCase(); // jiga|camry|bmw|lambo
-  const buzz = ms => { try{ navigator.vibrate && navigator.vibrate(ms||15) }catch(_){} };
-  const flashHint = cell => { const h=cell.querySelector('.tap-hint'); h.classList.add('show'); setTimeout(()=>h.classList.remove('show'),520) };
+  const id = (qs.get('id') || 'jiga').toLowerCase();
 
-  const CASE_META = {
-    jiga:{name:'Жига',price:249}, camry:{name:'Камри',price:499},
-    bmw:{name:'Бэха',price:999},  lambo:{name:'Ламбо',price:2999}
-  };
+  const PRICE = { jiga:249, camry:499, bmw:999, lambo:2999 };
+  const NAME  = { jiga:'Жига', camry:'Камри', bmw:'Бэха', lambo:'Ламбо' };
+
   const STAGES = {
-    jiga:  ['/assets/Case Lada P1.png','/assets/Case Lada P2.png','/assets/Case Lada P3.png'],
-    camry: ['/assets/Case Cam P1.png', '/assets/Case Cam P2.png', '/assets/Case Cam P3.png'],
-    bmw:   ['/assets/Case BMW P1.png','/assets/Case BMW P2.png','/assets/Case BMW P3.png'],
-    lambo: ['/assets/Case Lambo P1.png','/assets/Case Lambo P2.png','/assets/Case Lambo P3.png'],
+    jiga:['/assets/Case Lada P1.png','/assets/Case Lada P2.png','/assets/Case Lada P3.png'],
+    camry:['/assets/Case Cam P1.png','/assets/Case Cam P2.png','/assets/Case Cam P3.png'],
+    bmw:['/assets/Case BMW P1.png','/assets/Case BMW P2.png','/assets/Case BMW P3.png'],
+    lambo:['/assets/Case Lambo P1.png','/assets/Case Lambo P2.png','/assets/Case Lambo P3.png']
   };
 
-  // заголовок/цена
-  const meta = CASE_META[id] || CASE_META.jiga;
-  document.getElementById('caseName').textContent = meta.name;
-  document.getElementById('priceVal').textContent = meta.price;
+  document.getElementById('caseName').textContent = NAME[id];
+  document.getElementById('priceVal').textContent = PRICE[id];
 
-  // баланс
-  const balEl = document.querySelector('#balance .value');
-  fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
-    if(d && typeof d.stars!=='undefined') balEl.textContent=d.stars;
-  }).catch(()=>{});
+  const balEl = document.querySelector('.balance .value');
+  fetch('/api/profile').then(r=>r.json()).then(d=>{ if(d?.stars!=null) balEl.textContent=d.stars; });
 
-  // прелоад PNG
-  (STAGES[id]||[]).forEach(s=>{ const i=new Image(); i.src=s; });
-
-  // подготовили сетку
   const cells = [...document.querySelectorAll('.case-cell')];
-  cells.forEach(c=>{
-    c.dataset.stage='0';
-    c.querySelector('.case-cell__img').src = STAGES[id][0];
-  });
+  cells.forEach(c=>{ c.dataset.stage='0'; c.querySelector('img').src = STAGES[id][0]; });
 
-  // переход стадии P1->P2->P3->OPEN (локально в ячейке)
-  function stepCell(cell){
-    let s = +cell.dataset.stage;
-    if (s < 2){
-      s += 1;
-      cell.dataset.stage = String(s);
-      cell.querySelector('.case-cell__img').src = STAGES[id][s];
-      flashHint(cell);
-      buzz(12);
-    } else {
-      openPrizeInCell(cell);
-    }
-  }
+  function buzz(ms){ navigator.vibrate?.(ms||12); }
+  function flashHint(cell){ const h=cell.querySelector('.tap-hint'); h.classList.add('show'); setTimeout(()=>h.classList.remove('show'),500); }
 
-  // кнопка общей цены = нажимаем первую плитку
-  document.getElementById('openAny').addEventListener('click', ()=> stepCell(cells[0]));
-  // клики по плиткам
-  cells.forEach(c=> c.addEventListener('click', ()=> stepCell(c)));
-
-  // «Назад»
-  document.getElementById('backBtn').addEventListener('click', ()=> history.back());
-
-  // ==== ОТКРЫТИЕ ВНУТРИ ПЛИТКИ ====
-  function buildDoorsDOM(){
-    const wrap = document.createElement('div');
-    wrap.className = 'cell-doors';
-    wrap.innerHTML = `
+  function buildDoors(){
+    const wrap=document.createElement('div');
+    wrap.className='cell-doors';
+    wrap.innerHTML=`
       <div class="door door--left"></div>
       <div class="door door--right"></div>
-      <div class="lock">
-        <div class="lock__body"></div>
-        <div class="lock__u"></div>
-        <div class="spark spark--1"></div>
-        <div class="spark spark--2"></div>
-        <div class="spark spark--3"></div>
-      </div>
-      <div class="prize" aria-live="polite">
-        <img class="prize__img" src="/assets/prizes/sample.png" alt="Приз">
-        <div class="prize__title">Ваш приз!</div>
-        <button class="prize__btn" type="button">Забрать</button>
-      </div>
+      <div class="lock"><div class="lock__body"></div><div class="lock__u"></div></div>
+      <div class="prize"><img class="prize__img"><div class="prize__title"></div><button class="prize__btn">Забрать</button></div>
     `;
     return wrap;
   }
 
-  function openPrizeInCell(cell){
-    // 1) скрываем PNG контейнера
-    const img = cell.querySelector('.case-cell__img');
-    img.style.visibility = 'hidden';
+  function openCell(cell){
+    const img = cell.querySelector('img');
+    img.style.visibility='hidden';
+    let doors = buildDoors();
+    cell.appendChild(doors);
 
-    // 2) вставляем двери в эту ячейку
-    let doors = cell.querySelector('.cell-doors');
-    if (!doors){
-      doors = buildDoorsDOM();
-      cell.appendChild(doors);
-    }
+    fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId:id})})
+      .then(r=>r.json()).then(d=>{
+        if(d?.stars!=null) balEl.textContent=d.stars;
+        doors.querySelector('.prize__img').src = d?.prize?.image || '/assets/prizes/sample.png';
+        doors.querySelector('.prize__title').textContent = d?.prize?.title || 'Приз';
+      });
 
-    // 3) дергаем API, подменяем текст/картинку приза
-    fetch('/api/open', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ caseId:id })
-    })
-    .then(r=>r.json())
-    .then(res=>{
-      if(res && res.stars!=null) balEl.textContent = res.stars;
-      const prizeImg   = res?.prize?.image || "/assets/prizes/sample.png";
-      const prizeTitle = res?.prize?.label || res?.prize?.title || "Секретный приз";
-      doors.querySelector('.prize__img').src = prizeImg;
-      doors.querySelector('.prize__img').alt = prizeTitle;
-      doors.querySelector('.prize__title').textContent = prizeTitle;
-    })
-    .catch(()=>{}); // даже если сеть, анимацию всё равно показываем
-
-    // 4) анимации (локально в двери)
-    doors.classList.remove('break','shatter','open','reveal');
     doors.classList.add('enter');
-    setTimeout(()=>doors.classList.add('break'),   160);
-    setTimeout(()=>doors.classList.add('shatter'), 500);
-    setTimeout(()=>doors.classList.add('open'),    800);
-    setTimeout(()=>doors.classList.add('reveal'), 1200);
-    buzz(20);
+    setTimeout(()=>doors.classList.add('break'),150);
+    setTimeout(()=>doors.classList.add('shatter'),500);
+    setTimeout(()=>doors.classList.add('open'),800);
+    setTimeout(()=>doors.classList.add('reveal'),1150);
 
-    // 5) закрытие: вернуть плитку в P1
-    const close = () => {
-      doors.remove();                        // убрать ворота
-      img.style.visibility = 'visible';      // вернуть контейнер
+    doors.querySelector('.prize__btn').addEventListener('click',()=>{
+      doors.remove();
+      img.style.visibility='visible';
       cell.dataset.stage='0';
       img.src = STAGES[id][0];
-    };
-    doors.querySelector('.prize__btn').addEventListener('click', (e)=>{ e.stopPropagation(); close(); }, {once:true});
+    },{once:true});
   }
+
+  function step(cell){
+    let s = +cell.dataset.stage;
+    if(s<2){ s++; cell.dataset.stage=s; cell.querySelector('img').src=STAGES[id][s]; flashHint(cell); buzz(); }
+    else openCell(cell);
+  }
+
+  cells.forEach(c=>c.addEventListener('click',()=>step(c)));
+  document.getElementById('openAny').addEventListener('click',()=>step(cells[0]));
+  document.getElementById('backBtn').onclick = ()=>history.back();
 })();
 </script>
+
+</body>
+</html>
+
