@@ -1,280 +1,194 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Открытие кейса — Gift Wins</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Открытие кейса</title>
 <style>
-:root{
-  --bg:#0b0d12; --text:#f7f8fb; --accent:#ffd400; --muted:#a5abb8;
-}
+:root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-img{display:block;max-width:100%}
-
-/* шапка */
-.page{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:14px 16px 24px}
-.top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
+.page{max-width:520px;margin:0 auto;min-height:100vh;padding:14px 16px 24px}
+.top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
 .back{background:var(--accent);color:#171a1f;font-weight:900;border:none;border-radius:16px;padding:12px 16px}
 .logo{height:32px}
-.balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px;align-items:center}
-
-/* заголовок кейса */
-.h1{font-weight:900;font-size:42px;letter-spacing:.5px;margin:14px 2px 8px}
-
-/* сетка контейнеров */
+.balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px}
+.h1{font-weight:900;font-size:42px;margin:16px 2px 8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
 .cell{
-  position:relative;
-  /* РАМКУ УБРАЛИ — только лёгкая тень для читаемости */
-  background:rgba(255,255,255,.03);
-  border: none;
-  border-radius:24px;
-  padding:14px;         /* одинаковые отступы на всех стадиях */
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
-  overflow:hidden;
+  position:relative;background:rgba(255,255,255,.03);border:none;border-radius:24px;
+  padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden
 }
-.crate{
-  width:100%;
-  aspect-ratio:1 / 1;   /* квадрат всегда */
-  display:grid;
-  place-items:center;
-}
-.crate img{
-  width:92%;
-  height:92%;
-  object-fit:contain;    /* картинка без искажений */
-  image-rendering:auto;
-}
-
-/* цена — ОДНА под сеткой */
-.price-wrap{display:flex;justify-content:center;margin:16px 0 0}
-.price{
-  background:var(--accent); color:#171a1f;
-  padding:12px 18px; border-radius:16px; font-weight:900; font-size:18px;
-  box-shadow:0 0 22px rgba(255,212,0,.35);
-}
-
-/* подсказка «ЖМИ» */
-.hint{
-  position:absolute; inset:0; display:grid; place-items:center;
-  font-weight:900; color:#fff; background:rgba(0,0,0,.28);
-  opacity:0; pointer-events:none; transition:.18s;
-}
+.crate{width:100%;aspect-ratio:1/1;display:grid;place-items:center}
+.crate img{width:92%;height:92%;object-fit:contain;transition:opacity .15s}
+.hint{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.18s}
 .cell.show-hint .hint{opacity:1}
+.price-wrap{display:flex;justify-content:center;margin:16px 0 0}
+.price{background:var(--accent);color:#171a1f;padding:12px 18px;border-radius:16px;font-weight:900;box-shadow:0 0 22px rgba(255,212,0,.35)}
 
-/* оверлей приза (из твоего решения, минимально) */
-.oc{position:fixed;inset:0;display:none;place-items:center;z-index:1000}
-.oc.show{display:grid}
-.oc-back{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px)}
-.oc-card{position:relative;width:min(520px,92vw);background:#12151d;border:1px solid #23283a;border-radius:22px;padding:22px}
-.oc-doors{position:relative;height:min(56vh,520px);border-radius:18px;background:#0b0d12;overflow:hidden}
-.oc-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00)}
-.oc-door.l{left:0;transform-origin:left center}
-.oc-door.r{right:0;transform-origin:right center}
-.oc-title{font-weight:900;font-size:22px;margin:14px 0 0}
-.oc-btn{margin-top:12px;background:var(--accent);color:#171a1f;border:none;border-radius:12px;padding:10px 16px;font-weight:900}
-
-/* анимация открытия */
-.oc.open .oc-door.l{animation:doorL .55s ease forwards}
-.oc.open .oc-door.r{animation:doorR .55s ease forwards}
+/* локальные двери внутри ячейки */
+.cell-doors{
+  position:absolute;inset:14px; /* поверх картинки, внутри паддинга плитки */
+  background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden
+}
+.cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00)}
+.cell-door.l{left:0;transform-origin:left center}
+.cell-door.r{right:0;transform-origin:right center}
 @keyframes doorL{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(-72deg) translateX(-10%)}}
 @keyframes doorR{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(72deg) translateX(10%)}}
-
-.prize{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;opacity:0}
-.oc.reveal .prize{animation:prizeIn .35s .1s ease both}
+.cell.open .cell-door.l{animation:doorL .55s ease forwards}
+.cell.open .cell-door.r{animation:doorR .55s ease forwards}
+.prize-box{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:14px;opacity:0}
+.cell.reveal .prize-box{animation:prizeIn .35s .1s ease both}
 @keyframes prizeIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
-
-.prize img{max-width:72%;max-height:60%}
+.prize-box img{max-width:72%;max-height:60%}
+.prize-title{font-weight:900;font-size:20px;margin-top:8px}
+.prize-btn{margin-top:10px;background:var(--accent);color:#171a1f;border:none;border-radius:12px;padding:10px 16px;font-weight:900}
 </style>
 </head>
 <body>
 <div class="page">
   <div class="top">
     <button class="back" onclick="history.back()">Назад</button>
-    <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" />
-    <div class="balance"><span>★</span><span id="bal">25</span></div>
+    <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+    <div class="balance">★ <span id="bal">25</span></div>
   </div>
 
   <div id="caseTitle" class="h1">Кейс</div>
 
-  <!-- сетка -->
   <div id="grid" class="grid"></div>
 
-  <!-- единая цена снизу -->
   <div class="price-wrap"><div id="price" class="price">★ 0</div></div>
 </div>
 
-<!-- оверлей приза -->
-<div id="oc" class="oc" role="dialog" aria-modal="true">
-  <div class="oc-back"></div>
-  <div class="oc-card">
-    <div class="oc-doors">
-      <div class="oc-door l"></div>
-      <div class="oc-door r"></div>
-      <div class="prize">
-        <img id="prizeImg" src="/assets/prizes/sample.png" alt="">
-        <div id="prizeTitle" class="oc-title">Приз</div>
-        <button id="takeBtn" class="oc-btn">Забрать</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-/* -------- helpers -------- */
-const qs = s => document.querySelector(s);
-const qsa = s => [...document.querySelectorAll(s)];
-const vib = (t=15)=>('vibrate' in navigator)&&navigator.vibrate(t);
+const qs=s=>document.querySelector(s), qsa=s=>[...document.querySelectorAll(s)];
+const vib=(t=15)=>('vibrate'in navigator)&&navigator.vibrate(t);
 
-const params = new URLSearchParams(location.search);
-const caseId = (params.get('id') || 'jiga').toLowerCase(); // jiga|camry|bmw|lambo
-
-/* карта ассетов по кейсам и стадиям */
-const ASSETS = {
-  jiga: { // серая
-    price: 249,
-    stages: [
-      "/assets/Case%20Lada%20P1.png",
-      "/assets/Case%20Lada%20P2.png",
-      "/assets/Case%20Lada%20P3.png" // если файла нет — можно повторить P2
-    ]
-  },
-  camry: { // зелёная
-    price: 499,
-    stages: [
-      "/assets/Case%20Cam%20P1.png",
-      "/assets/Case%20Cam%20P2.png",
-      "/assets/Case%20Cam%20P3.png"
-    ]
-  },
-  bmw: { // красная
-    price: 999,
-    stages: [
-      "/assets/Case%20BMW%20P1.png",
-      "/assets/Case%20BMW%20P2.png",
-      "/assets/Case%20BMW%20P3.png"
-    ]
-  },
-  lambo: { // жёлтая
-    price: 2999,
-    stages: [
-      "/assets/Case%20Lambo%20P1.png",
-      "/assets/Case%20Lambo%20P2.png",
-      "/assets/Case%20Lambo%20P3.png" // если нет — повтор P2
-    ]
-  }
-};
-
-// фолбэки на случай отсутствующих PNG
-for (const k in ASSETS){
-  const a = ASSETS[k].stages;
-  if (!a[1]) a[1] = a[0];
-  if (!a[2]) a[2] = a[1];
+// --- определить текущий caseId ---
+function getCaseId(){
+  const urlId=(new URLSearchParams(location.search)).get('id');
+  if(urlId) return urlId.toLowerCase();
+  const saved=localStorage.getItem('lastCaseId');
+  return (saved||'jiga').toLowerCase();
 }
+const caseId=getCaseId();
+console.debug('[case] using id =',caseId);
 
-/* титул */
-const TITLES = { jiga:"Жига", camry:"Камри", bmw:"Бэха", lambo:"Ламбо" };
-qs('#caseTitle').textContent = TITLES[caseId] || "Кейс";
+// --- карта ассетов (пути проверь, чтобы PNG лежали именно здесь) ---
+const ASSETS={
+  jiga:{title:'Жига', price:249, stages:[
+    '/assets/Case Lada P1.png',
+    '/assets/Case Lada P2.png',
+    '/assets/Case Lada P3.png'
+  ]},
+  camry:{title:'Камри', price:499, stages:[
+    '/assets/Case Cam P1.png',
+    '/assets/Case Cam P2.png',
+    '/assets/Case Cam P3.png'
+  ]},
+  bmw:{title:'Бэха', price:999, stages:[
+    '/assets/Case BMW P1.png',
+    '/assets/Case BMW P2.png',
+    '/assets/Case BMW P3.png'
+  ]},
+  lambo:{title:'Ламбо', price:2999, stages:[
+    '/assets/Case Lambo P1.png',
+    '/assets/Case Lambo P2.png',
+    '/assets/Case Lambo P3.png'
+  ]}
+};
+// авто-фолбэк, если какого-то PNG нет
+for(const k in ASSETS){const a=ASSETS[k].stages; if(!a[1]) a[1]=a[0]; if(!a[2]) a[2]=a[1];}
 
-/* баланс (не критично, просто попытка подхватить) */
+const conf=ASSETS[caseId]||ASSETS.jiga;
+qs('#caseTitle').textContent=conf.title;
+qs('#price').textContent=`★ ${conf.price}`;
+
+// баланс (опционально)
 fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
-  if(d && typeof d.stars!=='undefined') qs('#bal').textContent = d.stars;
+  if(d && typeof d.stars!=='undefined') qs('#bal').textContent=d.stars;
 }).catch(()=>{});
 
-/* цена одна под сеткой */
-qs('#price').textContent = `★ ${ASSETS[caseId]?.price ?? 0}`;
-
-/* рендер 2×2 */
-const grid = qs('#grid');
-for (let i=0;i<4;i++){
-  const cell = document.createElement('button');
-  cell.className = 'cell';
-  cell.dataset.stage = "0"; // 0→1→2→3
-  cell.innerHTML = `
+// --- рендер сетки 2×2 ---
+const grid=qs('#grid');
+for(let i=0;i<4;i++){
+  const cell=document.createElement('button');
+  cell.type='button';
+  cell.className='cell';
+  cell.dataset.stage='0';
+  cell.innerHTML=`
     <div class="crate"><img alt="container"></div>
     <div class="hint">ЖМИ</div>
   `;
   grid.appendChild(cell);
 }
+// стартовое P1 на все плитки
+qsa('.crate img').forEach(img=>img.src=conf.stages[0]);
 
-/* выставляем стартовые PNG (P1) на все 4 плитки */
-const startSrc = ASSETS[caseId].stages[0];
-qsa('.cell .crate img').forEach(img=>{
-  img.src = startSrc;
-});
-
-/* логика кликов по контейнеру:
-   1й клик: P1→P2  (вибро + подсказка "ЖМИ" fade)
-   2й клик: P2→P3
-   3й клик: P3→приз (двери на конкретной плитке) */
+// --- логика кликов: P1→P2→P3→приз с локальными дверьми ---
 grid.addEventListener('click', (e)=>{
-  const cell = e.target.closest('.cell');
-  if (!cell) return;
-
+  const cell=e.target.closest('.cell'); if(!cell) return;
   vib(12);
+  let stage=+cell.dataset.stage;
+  const img=cell.querySelector('.crate img');
 
-  let stage = +cell.dataset.stage; // 0..3
-  const img = cell.querySelector('.crate img');
-  const hint = cell.querySelector('.hint');
-
-  if (stage < 2){
-    // показать/скрыть мягкую подсказку "ЖМИ"
-    cell.classList.add('show-hint');
-    setTimeout(()=>cell.classList.remove('show-hint'), 280);
-
-    stage += 1;
-    img.src = ASSETS[caseId].stages[stage];
-    cell.dataset.stage = String(stage);
+  if(stage<2){
+    cell.classList.add('show-hint'); setTimeout(()=>cell.classList.remove('show-hint'),260);
+    stage+=1; img.src=conf.stages[stage]; cell.dataset.stage=String(stage);
     return;
   }
 
-  // stage === 2 → открываем (запрос/приз)
-  cell.dataset.stage = "3";
+  // stage === 2 → запрос приза + локальные двери
+  cell.dataset.stage='3';
+  img.style.opacity='0';
 
-  // прячем PNG конкретной плитки, показываем «двери» + приз
-  img.style.opacity = '0';
+  // создать «двери» только в этой ячейке
+  const doors=document.createElement('div');
+  doors.className='cell-doors';
+  doors.innerHTML=`
+    <div class="cell-door l"></div>
+    <div class="cell-door r"></div>
+    <div class="prize-box">
+      <img id="pimg" src="/assets/prizes/sample.png" alt="">
+      <div class="prize-title" id="ptitle">Ваш приз!</div>
+      <button class="prize-btn" id="ptake">Забрать</button>
+    </div>
+  `;
+  cell.appendChild(doors);
 
-  // получаем приз
-  fetch('/api/open', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ caseId })
-  })
-  .then(r=>r.json()).then(res=>{
-    if(res && res.stars!=null) qs('#bal').textContent = res.stars;
+  // забрать приз с бэкенда
+  fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId})})
+  .then(r=>r.json())
+  .then(res=>{
+    if(res && res.stars!=null) qs('#bal').textContent=res.stars;
+    const prizeImg= res?.prize?.image || '/assets/prizes/sample.png';
+    const prizeTitle= res?.prize?.title || 'Секретный приз';
+    doors.querySelector('#pimg').src=prizeImg;
+    doors.querySelector('#ptitle').textContent=prizeTitle;
 
-    const prizeImg = res?.prize?.image || "/assets/prizes/sample.png";
-    const prizeTitle = res?.prize?.title || "Секретный приз";
+    // анимации именно в этой ячейке
+    cell.classList.add('open');
+    setTimeout(()=>cell.classList.add('reveal'), 380);
 
-    // оверлей «привязываем» к этой плитке чисто визуально: ставим поверх
-    const oc = qs('#oc');
-    qs('#prizeImg').src = prizeImg;
-    qs('#prizeTitle').textContent = prizeTitle;
-    oc.classList.remove('open','reveal');
-    oc.classList.add('show');
-
-    // запускаем открытие
-    requestAnimationFrame(()=>{
-      oc.classList.add('open');
-      setTimeout(()=> oc.classList.add('reveal'), 380);
-    });
-
-    // по кнопке «Забрать» — закрыть и вернуть плитке видимость (можно оставить скрытой)
-    qs('#takeBtn').onclick = ()=>{
-      oc.classList.remove('show','open','reveal');
-      img.style.opacity = '1'; // или оставь 0, если контейнер после открытия должен пропасть
+    doors.querySelector('#ptake').onclick=()=>{
+      // закрываем локально: можно скрыть двери и оставить плитку «пустой»
+      cell.classList.remove('open','reveal');
+      doors.remove();
+      // img.style.opacity='1'; // если нужно вернуть контейнер назад — раскомментируй
     };
-    qs('.oc-back').onclick = ()=> qs('#takeBtn').click();
   })
   .catch(()=>{
-    // в случае ошибки — откатываем картинку назад
-    img.style.opacity = '1';
-    cell.dataset.stage = "2";
+    // откат при ошибке
+    img.style.opacity='1';
+    cell.dataset.stage='2';
+    doors.remove();
   });
 });
+
+// на случай, если ты приходишь на case без query из главной:
+try{ if(!location.search.includes('id=')){ localStorage.setItem('lastCaseId', caseId); } }catch(_){}
+console.debug('[case] assets:', conf);
 </script>
 </body>
 </html>
-
