@@ -65,138 +65,126 @@ html,body{margin:0;height:100%;background:#0b0d12;color:var(--text);font-family:
 const qs=s=>document.querySelector(s), qsa=s=>[...document.querySelectorAll(s)];
 const vib=(t=15)=>('vibrate'in navigator)&&navigator.vibrate(t);
 
-// ---------- robust caseId resolver ----------
+// --- определить текущий caseId ---
 function getCaseId(){
-  // 1) ?id=lambo
-  const idQ = new URLSearchParams(location.search).get('id');
-  if (idQ) return idQ.toLowerCase();
-
-  // 2) /case/lambo или /case-lambo
-  const p = (location.pathname||'').toLowerCase();
-  if (/(lambo|bmw|camry|jiga)/.test(p)) return RegExp.$1;
-
-  // 3) sessionStorage от главной
-  try {
-    const s = sessionStorage.getItem('currentCaseId');
-    if (s) return s.toLowerCase();
-  } catch(_){}
-
-  // 4) localStorage на всякий
-  try {
-    const l = localStorage.getItem('lastCaseId');
-    if (l) return l.toLowerCase();
-  } catch(_){}
-
-  return 'jiga';
+  const urlId=(new URLSearchParams(location.search)).get('id');
+  if(urlId) return urlId.toLowerCase();
+  const saved=localStorage.getItem('lastCaseId');
+  return (saved||'jiga').toLowerCase();
 }
-const caseId = getCaseId();
+const caseId=getCaseId();
+console.debug('[case] using id =',caseId);
 
-// ---------- assets (безопасные пути с пробелами) ----------
-const P = f => encodeURI(f); // оборачиваем путь
-const ASSETS = {
-  jiga : { title:'Жига',  price:249,  stages:[P('/assets/Case Lada P1.png'),  P('/assets/Case Lada P2.png'),  P('/assets/Case Lada P3.png')] },
-  camry: { title:'Камри', price:499,  stages:[P('/assets/Case Cam P1.png'),   P('/assets/Case Cam P2.png'),   P('/assets/Case Cam P3.png')] },
-  bmw  : { title:'Бэха',  price:999,  stages:[P('/assets/Case BMW P1.png'),   P('/assets/Case BMW P2.png'),   P('/assets/Case BMW P3.png')] },
-  lambo: { title:'Ламбо', price:2999, stages:[P('/assets/Case Lambo P1.png'), P('/assets/Case Lambo P2.png'), P('/assets/Case Lambo P3.png')] },
+// --- карта ассетов (пути проверь, чтобы PNG лежали именно здесь) ---
+const ASSETS={
+  jiga:{title:'Жига', price:249, stages:[
+    '/assets/Case Lada P1.png',
+    '/assets/Case Lada P2.png',
+    '/assets/Case Lada P3.png'
+  ]},
+  camry:{title:'Камри', price:499, stages:[
+    '/assets/Case Cam P1.png',
+    '/assets/Case Cam P2.png',
+    '/assets/Case Cam P3.png'
+  ]},
+  bmw:{title:'Бэха', price:999, stages:[
+    '/assets/Case BMW P1.png',
+    '/assets/Case BMW P2.png',
+    '/assets/Case BMW P3.png'
+  ]},
+  lambo:{title:'Ламбо', price:2999, stages:[
+    '/assets/Case Lambo P1.png',
+    '/assets/Case Lambo P2.png',
+    '/assets/Case Lambo P3.png'
+  ]}
 };
-// подстрахуем отсутствие P2/P3
-for (const k in ASSETS){ const a=ASSETS[k].stages; if(!a[1]) a[1]=a[0]; if(!a[2]) a[2]=a[1]; }
+// авто-фолбэк, если какого-то PNG нет
+for(const k in ASSETS){const a=ASSETS[k].stages; if(!a[1]) a[1]=a[0]; if(!a[2]) a[2]=a[1];}
 
-const cfg = ASSETS[caseId] || ASSETS.jiga;
-console.debug('[case] resolved id:', caseId, '→', cfg);
+const conf=ASSETS[caseId]||ASSETS.jiga;
+qs('#caseTitle').textContent=conf.title;
+qs('#price').textContent=`★ ${conf.price}`;
 
-// заголовок/цена
-qs('#caseTitle')?.textContent = cfg.title;
-qs('#price')?.(qs('#price').textContent = `★ ${cfg.price}`);
+// баланс (опционально)
+fetch('/api/profile').then(r=>r.ok?r.json():null).then(d=>{
+  if(d && typeof d.stars!=='undefined') qs('#bal').textContent=d.stars;
+}).catch(()=>{});
 
-// если сетка уже отрендерена версткой — просто вставим P1
-document.addEventListener('DOMContentLoaded', () => {
-  const imgs = qsa('.crate img');
-  if (imgs.length === 0) {
-    // если сетка рисуется скриптом – создадим 4 ячейки здесь
-    const grid = qs('#grid');
-    if (grid) {
-      for (let i=0;i<4;i++) {
-        const cell = document.createElement('button');
-        cell.type='button';
-        cell.className='cell';
-        cell.dataset.stage='0';
-        cell.innerHTML = `
-          <div class="crate"><img alt="container"></div>
-          <div class="hint">ЖМИ</div>
-        `;
-        grid.appendChild(cell);
-      }
-    }
+// --- рендер сетки 2×2 ---
+const grid=qs('#grid');
+for(let i=0;i<4;i++){
+  const cell=document.createElement('button');
+  cell.type='button';
+  cell.className='cell';
+  cell.dataset.stage='0';
+  cell.innerHTML=`
+    <div class="crate"><img alt="container"></div>
+    <div class="hint">ЖМИ</div>
+  `;
+  grid.appendChild(cell);
+}
+// стартовое P1 на все плитки
+qsa('.crate img').forEach(img=>img.src=conf.stages[0]);
+
+// --- логика кликов: P1→P2→P3→приз с локальными дверьми ---
+grid.addEventListener('click', (e)=>{
+  const cell=e.target.closest('.cell'); if(!cell) return;
+  vib(12);
+  let stage=+cell.dataset.stage;
+  const img=cell.querySelector('.crate img');
+
+  if(stage<2){
+    cell.classList.add('show-hint'); setTimeout(()=>cell.classList.remove('show-hint'),260);
+    stage+=1; img.src=conf.stages[stage]; cell.dataset.stage=String(stage);
+    return;
   }
-  // выставляем P1 на все плитки
-  qsa('.crate img').forEach((img, idx)=>{
-    img.src = cfg.stages[0];
-    img.onload  = ()=>console.debug(`[img${idx}] ok:`, img.src);
-    img.onerror = ()=>console.warn(`[img${idx}] 404:`, img.src);
+
+  // stage === 2 → запрос приза + локальные двери
+  cell.dataset.stage='3';
+  img.style.opacity='0';
+
+  // создать «двери» только в этой ячейке
+  const doors=document.createElement('div');
+  doors.className='cell-doors';
+  doors.innerHTML=`
+    <div class="cell-door l"></div>
+    <div class="cell-door r"></div>
+    <div class="prize-box">
+      <img id="pimg" src="/assets/prizes/sample.png" alt="">
+      <div class="prize-title" id="ptitle">Ваш приз!</div>
+      <button class="prize-btn" id="ptake">Забрать</button>
+    </div>
+  `;
+  cell.appendChild(doors);
+
+  // забрать приз с бэкенда
+  fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId})})
+  .then(r=>r.json())
+  .then(res=>{
+    if(res && res.stars!=null) qs('#bal').textContent=res.stars;
+    const prizeImg= res?.prize?.image || '/assets/prizes/sample.png';
+    const prizeTitle= res?.prize?.title || 'Секретный приз';
+    doors.querySelector('#pimg').src=prizeImg;
+    doors.querySelector('#ptitle').textContent=prizeTitle;
+
+    // анимации именно в этой ячейке
+    cell.classList.add('open');
+    setTimeout(()=>cell.classList.add('reveal'), 380);
+
+    doors.querySelector('#ptake').onclick=()=>{
+      // закрываем локально: можно скрыть двери и оставить плитку «пустой»
+      cell.classList.remove('open','reveal');
+      doors.remove();
+      // img.style.opacity='1'; // если нужно вернуть контейнер назад — раскомментируй
+    };
+  })
+  .catch(()=>{
+    // откат при ошибке
+    img.style.opacity='1';
+    cell.dataset.stage='2';
+    doors.remove();
   });
 });
-
-// логика стадий + локальные двери (как было в предыдущей версии)
-const grid = document.getElementById('grid');
-if (grid) {
-  grid.addEventListener('click', (e)=>{
-    const cell=e.target.closest('.cell'); if(!cell) return;
-    vib(12);
-    let stage=+cell.dataset.stage;
-    const img=cell.querySelector('.crate img');
-
-    if(stage<2){
-      cell.classList.add('show-hint'); setTimeout(()=>cell.classList.remove('show-hint'),260);
-      stage+=1; img.src=cfg.stages[stage]; cell.dataset.stage=String(stage);
-      return;
-    }
-
-    // stage === 2 → запрос приза + локальные двери
-    cell.dataset.stage='3';
-    img.style.opacity='0';
-
-    const doors=document.createElement('div');
-    doors.className='cell-doors';
-    doors.innerHTML=`
-      <div class="cell-door l"></div>
-      <div class="cell-door r"></div>
-      <div class="prize-box">
-        <img id="pimg" src="/assets/prizes/sample.png" alt="">
-        <div class="prize-title" id="ptitle">Ваш приз!</div>
-        <button class="prize-btn" id="ptake">Забрать</button>
-      </div>`;
-    cell.appendChild(doors);
-
-    fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId})})
-      .then(r=>r.json())
-      .then(res=>{
-        const prizeImg  = res?.prize?.image || '/assets/prizes/sample.png';
-        const prizeTitle= res?.prize?.title || 'Секретный приз';
-        doors.querySelector('#pimg').src = prizeImg;
-        doors.querySelector('#ptitle').textContent = prizeTitle;
-
-        cell.classList.add('open');
-        setTimeout(()=>cell.classList.add('reveal'), 380);
-
-        doors.querySelector('#ptake').onclick=()=>{
-          cell.classList.remove('open','reveal');
-          doors.remove();
-        };
-      })
-      .catch(err=>{
-        console.error('open failed', err);
-        img.style.opacity='1';
-        cell.dataset.stage='2';
-        doors.remove();
-      });
-  });
-}
-
-// подстраховка: если пришли без ?id= — запомним, чтобы потом работать без query
-try{ if(!location.search.includes('id=')){ localStorage.setItem('lastCaseId', caseId); } }catch(_){}
-</script>
-
 
 // на случай, если ты приходишь на case без query из главной:
 try{ if(!location.search.includes('id=')){ localStorage.setItem('lastCaseId', caseId); } }catch(_){}
@@ -204,3 +192,4 @@ console.debug('[case] assets:', conf);
 </script>
 </body>
 </html>
+
