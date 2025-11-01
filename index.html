@@ -77,13 +77,40 @@
   </div>
 
   <!-- МИНИМАЛЬНЫЙ JS: только баланс, без перехватов кликов -->
-  <script>
-    (function () {
-      const balEl = document.querySelector('#balance .value');
-      fetch('/api/profile')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
-        .catch(()=>{});
+ <script>
+(function () {
+  // --- баланс (как было)
+  const balEl = document.querySelector('#balance .value');
+  fetch('/api/profile')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
+    .catch(()=>{});
+
+  // --- сохраняем выбранный кейс при клике, чтобы /case подхватывал свои PNG
+  document.addEventListener('click', function (e) {
+    const a = e.target.closest('a.card');
+    if (!a) return;
+
+    const caseId = a.dataset.caseid || a.dataset.case || '';
+    if (!caseId) return;
+
+    try {
+      // используем оба хранилища (fallback для Safari / Telegram WebView)
+      sessionStorage.setItem('currentCaseId', caseId);
+      localStorage.setItem('lastCaseId', caseId);
+    } catch(_) {}
+
+    // нормализуем href, чтобы был и query-параметр на всякий случай
+    // (навигацию НЕ отменяем — пускай идёт по ссылке)
+    if (!/[\?&]case=/.test(a.href)) {
+      const url = new URL(a.href, location.origin);
+      url.searchParams.set('case', caseId);
+      a.href = url.pathname + '?' + url.searchParams.toString();
+    }
+  });
+})();
+</script>
+
     })();
   </script>
 </body>
