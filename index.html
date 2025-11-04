@@ -78,7 +78,41 @@
 
   <!-- МИНИМАЛЬНЫЙ JS: только баланс, без перехватов кликов -->
  <script>
-(function () {
+<!-- index.html -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  (async () => {
+    const tg = window.Telegram.WebApp;
+    tg.ready();           // сообщаем Telegram что UI готов
+    tg.expand();          // опционально — на весь экран
+
+    // В initDataUnsafe лежат распарсенные данные, но на сервер шлём СЫРОЕ initData
+    const initData = tg.initData; // строка запроса с подписью Telegram
+    if (!initData) {
+      console.warn('initData is empty — открой Mini App из Telegram-клиента.');
+      return;
+    }
+
+    // Отправляем на сервер: он проверит подпись и создаст сессию
+    const res = await fetch('/api/tg-auth', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ initData })
+    });
+
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      console.error('Auth fail', e);
+      return;
+    }
+
+    // Можно подтянуть своего юзера/баланс
+    const me = await fetch('/api/me', { credentials: 'include' }).then(r=>r.json());
+    console.log('ME:', me);
+    // дальше обнови UI: баланс, ник, аватар и т.д.
+  })();
+
+   (function () {
   // --- баланс (как было)
   const balEl = document.querySelector('#balance .value');
   fetch('/api/profile')
