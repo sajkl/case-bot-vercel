@@ -5,147 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
-  <link rel="stylesheet" href="/styles.css?v=12">
+  <link rel="stylesheet" href="/styles.css?v=13">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div class="container">
     <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
-      <div class="balance" id="balance">
-        <span class="star">★</span><span class="value">25</span>
-      </div>
+      <a class="balance" id="balance" href="/topup/">
+        <span class="star">★</span><span class="value" id="balanceValue">25</span>
+      </a>
     </header>
 
     <!-- LIVE -->
-    <section class="live-bar">
-      <span>LIVE</span>
-    </section>
+    <section class="live-bar"><span>LIVE</span></section>
 
     <!-- Сетка 2×2 -->
     <main class="grid">
-      <!-- Жига -->
-      <a class="card gray" data-k="1" data-caseid="jiga"
-         href="/case/?case=jiga"
-         aria-label="Жига"
-         style="--w:150%; --top:-48px; --left:49%;">
+      <a class="card gray"  data-caseid="jiga"  href="/case/?case=jiga"  aria-label="Жига"  style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
-        <div class="title">Жига</div>
-        <div class="price"><span class="star">★</span> 249</div>
+        <div class="title">Жига</div><div class="price"><span class="star">★</span> 249</div>
       </a>
-
-      <!-- Камри -->
-      <a class="card green" data-k="2" data-caseid="camry"
-         href="/case/?case=camry"
-         aria-label="Камри"
-         style="--w:152%; --top:-54px; --left:52%;">
+      <a class="card green" data-caseid="camry" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
-        <div class="title">Камри</div>
-        <div class="price"><span class="star">★</span> 499</div>
+        <div class="title">Камри</div><div class="price"><span class="star">★</span> 499</div>
       </a>
-
-      <!-- Бэха -->
-      <a class="card red" data-k="3" data-caseid="bmw"
-         href="/case/?case=bmw"
-         aria-label="Бэха"
-         style="--w:158%; --top:-52px; --left:51%;">
+      <a class="card red"   data-caseid="bmw"   href="/case/?case=bmw"   aria-label="Бэха"  style="--w:158%; --top:-52px; --left:51%;">
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
-        <div class="title">Бэха</div>
-        <div class="price"><span class="star">★</span> 999</div>
+        <div class="title">Бэха</div><div class="price"><span class="star">★</span> 999</div>
       </a>
-
-      <!-- Ламбо -->
-      <a class="card yellow" data-k="4" data-caseid="lambo"
-         href="/case/?case=lambo"
-         aria-label="Ламбо"
-         style="--w:160%; --top:-64px; --left:53%;">
+      <a class="card yellow"data-caseid="lambo" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
-        <div class="title">Ламбо</div>
-        <div class="price"><span class="star">★</span> 2999</div>
+        <div class="title">Ламбо</div><div class="price"><span class="star">★</span> 2999</div>
       </a>
     </main>
 
-    <!-- Спейсер под фикс-навбар -->
     <div class="nav-spacer" aria-hidden="true"></div>
 
-    <!-- Навигация — реальные страницы -->
+    <!-- Навигация (объединённые вкладки) -->
     <nav class="nav">
       <a class="btn" href="/profile/">Профиль</a>
       <a class="btn" href="/vote/">Голосование</a>
-      <a class="btn" href="/inv/">Инвентарь</a>
     </nav>
   </div>
 
-  <!-- МИНИМАЛЬНЫЙ JS: только баланс, без перехватов кликов -->
- <script>
-<!-- index.html -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
+  <script>
   (async () => {
-    const tg = window.Telegram.WebApp;
-    tg.ready();           // сообщаем Telegram что UI готов
-    tg.expand();          // опционально — на весь экран
+    const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 
-    // В initDataUnsafe лежат распарсенные данные, но на сервер шлём СЫРОЕ initData
-    const initData = tg.initData; // строка запроса с подписью Telegram
-    if (!initData) {
-      console.warn('initData is empty — открой Mini App из Telegram-клиента.');
-      return;
+    const initData = tg.initData;
+    if (initData) {
+      try {
+        await fetch('/api/tg-auth', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ initData })
+        });
+      } catch(_) {}
     }
 
-    // Отправляем на сервер: он проверит подпись и создаст сессию
-    const res = await fetch('/api/tg-auth', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ initData })
+    // баланс
+    const balEl = document.getElementById('balanceValue');
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
+      .catch(()=>{});
+
+    // сохранить выбранный кейс
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a.card'); if (!a) return;
+      const caseId = a.dataset.caseid || '';
+      if (caseId) {
+        try { sessionStorage.setItem('currentCaseId', caseId); localStorage.setItem('lastCaseId', caseId); } catch(_){}
+        const url = new URL(a.href, location.origin);
+        url.searchParams.set('case', caseId); a.href = url.pathname + '?' + url.searchParams.toString();
+      }
     });
-
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      console.error('Auth fail', e);
-      return;
-    }
-
-    // Можно подтянуть своего юзера/баланс
-    const me = await fetch('/api/me', { credentials: 'include' }).then(r=>r.json());
-    console.log('ME:', me);
-    // дальше обнови UI: баланс, ник, аватар и т.д.
   })();
-
-   (function () {
-  // --- баланс (как было)
-  const balEl = document.querySelector('#balance .value');
-  fetch('/api/profile')
-    .then(r => r.ok ? r.json() : null)
-    .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
-    .catch(()=>{});
-
-  // --- сохраняем выбранный кейс при клике, чтобы /case подхватывал свои PNG
-  document.addEventListener('click', function (e) {
-    const a = e.target.closest('a.card');
-    if (!a) return;
-
-    const caseId = a.dataset.caseid || a.dataset.case || '';
-    if (!caseId) return;
-
-    try {
-      // используем оба хранилища (fallback для Safari / Telegram WebView)
-      sessionStorage.setItem('currentCaseId', caseId);
-      localStorage.setItem('lastCaseId', caseId);
-    } catch(_) {}
-
-    // нормализуем href, чтобы был и query-параметр на всякий случай
-    // (навигацию НЕ отменяем — пускай идёт по ссылке)
-    if (!/[\?&]case=/.test(a.href)) {
-      const url = new URL(a.href, location.origin);
-      url.searchParams.set('case', caseId);
-      a.href = url.pathname + '?' + url.searchParams.toString();
-    }
-  });
-})();
-</script>
-
-    })();
   </script>
 </body>
 </html>
+
