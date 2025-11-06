@@ -61,11 +61,38 @@
 
   <script>
   (async () => {
-    const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
-    const initData = tg.initData;
-    if (initData) {
-      try { await fetch('/api/tg-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData})}); } catch(_){}
-    }
+  const tg = window.Telegram.WebApp;
+  tg.ready(); tg.expand();
+
+  // 1) Авторизация через initData (один раз при открытии)
+  if (tg.initData) {
+    await fetch('/api/tg-auth', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ initData: tg.initData })
+    }).catch(()=>{});
+  }
+
+  // 2) Получаем себя из вашего API (уже по вашей сессии)
+  const me = await fetch('/api/me', { credentials: 'include' })
+                    .then(r => r.ok ? r.json() : null)
+                    .catch(()=>null);
+
+  // 3) Обновляем UI
+  if (me?.ok) {
+    const u = me.user || {};
+    // username
+    const nameEl = document.getElementById('username');
+    if (u.username) nameEl.textContent = '@' + u.username;
+    else nameEl.textContent = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Без имени';
+
+    // аватар: сначала фото из initData/БД, если нет — прокси-роут
+    const avatarEl = document.getElementById('avatar');
+    const src = u.photo_url || (u.id ? `/api/tg-avatar?user_id=${u.id}` : '');
+    if (src) avatarEl.style.backgroundImage = `url("${src}")`;
+  }
+})();
+    
 
     // профиль/баланс
     const balEl = document.getElementById('balanceValue');
