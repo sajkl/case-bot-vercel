@@ -1,56 +1,65 @@
+// ВЕРСИЯ ПРОВЕРКИ БЕЗ ДЕКОДИРОВАНИЯ
 import crypto from 'crypto';
 
-function parse(initData) {
-  const p = new URLSearchParams(initData);
-  const o = {}; for (const [k,v] of p) o[k] = v;
-  return o;
-}
-function buildDataCheck(obj) {
-  return Object.entries(obj)
-    .filter(([k]) => k !== 'hash')
-    .sort(([a],[b]) => a.localeCompare(b))
-    .map(([k,v]) => `${k}=${v}`)
-    .join('\n');
-}
-function verify(initData, botToken, maxAgeSec=86400) {
-  const obj = parse(initData);
-  const { hash, auth_date } = obj;
-  if (!hash || !auth_date) return { ok:false, reason:'no hash/auth_date', obj };
+function computeHmacFromRawInitData(rawInitData, botToken) {
   const secret = crypto.createHash('sha256').update(botToken).digest();
-  const hmac = crypto.createHmac('sha256', secret).update(buildDataCheck(obj)).digest('hex');
-  if (hmac !== hash) return { ok:false, reason:'bad hash', obj };
-  const now = Math.floor(Date.now()/1000);
-  if (Math.abs(now - Number(auth_date)) > maxAgeSec) return { ok:false, reason:'expired', obj };
-  return { ok:true, obj };
-}
-function signJwt(payload, secret, expSec=60*60*24*7) {
-  const h = Buffer.from(JSON.stringify({ alg:'HS256', typ:'JWT' })).toString('base64url');
-  const p = Buffer.from(JSON.stringify({ ...payload, exp: Math.floor(Date.now()/1000)+expSec })).toString('base64url');
-  const s = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
-  return `${h}.${p}.${s}`;
+
+  // 1) разбираем сырые пары key=value, не декодируя значения
+  const pairs = String(rawInitData).split('&')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  // 2) выкидываем hash=...
+  const withoutHash = pairs.filter(p => !p.startsWith('hash='));
+
+  // 3) сортируем по ключу (до знака '='), без декодирования
+  withoutHash.sort((a, b) => {
+    const ka = a.split('=')[0];
+    const kb = b.split('=')[0];
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+
+  // 4) собираем data_check_string ровно как «key=value» построчно
+  const dataCheckString = withoutHash.join('\n');
+
+  // 5) HMAC
+  return crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ ok:false, reason:'method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ ok:false, reason: 'method not allowed' });
 
-  const BOT_TOKEN  = process.env.BOT_TOKEN;
-  const APP_SECRET = process.env.APP_SECRET || (BOT_TOKEN || '') + ':dev';
+  const BOT_TOKEN  = (process.env.BOT_TOKEN || '').trim();
+  const APP_SECRET = (process.env.APP_SECRET || (BOT_TOKEN + ':dev')).trim();
   const { initData } = req.body || {};
 
-  if (!initData) return res.status(200).json({ ok:false, reason:'missing initData' });
-  if (!BOT_TOKEN)  return res.status(200).json({ ok:false, reason:'missing BOT_TOKEN env' });
+  if (!initData)  return res.status(200).json({ ok:false, reason:'missing initData' });
+  if (!BOT_TOKEN) return res.status(200).json({ ok:false, reason:'missing BOT_TOKEN env' });
 
-  const ver = verify(initData, BOT_TOKEN);
-  if (!ver.ok) return res.status(200).json({ ok:false, reason:ver.reason });
+  // берём hash из сырой строки сами (тоже без декода)
+  const providedHash = new URLSearchParams(initData).get('hash');
+  if (!providedHash) return res.status(200).json({ ok:false, reason:'missing hash' });
 
-  const userRaw = ver.obj.user;
+  const computedHash = computeHmacFromRawInitData(initData, BOT_TOKEN);
+  if (computedHash !== providedHash) {
+    return res.status(200).json({
+      ok:false, reason:'bad hash',
+      debug: { provided: providedHash.slice(0,16)+'…', computed: computedHash.slice(0,16)+'…' }
+    });
+  }
+
+  // user берём уже из распарсенных параметров (здесь можно декодировать)
   let user = null;
-  try { user = userRaw ? JSON.parse(userRaw) : null; } catch {}
-  if (!user?.id) return res.status(200).json({ ok:false, reason:'no user field in initData', debug:{ keys:Object.keys(ver.obj) } });
+  try { user = JSON.parse(new URLSearchParams(initData).get('user') || 'null'); } catch {}
+  if (!user?.id) return res.status(200).json({ ok:false, reason:'no user in initData' });
 
-  const token = signJwt({ sub:String(user.id), tg:user }, APP_SECRET);
+  // выпускаем JWT и ставим куку
+  const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+  const body   = Buffer.from(JSON.stringify({ sub:String(user.id), tg:user, exp:Math.floor(Date.now()/1000)+60*60*24*7 })).toString('base64url');
+  const sig    = crypto.createHmac('sha256', APP_SECRET).update(`${header}.${body}`).digest('base64url');
+  const token  = `${header}.${body}.${sig}`;
 
-  // ставим куку и также возвращаем токен (fallback для iOS)
   res.setHeader('Set-Cookie', `sid=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60*60*24*7}`);
   res.status(200).json({ ok:true, token });
 }
+
