@@ -63,12 +63,12 @@
   const tg = window.Telegram.WebApp;
   tg.ready(); tg.expand();
 
-  // Авторизация через initData (создаёт куку sid)
+  // 1) Авторизация: создаём куку sid
   try {
     if (tg.initData) {
       await fetch('/api/tg-auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ initData: tg.initData })
       });
     } else {
@@ -76,16 +76,16 @@
     }
   } catch (e) { console.warn('tg-auth error', e); }
 
-  // Параллельные запросы
+  // 2) Параллельно тянем данные
   const [me, prof, ref, linkRes, inv] = await Promise.all([
-    fetch('/api/me', { credentials: 'include' }).then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('/api/me', { credentials:'include' }).then(r=>r.ok?r.json():null).catch(()=>null),
     fetch('/api/profile').then(r=>r.ok?r.json():null).catch(()=>null),
     fetch('/api/referral/stats').then(r=>r.ok?r.json():null).catch(()=>null),
     fetch('/api/referral/link').then(r=>r.ok?r.json():null).catch(()=>null),
     fetch('/api/inventory').then(r=>r.ok?r.json():null).catch(()=>null),
   ]);
 
-  // UI
+  // 3) UI
   const balEl = document.getElementById('balanceValue');
   const userEl = document.getElementById('username');
   const avatarEl = document.getElementById('avatar');
@@ -123,28 +123,8 @@
     grid.appendChild(el);
   });
 })();
-  // рефералка
-  if (ref) {
-    document.getElementById('earned').textContent = (ref.earned ?? 0).toFixed(1);
-    document.getElementById('invited').textContent = ref.invited ?? 0;
-  }
-  const inviteUrl = linkRes?.url || location.origin;
-  document.getElementById('inviteBtn').onclick = () => tg.openTelegramLink(inviteUrl);
-  document.getElementById('copyLink').onclick = async () => {
-    try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); }
-    catch { tg.showAlert(inviteUrl); }
-  };
-
-  // инвентарь
-  const grid = document.getElementById('invGrid');
-  (inv?.items || []).forEach(it => {
-    const el = document.createElement('div');
-    el.className = 'inv-item';
-    el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
-    grid.appendChild(el);
-  });
-})();
 </script>
+
 
 </body>
 </html>
