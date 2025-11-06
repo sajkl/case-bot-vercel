@@ -60,12 +60,10 @@
   </div>
 <script>
 (async () => {
-  // Инициализация WebApp
   const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
+  tg.ready(); tg.expand();
 
-  // 1) Авторизация через initData (если открыто из Telegram)
+  // Авторизация через initData (создаёт куку sid)
   try {
     if (tg.initData) {
       await fetch('/api/tg-auth', {
@@ -73,44 +71,58 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: tg.initData })
       });
+    } else {
+      console.warn('initData is empty — открой из Telegram');
     }
-  } catch (e) {
-    console.warn('tg-auth error', e);
-  }
+  } catch (e) { console.warn('tg-auth error', e); }
 
-  // 2) Параллельно тянем всё нужное
+  // Параллельные запросы
   const [me, prof, ref, linkRes, inv] = await Promise.all([
-    fetch('/api/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch('/api/profile').then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch('/api/referral/stats').then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch('/api/referral/link').then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch('/api/inventory').then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/me', { credentials: 'include' }).then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('/api/profile').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('/api/referral/stats').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('/api/referral/link').then(r=>r.ok?r.json():null).catch(()=>null),
+    fetch('/api/inventory').then(r=>r.ok?r.json():null).catch(()=>null),
   ]);
 
-  // 3) Обновляем UI
+  // UI
   const balEl = document.getElementById('balanceValue');
   const userEl = document.getElementById('username');
   const avatarEl = document.getElementById('avatar');
 
-  // баланс
   if (prof?.stars != null) balEl.textContent = prof.stars;
 
-  // профиль: username + аватар
   if (me?.ok) {
     const u = me.user || {};
-    userEl.textContent =
-      u.username ? '@' + u.username :
+    userEl.textContent = u.username ? '@' + u.username :
       [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Без имени';
 
-    // приоритет: photo_url из /api/me -> avatarUrl из /api/profile -> прокси по user_id
-    const src =
-      u.photo_url ||
-      (prof?.avatarUrl || (u.id ? `/api/tg-avatar?user_id=${u.id}` : ''));
+    const src = u.photo_url || (prof?.avatarUrl || (u.id ? `/api/tg-avatar?user_id=${u.id}` : ''));
     if (src) avatarEl.style.backgroundImage = `url("${src}")`;
   } else {
-    console.warn('no session from /api/me');
+    console.warn('/api/me returned no session', me);
   }
 
+  if (ref) {
+    document.getElementById('earned').textContent = (ref.earned ?? 0).toFixed(1);
+    document.getElementById('invited').textContent = ref.invited ?? 0;
+  }
+
+  const inviteUrl = linkRes?.url || location.origin;
+  document.getElementById('inviteBtn').onclick = () => tg.openTelegramLink(inviteUrl);
+  document.getElementById('copyLink').onclick = async () => {
+    try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); }
+    catch { tg.showAlert(inviteUrl); }
+  };
+
+  const grid = document.getElementById('invGrid');
+  (inv?.items || []).forEach(it => {
+    const el = document.createElement('div');
+    el.className = 'inv-item';
+    el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
+    grid.appendChild(el);
+  });
+})();
   // рефералка
   if (ref) {
     document.getElementById('earned').textContent = (ref.earned ?? 0).toFixed(1);
