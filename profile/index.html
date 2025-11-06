@@ -66,21 +66,36 @@ console.log('initData len:', (Telegram.WebApp.initData||'').length);
 <script>
 (async () => {
   const tg = window.Telegram.WebApp;
-  tg.ready(); tg.expand();
+  tg.ready(); 
+  tg.expand();
 
-  // 1) Авторизация: создаём куку sid
-  try {
-    if (tg.initData) {
-      await fetch('/api/tg-auth', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ initData: tg.initData })
-      });
-    } else {
-      console.warn('initData is empty — открой из Telegram');
-    }
-  } catch (e) { console.warn('tg-auth error', e); }
+  // Выполняем авторизацию
+  const auth = await fetch('/api/tg-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData: tg.initData })
+  }).then(r => r.json());
 
+  console.log('AUTH:', auth);
+
+  if (!auth.ok) {
+    console.warn('Auth failed:', auth);
+    return;
+  }
+
+  // Если авторизация прошла — загружаем профиль
+  const me = await fetch('/api/me', { credentials: 'include' })
+    .then(r => r.json());
+
+  console.log('ME:', me);
+
+  // Обновляем UI
+  document.getElementById('username').textContent =
+    me.user.username ? '@' + me.user.username : (me.user.first_name || 'Без имени');
+
+  if (me.user.photo_url) {
+    document.getElementById('avatar').style.backgroundImage = `url("${me.user.photo_url}")`;
+  }
   // 2) Параллельно тянем данные
   const [me, prof, ref, linkRes, inv] = await Promise.all([
     fetch('/api/me', { credentials:'include' }).then(r=>r.ok?r.json():null).catch(()=>null),
