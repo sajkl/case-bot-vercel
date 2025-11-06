@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Профиль — Lambo Drop</title>
+  <link rel="stylesheet" href="/styles.css?v=13">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a class="back" href="/"><span>Закрыть</span></a>
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
+      <a class="balance" id="balance" href="/topup/"><span class="star">★</span><span class="value" id="balanceValue">0</span></a>
+    </header>
+
+    <!-- Аватар/юзернейм -->
+    <section class="profile-hero">
+      <div class="avatar" id="avatar"></div>
+      <div class="username" id="username">@username</div>
+    </section>
+
+    <!-- Кнопки действий -->
+    <section class="cards-vertical">
+      <a class="row-btn" href="/promo/"><span>🎟️ Активировать промокод</span></a>
+      <a class="row-btn" href="/history/payments/"><span>↔️ История транзакций</span></a>
+      <a class="row-btn" href="/history/bets/"><span>🕒 История ставок</span></a>
+    </section>
+
+    <!-- Реферальная система -->
+    <section class="ref-card">
+      <h3>Реферальная система</h3>
+      <p class="muted">Приглашай друзей и получай бонусы за каждого нового пользователя</p>
+
+      <div class="ref-grid">
+        <div class="ref-stat"><div class="big">+10%</div><div class="small">За каждого друга</div></div>
+        <div class="ref-stat"><div class="pill"><span id="earned">0.0</span> ★ заработано</div><div class="small"><span id="invited">0</span> ч. Приглашено</div></div>
+      </div>
+
+      <div class="ref-actions">
+        <button id="inviteBtn" class="primary">Пригласить друзей</button>
+        <button id="copyLink" class="icon-btn" aria-label="Скопировать ссылку">🔗</button>
+      </div>
+    </section>
+
+    <!-- Инвентарь как секция профиля -->
+    <section class="inventory">
+      <h3>Инвентарь</h3>
+      <div class="inv-grid" id="invGrid">
+        <!-- элементы инвентаря сюда из /api/inventory -->
+      </div>
+    </section>
+
+    <div class="nav-spacer" aria-hidden="true"></div>
+    <nav class="nav">
+      <a class="btn active" href="/profile/">Профиль</a>
+      <a class="btn" href="/vote/">Голосование</a>
+    </nav>
+  </div>
+
+  <script>
+  (async () => {
+    const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+    const initData = tg.initData;
+    if (initData) {
+      try { await fetch('/api/tg-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData})}); } catch(_){}
+    }
+
+    // профиль/баланс
+    const balEl = document.getElementById('balanceValue');
+    const userEl = document.getElementById('username');
+    const avatarEl = document.getElementById('avatar');
+
+    const me = await fetch('/api/me',{credentials:'include'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    if (me?.ok) {
+      if (me.user?.username) userEl.textContent = '@' + me.user.username;
+    }
+    const prof = await fetch('/api/profile').then(r=>r.ok?r.json():null).catch(()=>null);
+    if (prof?.stars != null) balEl.textContent = prof.stars;
+    if (prof?.avatarUrl) avatarEl.style.backgroundImage = `url(${prof.avatarUrl})`;
+
+    // рефка
+    const ref = await fetch('/api/referral/stats').then(r=>r.ok?r.json():null).catch(()=>null);
+    if (ref){ document.getElementById('earned').textContent = (ref.earned ?? 0).toFixed(1);
+              document.getElementById('invited').textContent = ref.invited ?? 0; }
+
+    const linkRes = await fetch('/api/referral/link').then(r=>r.ok?r.json():null).catch(()=>null);
+    const inviteUrl = linkRes?.url || location.origin;
+
+    document.getElementById('inviteBtn').onclick = () => tg.openTelegramLink(inviteUrl);
+    document.getElementById('copyLink').onclick = async () => {
+      try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); } catch(_){ tg.showAlert(inviteUrl); }
+    };
+
+    // инвентарь
+    const inv = await fetch('/api/inventory').then(r=>r.ok?r.json():null).catch(()=>null);
+    const grid = document.getElementById('invGrid');
+    (inv?.items || []).forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'inv-item';
+      el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
+      grid.appendChild(el);
+    });
+  })();
+  </script>
+</body>
+</html>
