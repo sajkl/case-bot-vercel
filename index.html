@@ -51,18 +51,27 @@
   </div>
 
   <script>
-  (async () => {
-    const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+ (async () => {
+  const tg = window.Telegram.WebApp;
+  tg.ready(); tg.expand();
 
-    const initData = tg.initData;
-    if (initData) {
-      try {
-        await fetch('/api/tg-auth', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ initData })
-        });
-      } catch(_) {}
-    }
+  const auth = await fetch('/api/tg-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData: tg.initData })
+  }).then(r => r.json());
+
+  console.log('AUTH RESULT:', auth);
+
+  if (!auth.ok) {
+    console.warn('Auth failed:', auth);
+    return;
+  }
+
+  // Теперь можно грузить профиль
+  const me = await fetch('/api/me', { credentials:'include' })
+    .then(r=>r.json());
+  console.log('ME:', me);
 
     // баланс
     const balEl = document.getElementById('balanceValue');
