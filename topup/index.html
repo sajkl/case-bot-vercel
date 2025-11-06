@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Пополнение — Lambo Drop</title>
+  <link rel="stylesheet" href="/styles.css?v=13">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a class="back" href="/profile/"><span>Закрыть</span></a>
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
+      <a class="balance" id="balance" href="/topup/"><span class="star">★</span><span class="value" id="balanceValue">0</span></a>
+    </header>
+
+    <section class="topup-hero">
+      <img class="big-star" src="/assets/star-big.png" alt="">
+      <h1>Покупка звёзд</h1>
+      <p class="muted">На Telegram аккаунт и без KYC</p>
+      <p class="hint">После покупки вы получите звёзды на аккаунт Telegram (не на баланс приложения)!</p>
+    </section>
+
+    <section class="topup-form">
+      <div class="field">
+        <label>@ Юзернейм</label>
+        <div class="row">
+          <input id="toUser" type="text" placeholder="@username">
+          <button id="toSelf" class="seg">Себе</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>★ Количество звёзд</label>
+        <input id="amount" type="number" inputmode="numeric" placeholder="Например, 50" min="1">
+      </div>
+
+      <button id="connectWallet" class="primary xl">Подключить кошелёк</button>
+    </section>
+
+    <div class="nav-spacer" aria-hidden="true"></div>
+    <nav class="nav">
+      <a class="btn" href="/profile/">Профиль</a>
+      <a class="btn" href="/vote/">Голосование</a>
+    </nav>
+  </div>
+
+  <script>
+  (async () => {
+    const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+    const me = await fetch('/api/me',{credentials:'include'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    const prof = await fetch('/api/profile').then(r=>r.ok?r.json():null).catch(()=>null);
+    if (prof?.stars != null) document.getElementById('balanceValue').textContent = prof.stars;
+
+    const toUser = document.getElementById('toUser');
+    document.getElementById('toSelf').onclick = () => {
+      if (me?.user?.username) toUser.value = '@' + me.user.username;
+      else tg.showAlert('Не удалось определить ваш username');
+    };
+
+    document.getElementById('connectWallet').onclick = async () => {
+      const username = toUser.value.replace(/^@?/, '@').trim();
+      const amount = parseInt(document.getElementById('amount').value, 10) || 0;
+      if (!username || amount <= 0) { tg.showAlert('Заполните юзернейм и количество'); return; }
+
+      // Заглушка — здесь подключишь TON/Stars-покупку
+      // Пример: tg.openInvoice(link) или tonconnect.openModal() и т.д.
+      tg.showConfirm(`Отправить ${amount}★ на ${username}?`);
+    };
+  })();
+  </script>
+</body>
+</html>
