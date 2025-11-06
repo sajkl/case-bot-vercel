@@ -1,25 +1,25 @@
 import crypto from 'crypto';
 
-function verify(token, secret) {
-  try {
-    const [h,p,s] = token.split('.');
-    const check = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
-    if (check !== s) return null;
-    const body = JSON.parse(Buffer.from(p,'base64url').toString());
-    if (body.exp < Math.floor(Date.now()/1000)) return null;
-    return body;
-  } catch { return null; }
+function verifyJwt(token, secret) {
+  const [h,p,s] = String(token).split('.');
+  if (!h || !p || !s) return null;
+  const sig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
+  if (s !== sig) return null;
+  const payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+  if (payload.exp && payload.exp < Math.floor(Date.now()/1000)) return null;
+  return payload;
 }
 
-export default function handler(req, res) {
-  const APP_SECRET = process.env.APP_SECRET || 'dev';
-
+export default function handler(req,res){
   const cookie = req.headers.cookie || '';
-  const sid = cookie.split(';').find(c=>c.trim().startsWith('sid='));
-  if (!sid) return res.status(401).json({ ok:false });
+  const auth = req.headers.authorization || '';
+  let token = cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith('sid='))?.slice(4);
+  if (!token && auth.startsWith('Bearer ')) token = auth.slice(7);
+  if (!token) return res.status(401).json({ ok:false });
 
-  const payload = verify(sid.split('=')[1], APP_SECRET);
+  const APP_SECRET = (process.env.APP_SECRET || 'dev').trim();
+  const payload = verifyJwt(token, APP_SECRET);
   if (!payload) return res.status(401).json({ ok:false });
 
-  res.json({ ok:true, user: payload.tg });
+  return res.status(200).json({ ok:true, user: payload.tg || { id: payload.sub } });
 }
