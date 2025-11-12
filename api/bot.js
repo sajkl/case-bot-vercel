@@ -1,31 +1,40 @@
+// /api/bot.js
 import { Telegraf } from 'telegraf';
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
+if (!BOT_TOKEN) {
+  console.error('BOT_TOKEN is missing');
+}
 
-// команда /start — высылает inline-кнопку с WebApp
+const bot = new Telegraf(BOT_TOKEN);
+
+// /start — шлём кнопку с WebApp
 bot.start((ctx) => {
-  ctx.reply('Открой мини-апп 👇', {
+  return ctx.reply('Открой мини-апп 👇', {
     reply_markup: {
       inline_keyboard: [[
-        {
-          text: '🚀 Открыть Lambo Drop',
-          web_app: { url: 'https://case-bot-vercel.vercel.app/profile/' } // твой URL
-        }
+        { text: '🚀 Открыть Lambo Drop', web_app: { url: 'https://case-bot-vercel.vercel.app/profile/' } }
       ]]
     }
   });
 });
 
-// для проверки, что бот жив
+// простой ping
 bot.command('ping', (ctx) => ctx.reply('pong ✅'));
 
-// экспорт для Vercel (обязательно!)
+// Vercel webhook handler
 export default async function handler(req, res) {
-  try {
-    await bot.handleUpdate(JSON.parse(req.body), res);
-    res.status(200).end();
-  } catch (err) {
-    console.error('Bot error:', err);
-    res.status(500).end();
+  // Telegram шлёт JSON с header "application/json" → Vercel парсит в req.body (object)
+  if (req.method === 'POST') {
+    try {
+      await bot.handleUpdate(req.body);
+      return res.status(200).end(); // важно вернуть 200 быстро
+    } catch (e) {
+      console.error('bot.handleUpdate error:', e);
+      return res.status(200).end(); // всё равно 200, чтобы Telegram не ретраил бесконечно
+    }
   }
+
+  // Для удобной проверки из браузера
+  return res.status(200).json({ ok: true, hint: 'POST Telegram update JSON here' });
 }
