@@ -6,13 +6,23 @@
   <title>Профиль — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css?v=13">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* На всякий случай — чтобы аватар был виден даже без стилей проекта */
+    .profile-hero .avatar {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: #1f1f1f center/cover no-repeat;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <header class="header">
       <a class="back" href="/"><span>Закрыть</span></a>
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
-      <a class="balance" id="balance" href="/topup/"><span class="star">★</span><span class="value" id="balanceValue">0</span></a>
+      <a class="balance" id="balance" href="/topup/">
+        <span class="star">★</span><span class="value" id="balanceValue">0</span>
+      </a>
     </header>
 
     <!-- Аватар/юзернейм -->
@@ -34,8 +44,14 @@
       <p class="muted">Приглашай друзей и получай бонусы за каждого нового пользователя</p>
 
       <div class="ref-grid">
-        <div class="ref-stat"><div class="big">+10%</div><div class="small">За каждого друга</div></div>
-        <div class="ref-stat"><div class="pill"><span id="earned">0.0</span> ★ заработано</div><div class="small"><span id="invited">0</span> ч. Приглашено</div></div>
+        <div class="ref-stat">
+          <div class="big">+10%</div>
+          <div class="small">За каждого друга</div>
+        </div>
+        <div class="ref-stat">
+          <div class="pill"><span id="earned">0.0</span> ★ заработано</div>
+          <div class="small"><span id="invited">0</span> ч. Приглашено</div>
+        </div>
       </div>
 
       <div class="ref-actions">
@@ -60,91 +76,109 @@
   </div>
 
   <script>
-console.log('initData len:', (Telegram.WebApp.initData||'').length);
-</script>
+    (async () => {
+      // 0) Безопасная инициализация Telegram WebApp
+      const tg = window.Telegram?.WebApp;
+      if (!tg) {
+        console.warn('Telegram WebApp SDK not found');
+        return;
+      }
+      tg.ready();
+      try { tg.expand(); } catch (_) {}
 
-<script>
-(async () => {
-  const tg = window.Telegram.WebApp;
-  tg.ready(); 
-  tg.expand();
+      // Лог длины initData (удобно для отладки)
+      console.log('initData len:', (tg.initData || '').length);
 
-  // Выполняем авторизацию
-  const auth = await fetch('/api/tg-auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ initData: tg.initData })
-  }).then(r => r.json());
+      // 1) Авторизация (кука + возврат JWT в теле на случай проблем с куками в WebView)
+      let auth = null;
+      try {
+        auth = await fetch('/api/tg-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        }).then(r => r.json());
+      } catch (e) {
+        console.warn('tg-auth network error', e);
+      }
 
-  console.log('AUTH:', auth);
+      console.log('AUTH:', auth);
+      if (!auth?.ok) {
+        console.warn('Auth failed:', auth);
+        // Можно показать пользователю нотификацию:
+        try { tg.showAlert('Не удалось авторизоваться. Открой через кнопку бота.'); } catch(_) {}
+        return;
+      }
 
-  if (!auth.ok) {
-    console.warn('Auth failed:', auth);
-    return;
-  }
+      // 2) Готовим headers для запросов после авторизации
+      if (auth.token) {
+        try { localStorage.setItem('sid_token', auth.token); } catch(_) {}
+      }
+      const bearer = (localStorage.getItem('sid_token') || auth.token) ? { Authorization: 'Bearer ' + (localStorage.getItem('sid_token') || auth.token) } : {};
+      const commonFetch = (url) => fetch(url, { credentials: 'include', headers: bearer }).then(r => r.ok ? r.json() : null).catch(() => null);
 
-  // Если авторизация прошла — загружаем профиль
-  const me = await fetch('/api/me', { credentials: 'include' })
-    .then(r => r.json());
+      // 3) Параллельно тянем данные профиля/баланса/рефералок/инвентаря
+      const [meData, prof, ref, linkRes, inv] = await Promise.all([
+        commonFetch('/api/me'),
+        commonFetch('/api/profile'),
+        commonFetch('/api/referral/stats'),
+        commonFetch('/api/referral/link'),
+        commonFetch('/api/inventory'),
+      ]);
 
-  console.log('ME:', me);
+      // 4) Обновляем UI
+      const balEl   = document.getElementById('balanceValue');
+      const userEl  = document.getElementById('username');
+      const avatarEl= document.getElementById('avatar');
 
-  // Обновляем UI
-  document.getElementById('username').textContent =
-    me.user.username ? '@' + me.user.username : (me.user.first_name || 'Без имени');
+      if (prof && typeof prof.stars === 'number') {
+        balEl.textContent = String(prof.stars);
+      }
 
-  if (me.user.photo_url) {
-    document.getElementById('avatar').style.backgroundImage = `url("${me.user.photo_url}")`;
-  }
-  // 2) Параллельно тянем данные
-  const [me, prof, ref, linkRes, inv] = await Promise.all([
-    fetch('/api/me', { credentials:'include' }).then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('/api/profile').then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('/api/referral/stats').then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('/api/referral/link').then(r=>r.ok?r.json():null).catch(()=>null),
-    fetch('/api/inventory').then(r=>r.ok?r.json():null).catch(()=>null),
-  ]);
+      if (meData?.ok && meData.user) {
+        const u = meData.user;
+        // username / FIO
+        userEl.textContent = u.username ? '@' + u.username :
+          [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Без имени';
 
-  // 3) UI
-  const balEl = document.getElementById('balanceValue');
-  const userEl = document.getElementById('username');
-  const avatarEl = document.getElementById('avatar');
+        // аватар: приоритеты photo_url -> проф.аватар -> proxy tg-avatar
+        const src = u.photo_url || (prof?.avatarUrl) || (u.id ? `/api/tg-avatar?user_id=${u.id}` : '');
+        if (src) avatarEl.style.backgroundImage = `url("${src}")`;
+      } else {
+        console.warn('/api/me returned no session', meData);
+      }
 
-  if (prof?.stars != null) balEl.textContent = prof.stars;
+      if (ref) {
+        const earnedEl = document.getElementById('earned');
+        const invitedEl= document.getElementById('invited');
+        if (earnedEl)  earnedEl.textContent  = ((ref.earned ?? 0) * 1).toFixed(1);
+        if (invitedEl) invitedEl.textContent = ref.invited ?? 0;
+      }
 
-  if (me?.ok) {
-    const u = me.user || {};
-    userEl.textContent = u.username ? '@' + u.username :
-      [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Без имени';
+      const inviteUrl = linkRes?.url || location.origin;
+      const inviteBtn = document.getElementById('inviteBtn');
+      const copyBtn   = document.getElementById('copyLink');
 
-    const src = u.photo_url || (prof?.avatarUrl || (u.id ? `/api/tg-avatar?user_id=${u.id}` : ''));
-    if (src) avatarEl.style.backgroundImage = `url("${src}")`;
-  } else {
-    console.warn('/api/me returned no session', me);
-  }
+      if (inviteBtn) inviteBtn.onclick = () => {
+        try { tg.openTelegramLink(inviteUrl); }
+        catch { location.href = inviteUrl; }
+      };
+      if (copyBtn) copyBtn.onclick = async () => {
+        try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); }
+        catch { tg.showAlert(inviteUrl); }
+      };
 
-  if (ref) {
-    document.getElementById('earned').textContent = (ref.earned ?? 0).toFixed(1);
-    document.getElementById('invited').textContent = ref.invited ?? 0;
-  }
-
-  const inviteUrl = linkRes?.url || location.origin;
-  document.getElementById('inviteBtn').onclick = () => tg.openTelegramLink(inviteUrl);
-  document.getElementById('copyLink').onclick = async () => {
-    try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); }
-    catch { tg.showAlert(inviteUrl); }
-  };
-
-  const grid = document.getElementById('invGrid');
-  (inv?.items || []).forEach(it => {
-    const el = document.createElement('div');
-    el.className = 'inv-item';
-    el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
-    grid.appendChild(el);
-  });
-})();
-</script>
-
-
+      // Инвентарь
+      const grid = document.getElementById('invGrid');
+      if (grid && inv?.items?.length) {
+        inv.items.forEach(it => {
+          const el = document.createElement('div');
+          el.className = 'inv-item';
+          el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
+          grid.appendChild(el);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
+
