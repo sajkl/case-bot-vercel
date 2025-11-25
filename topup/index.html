@@ -1,3 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Покупка звёзд — Lambo Drop</title>
+  <link rel="stylesheet" href="/styles.css?v=13">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Шапка -->
+    <header class="header">
+      <a class="back" href="/profile/"><span>Закрыть</span></a>
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
+      <div class="balance" id="balance">
+        <span class="star">★</span><span class="value" id="balanceValue">0</span>
+      </div>
+    </header>
+
+    <!-- Контент пополнения -->
+    <main class="topup-page">
+
+      <!-- Картинка сверху (если есть) -->
+      <div class="topup-art">
+        <!-- поставь сюда /assets/star-big.png или что-то своё -->
+        <!-- <img src="/assets/topup-star.png" alt=""> -->
+      </div>
+
+      <h1 class="topup-title">Покупка звёзд</h1>
+      <p class="topup-subtitle">На Telegram аккаунт и без KYC</p>
+      <p class="topup-note">
+        После покупки вы получите звёзды на аккаунт Telegram (не на баланс приложения)!
+      </p>
+
+      <!-- Блок "Юзернейм" -->
+      <section class="topup-field">
+        <div class="label">@ Юзернейм</div>
+        <div class="field-with-button">
+          <input id="tgUsername" type="text" class="input" placeholder="@username">
+          <button id="fillSelf" class="small-btn">Себе</button>
+        </div>
+      </section>
+
+      <!-- Блок "Количество звёзд" -->
+      <section class="topup-field">
+        <div class="label">★ Количество звёзд</div>
+        <input id="starsAmount" type="number" class="input" min="1" step="1" value="10">
+      </section>
+
+      <!-- Основная кнопка -->
+      <button id="topupBtn" class="primary big-btn">Пополнить</button>
+
+    </main>
+
+    <!-- Низ навигации -->
+    <div class="nav-spacer" aria-hidden="true"></div>
+    <nav class="nav">
+      <a class="btn" href="/profile/">Профиль</a>
+      <a class="btn" href="/vote/">Голосование</a>
+    </nav>
+  </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
   (async () => {
