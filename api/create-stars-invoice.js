@@ -1,105 +1,123 @@
-// /api/create-stars-invoice.js
-'use strict';
+// api/create-stars-invoice.js
+// Создание инвойса в Telegram Stars через createInvoiceLink
 
 const crypto = require('crypto');
-const db = require('../db');
 
-const BOT_TOKEN  = (process.env.BOT_TOKEN || '').trim();
-const APP_SECRET = (process.env.APP_SECRET || (BOT_TOKEN + ':dev')).trim();
+function computeHmacFromRawInitData(rawInitData, botToken) {
+  const secret = crypto.createHash('sha256').update(botToken).digest();
 
-function verifyJwt(token, secret) {
-  if (!token) return null;
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  const [headerB64, bodyB64, sigB64] = parts;
+  const pairs = String(rawInitData).split('&')
+    .map(s => s.trim())
+    .filter(Boolean);
 
-  const checkSig = crypto
-    .createHmac('sha256', secret)
-    .update(`${headerB64}.${bodyB64}`)
-    .digest('base64url');
+  const withoutHash = pairs.filter(p => !p.startsWith('hash='));
 
-  if (checkSig !== sigB64) return null;
-
-  let payload;
-  try {
-    payload = JSON.parse(Buffer.from(bodyB64, 'base64url').toString('utf8'));
-  } catch {
-    return null;
-  }
-
-  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-    return null;
-  }
-
-  return payload;
-}
-
-function parseSidCookie(req) {
-  const header = req.headers.cookie || '';
-  const m = header.match(/(?:^|;\s*)sid=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
-async function tg(method, payload) {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/${method}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify(payload || {})
+  withoutHash.sort((a, b) => {
+    const ka = a.split('=')[0];
+    const kb = b.split('=')[0];
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
-  return r.json().catch(() => ({}));
+
+  const dataCheckString = withoutHash.join('\n');
+
+  return crypto.createHmac('sha256', secret)
+    .update(dataCheckString)
+    .digest('hex');
 }
 
 module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ ok: false, reason: 'method not allowed' });
+  }
+
+  const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
+  if (!BOT_TOKEN) {
+    return res.status(200).json({ ok: false, reason: 'BOT_TOKEN env is empty' });
+  }
+
+  const { initData, amount } = req.body || {};
+  if (!initData) {
+    return res.status(200).json({ ok: false, reason: 'missing initData' });
+  }
+
+  const starCount = Number(amount) || 0;
+  if (!Number.isInteger(starCount) || starCount <= 0) {
+    return res.status(200).json({ ok: false, reason: 'bad amount' });
+  }
+
+  // Проверяем подпись initData
+  const params = new URLSearchParams(initData);
+  const providedHash = params.get('hash');
+  if (!providedHash) {
+    return res.status(200).json({ ok: false, reason: 'missing hash' });
+  }
+
+  const computedHash = computeHmacFromRawInitData(initData, BOT_TOKEN);
+  if (computedHash !== providedHash) {
+    return res.status(200).json({
+      ok: false,
+      reason: 'bad hash',
+      debug: {
+        provided: providedHash.slice(0, 16) + '…',
+        computed: computedHash.slice(0, 16) + '…'
+      }
+    });
+  }
+
+  // Достаём user из initData
+  let user = null;
   try {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ ok:false, reason:'method not allowed' });
-    }
+    user = JSON.parse(params.get('user') || 'null');
+  } catch (e) {
+    user = null;
+  }
+  if (!user || !user.id) {
+    return res.status(200).json({ ok: false, reason: 'no user in initData' });
+  }
 
-    const token = parseSidCookie(req);
-    const payload = verifyJwt(token, APP_SECRET);
-    if (!payload || !payload.sub) {
-      return res.status(401).json({ ok:false, reason:'no session' });
-    }
+  const payload = `stars:${user.id}:${Date.now()}`;
 
-    const body = typeof req.body === 'string'
-      ? JSON.parse(req.body || '{}')
-      : (req.body || {});
-    const amount = Number(body.amount || 0);
+  // Создаём ссылку на инвойс в Stars (currency: XTR, provider_token = пустая строка)
+  const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(200).json({ ok:false, reason:'bad amount' });
-    }
+  const body = {
+    title: 'Покупка звёзд',
+    description: 'Пополнение баланса LamboLuck',
+    payload,
+    currency: 'XTR',
+    prices: [
+      {
+        label: 'Звёзды',
+        amount: starCount // количество звёзд
+      }
+    ],
+    provider_token: '' // для Stars должен быть пустой
+  };
 
-    // Пока считаем 1 Star = 1 ★
-    const starsToBuy = amount;
-
-    // Создаём инвойс в Telegram (для Stars формат надо будет уточнить по доке,
-    // здесь — классический createInvoiceLink для наглядности)
-    const title = `Покупка ${amount} ★`;
-    const description = `Пополнение баланса на ${amount} ★`;
-    const currency = 'XTR'; // для Stars используется спец. "валюта" XTR
-    const prices = [
-      { label: `${amount} ★`, amount: starsToBuy } // amount в минимальных единицах (как см. в доке)
-    ];
-
-    const resp = await tg('createInvoiceLink', {
-      title,
-      description,
-      currency,
-      prices,
-      // payload, provider_data и пр. по ситуации
+  try {
+    const tgRes = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
 
-    if (!resp.ok) {
-      console.error('createInvoiceLink error', resp);
-      return res.status(200).json({ ok:false, reason:'telegram error', error:resp.description });
+    const data = await tgRes.json();
+
+    if (!data.ok) {
+      return res.status(200).json({
+        ok: false,
+        reason: 'telegram api error',
+        tg: { error_code: data.error_code, description: data.description }
+      });
     }
 
-    const invoiceLink = resp.result;
-    return res.status(200).json({ ok:true, invoice_link: invoiceLink });
+    const invoiceLink = data.result; // строка-ссылка
+    return res.status(200).json({ ok: true, link: invoiceLink });
   } catch (e) {
-    console.error('/api/create-stars-invoice fatal:', e);
-    return res.status(200).json({ ok:false, reason:'exception', error:String(e?.message||e) });
+    return res.status(200).json({
+      ok: false,
+      reason: 'fetch failed',
+      error: String(e)
+    });
   }
 };
