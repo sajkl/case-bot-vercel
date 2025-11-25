@@ -1,7 +1,11 @@
 // api/create-stars-invoice.js
-// Вместо createInvoiceLink шлём обычный sendInvoice в ЛС с ботом
+// Вместо createInvoiceLink шлём обычный sendInvoice в ЛС с ботом (Stars)
 
 const crypto = require('crypto');
+
+// ТЕ ЖЕ ПРАВИЛА, что и в tg-auth.js
+const RAW_BOT   = (process.env.BOT_TOKEN || '').trim();
+const APP_SECRET = (process.env.APP_SECRET || (RAW_BOT + ':dev')).trim();
 
 function verifyJwtFromCookie(cookieHeader, secret) {
   if (!cookieHeader) return null;
@@ -40,11 +44,15 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok:false, reason:'method not allowed' });
   }
 
-  const BOT_TOKEN  = (process.env.BOT_TOKEN  || '').trim();
-  const APP_SECRET = (process.env.APP_SECRET || '').trim();
+  const BOT_TOKEN = RAW_BOT;
 
-  if (!BOT_TOKEN)  return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
-  if (!APP_SECRET) return res.status(200).json({ ok:false, reason:'APP_SECRET env is empty' });
+  if (!BOT_TOKEN) {
+    return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
+  }
+  if (!APP_SECRET) {
+    // Сюда мы попадём только если нет BOT_TOKEN и нет APP_SECRET, но это уже край
+    return res.status(200).json({ ok:false, reason:'APP_SECRET resolved empty' });
+  }
 
   // 1) Достаём юзера из куки sid
   const jwt = verifyJwtFromCookie(req.headers.cookie || '', APP_SECRET);
@@ -55,7 +63,7 @@ module.exports = async function handler(req, res) {
   const userId = String(jwt.sub);
   const tgUser = jwt.tg || null;
 
-  // 2) Читаем amount
+  // 2) Количество звёзд
   let amount = 0;
   try {
     amount = Number(req.body?.amount);
@@ -69,7 +77,7 @@ module.exports = async function handler(req, res) {
 
   const payload = `stars:${userId}:${Date.now()}`;
 
-  // 3) sendInvoice вместо createInvoiceLink
+  // 3) sendInvoice (счёт уходит в ЛС с ботом)
   const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`;
 
   const body = {
@@ -77,10 +85,10 @@ module.exports = async function handler(req, res) {
     title: 'Покупка звёзд',
     description: 'Пополнение звёзд в LamboLuck',
     payload,
-    provider_token: '',          // пустая строка для Stars
-    currency: 'XTR',             // Telegram Stars
+    provider_token: '',          // для Stars — пусто
+    currency: 'XTR',             // Stars
     prices: [
-      { label: 'Stars', amount } // число звёзд = amount
+      { label: 'Stars', amount } // сколько звёзд покупаем
     ]
   };
 
@@ -104,7 +112,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // тут можно вернуть message_id, если понадобится
     return res.status(200).json({
       ok: true,
       message_id: data.result.message_id,
