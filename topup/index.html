@@ -93,7 +93,7 @@
         usernameInput.value = '@' + unsafeUser.username;
       }
 
-      const prof = await fetch('/api/profile')
+      const prof = await fetch('/api/profile', { credentials:'include' })
         .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
@@ -104,7 +104,7 @@
       console.warn('init topup error', e);
     }
 
-    // 2) Кнопка "Себе" — подставляем текущий username
+    // 2) Кнопка "Себе"
     if (selfBtn) {
       selfBtn.addEventListener('click', () => {
         try {
@@ -120,7 +120,7 @@
       });
     }
 
-    // 3) Создание инвойса и открытие оплаты
+    // 3) Создание инвойса
     async function createAndOpenInvoice() {
       const raw = (amountInput && amountInput.value || '').trim();
       const amount = Number(raw);
@@ -134,7 +134,6 @@
 
       try {
         const payload = {
-          initData: tg.initData,   // сырые данные от Telegram для проверки на бэке
           amount,
           username: (usernameInput && usernameInput.value || '').trim()
         };
@@ -142,6 +141,7 @@
         const res = await fetch('/api/create-stars-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',              // <-- важно! отправляем sid
           body: JSON.stringify(payload)
         }).then(r => r.json());
 
@@ -161,13 +161,7 @@
           return;
         }
 
-        // Открываем инвойс в Stars (через Telegram)
-        if (typeof tg.openInvoice === 'function') {
-          // если позже будешь использовать openInvoice
-          tg.openTelegramLink(res.link);
-        } else {
-          tg.openTelegramLink(res.link);
-        }
+        tg.openTelegramLink(res.link);
       } catch (e) {
         console.error('buyStars error', e);
         tg.showAlert('Ошибка сети при создании счёта');
@@ -183,6 +177,7 @@
       });
     }
   })();
-  </script>
+</script>
+
 </body>
 </html>
