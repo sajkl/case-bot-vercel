@@ -69,6 +69,48 @@
       tg.showConfirm(`Отправить ${amount}★ на ${username}?`);
     };
   })();
-  </script>
+  <script>
+async function buyStars(amount) {
+  try {
+    const resp = await fetch('/api/create-stars-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ amount })  // Кол-во ★ в приложении
+    }).then(r => r.json());
+
+    if (!resp.ok) {
+      Telegram.WebApp.showAlert('Ошибка создания инвойса');
+      console.warn(resp);
+      return;
+    }
+
+    const link = resp.invoice_link;
+
+    // Если openInvoice доступен
+    if (Telegram.WebApp.openInvoice) {
+      Telegram.WebApp.openInvoice(link, (status) => {
+        console.log('Invoice status:', status);
+
+        if (status === 'paid') {
+          fetch('/api/me', { credentials: 'include' })
+            .then(r => r.json())
+            .then(me => {
+              if (me.ok) {
+                document.querySelector('#balanceValue').textContent = me.stars;
+              }
+            });
+        }
+      });
+    } else {
+      Telegram.WebApp.openTelegramLink(link);
+    }
+  } catch (e) {
+    console.error(e);
+    Telegram.WebApp.showAlert('Ошибка сети');
+  }
+}
+</script>
+
 </body>
 </html>
