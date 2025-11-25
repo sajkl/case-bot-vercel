@@ -1,5 +1,5 @@
 // api/create-stars-invoice.js
-// Создание инвойса Telegram Stars по уже существующей сессии (кука sid)
+// Вместо createInvoiceLink шлём обычный sendInvoice в ЛС с ботом
 
 const crypto = require('crypto');
 
@@ -25,8 +25,7 @@ function verifyJwtFromCookie(cookieHeader, secret) {
 
   let payload;
   try {
-    const json = Buffer.from(bodyB64, 'base64url').toString('utf8');
-    payload = JSON.parse(json);
+    payload = JSON.parse(Buffer.from(bodyB64, 'base64url').toString('utf8'));
   } catch {
     return null;
   }
@@ -38,20 +37,16 @@ function verifyJwtFromCookie(cookieHeader, secret) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ ok: false, reason: 'method not allowed' });
+    return res.status(405).json({ ok:false, reason:'method not allowed' });
   }
 
   const BOT_TOKEN  = (process.env.BOT_TOKEN  || '').trim();
   const APP_SECRET = (process.env.APP_SECRET || '').trim();
 
-  if (!BOT_TOKEN) {
-    return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
-  }
-  if (!APP_SECRET) {
-    return res.status(200).json({ ok:false, reason:'APP_SECRET env is empty' });
-  }
+  if (!BOT_TOKEN)  return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
+  if (!APP_SECRET) return res.status(200).json({ ok:false, reason:'APP_SECRET env is empty' });
 
-  // 1) Читаем JWT из куки sid
+  // 1) Достаём юзера из куки sid
   const jwt = verifyJwtFromCookie(req.headers.cookie || '', APP_SECRET);
   if (!jwt || !jwt.sub) {
     return res.status(200).json({ ok:false, reason:'no session' });
@@ -60,7 +55,7 @@ module.exports = async function handler(req, res) {
   const userId = String(jwt.sub);
   const tgUser = jwt.tg || null;
 
-  // 2) Количество звёзд из тела запроса
+  // 2) Читаем amount
   let amount = 0;
   try {
     amount = Number(req.body?.amount);
@@ -74,56 +69,53 @@ module.exports = async function handler(req, res) {
 
   const payload = `stars:${userId}:${Date.now()}`;
 
-  // 3) Вызов createInvoiceLink для Stars
-  const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
+  // 3) sendInvoice вместо createInvoiceLink
+  const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`;
 
   const body = {
+    chat_id: userId,
     title: 'Покупка звёзд',
-    description: 'Пополнение звёзд для LamboLuck',
+    description: 'Пополнение звёзд в LamboLuck',
     payload,
-    currency: 'XTR',                 // Telegram Stars
+    provider_token: '',          // пустая строка для Stars
+    currency: 'XTR',             // Telegram Stars
     prices: [
-      { label: 'Stars', amount }     // amount = количество звёзд
+      { label: 'Stars', amount } // число звёзд = amount
     ]
-    // provider_token не указываем для Stars
   };
 
   try {
     const tgRes = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type':'application/json' },
       body: JSON.stringify(body),
     });
 
     const data = await tgRes.json();
 
     if (!data.ok) {
-      // Прокидываем ошибку наружу для дебага
       return res.status(200).json({
         ok: false,
         reason: 'telegram api error',
         tg: {
           error_code: data.error_code,
           description: data.description
-        },
-        debug: {
-          currency: body.currency,
-          amount: body.prices[0].amount
         }
       });
     }
 
-    const invoiceLink = data.result;
+    // тут можно вернуть message_id, если понадобится
     return res.status(200).json({
       ok: true,
-      link: invoiceLink,
+      message_id: data.result.message_id,
+      chat_id: data.result.chat.id,
       user: { id: userId, username: tgUser?.username || null }
     });
   } catch (e) {
     return res.status(200).json({
-      ok: false,
-      reason: 'fetch failed',
-      error: String(e)
+      ok:false,
+      reason:'fetch failed',
+      error:String(e)
     });
   }
 };
