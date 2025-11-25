@@ -22,9 +22,8 @@
     <!-- Контент пополнения -->
     <main class="topup-page">
 
-      <!-- Картинка сверху (если есть) -->
+      <!-- Картинка сверху (если захочешь – подставь свою) -->
       <div class="topup-art">
-        <!-- поставь сюда /assets/star-big.png или что-то своё -->
         <!-- <img src="/assets/topup-star.png" alt=""> -->
       </div>
 
@@ -34,27 +33,39 @@
         После покупки вы получите звёзды на аккаунт Telegram (не на баланс приложения)!
       </p>
 
-      <!-- Блок "Юзернейм" -->
+      <!-- Поле юзернейма -->
       <section class="topup-field">
         <div class="label">@ Юзернейм</div>
         <div class="field-with-button">
-          <input id="tgUsername" type="text" class="input" placeholder="@username">
-          <button id="fillSelf" class="small-btn">Себе</button>
+          <input
+            id="topup-username"
+            type="text"
+            class="input"
+            placeholder="@username">
+          <button id="topup-self" class="small-btn">Себе</button>
         </div>
       </section>
 
-      <!-- Блок "Количество звёзд" -->
+      <!-- Поле количества звёзд -->
       <section class="topup-field">
         <div class="label">★ Количество звёзд</div>
-        <input id="starsAmount" type="number" class="input" min="1" step="1" value="10">
+        <input
+          id="topup-amount"
+          type="number"
+          class="input"
+          min="1"
+          step="1"
+          value="10">
       </section>
 
       <!-- Основная кнопка -->
-      <button id="topupBtn" class="primary big-btn">Пополнить</button>
+      <button id="topup-submit" class="primary big-btn">
+        Пополнить
+      </button>
 
     </main>
 
-    <!-- Низ навигации -->
+    <!-- Навигация снизу -->
     <div class="nav-spacer" aria-hidden="true"></div>
     <nav class="nav">
       <a class="btn" href="/profile/">Профиль</a>
@@ -63,28 +74,54 @@
   </div>
 
   <!-- ЛОГИКА ПОПОЛНЕНИЯ -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
+  <script>
   (async () => {
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
 
-    // Автоподстановка юзернейма
+    const usernameInput = document.getElementById('topup-username');
+    const selfBtn       = document.getElementById('topup-self');
+    const amountInput   = document.getElementById('topup-amount');
+    const submitBtn     = document.getElementById('topup-submit');
+    const balEl         = document.getElementById('balanceValue');
+
+    // 1) Подтягиваем юзера и баланс
     try {
-      const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-      if (u && u.username) {
-        const userInput = document.querySelector('#topup-username');
-        if (userInput) userInput.value = '@' + u.username;
+      const unsafeUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (unsafeUser && unsafeUser.username && usernameInput && !usernameInput.value) {
+        usernameInput.value = '@' + unsafeUser.username;
       }
-    } catch (_) {}
 
-    const amountInput = document.querySelector('#topup-amount');
-    const payBtn = document.querySelector('#topup-submit');
+      const prof = await fetch('/api/profile')
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null);
 
-    if (!payBtn) return;
+      if (prof && typeof prof.stars !== 'undefined') {
+        balEl.textContent = prof.stars;
+      }
+    } catch (e) {
+      console.warn('init topup error', e);
+    }
 
-    payBtn.addEventListener('click', async () => {
+    // 2) Кнопка "Себе" — подставляем текущий username
+    if (selfBtn) {
+      selfBtn.addEventListener('click', () => {
+        try {
+          const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+          if (u && u.username) {
+            usernameInput.value = '@' + u.username;
+          } else {
+            tg.showAlert('Не удалось получить username из Telegram');
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      });
+    }
+
+    // 3) Создание инвойса и открытие оплаты
+    async function createAndOpenInvoice() {
       const raw = (amountInput && amountInput.value || '').trim();
       const amount = Number(raw);
 
@@ -93,23 +130,26 @@
         return;
       }
 
-      payBtn.disabled = true;
+      submitBtn.disabled = true;
 
       try {
+        const payload = {
+          initData: tg.initData,   // сырые данные от Telegram для проверки на бэке
+          amount,
+          username: (usernameInput && usernameInput.value || '').trim()
+        };
+
         const res = await fetch('/api/create-stars-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            initData: tg.initData,
-            amount
-          })
+          body: JSON.stringify(payload)
         }).then(r => r.json());
 
         console.log('create-stars-invoice:', res);
 
         if (!res.ok) {
           const msg =
-            res.tg?.description ||
+            (res.tg && res.tg.description) ||
             res.reason ||
             'Неизвестная ошибка при создании счёта';
           tg.showAlert('Ошибка при создании счёта:\n' + msg);
@@ -121,17 +161,28 @@
           return;
         }
 
-        // Открываем звёздный инвойс
-        tg.openTelegramLink(res.link);
+        // Открываем инвойс в Stars (через Telegram)
+        if (typeof tg.openInvoice === 'function') {
+          // если позже будешь использовать openInvoice
+          tg.openTelegramLink(res.link);
+        } else {
+          tg.openTelegramLink(res.link);
+        }
       } catch (e) {
-        console.error(e);
+        console.error('buyStars error', e);
         tg.showAlert('Ошибка сети при создании счёта');
       } finally {
-        payBtn.disabled = false;
+        submitBtn.disabled = false;
       }
-    });
-  })();
-</script>
+    }
 
+    if (submitBtn) {
+      submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        createAndOpenInvoice();
+      });
+    }
+  })();
+  </script>
 </body>
 </html>
