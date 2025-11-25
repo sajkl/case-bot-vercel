@@ -1,5 +1,5 @@
 // api/create-stars-invoice.js
-// Создание инвойса Stars по уже существующей сессии (кука sid)
+// Создание инвойса Telegram Stars по уже существующей сессии (кука sid)
 
 const crypto = require('crypto');
 
@@ -31,7 +31,6 @@ function verifyJwtFromCookie(cookieHeader, secret) {
     return null;
   }
 
-  // проверим exp, если есть
   if (payload.exp && Date.now() / 1000 > payload.exp) return null;
 
   return payload; // { sub, tg, exp, ... }
@@ -45,10 +44,14 @@ module.exports = async function handler(req, res) {
   const BOT_TOKEN  = (process.env.BOT_TOKEN  || '').trim();
   const APP_SECRET = (process.env.APP_SECRET || '').trim();
 
-  if (!BOT_TOKEN)  return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
-  if (!APP_SECRET) return res.status(200).json({ ok:false, reason:'APP_SECRET env is empty' });
+  if (!BOT_TOKEN) {
+    return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
+  }
+  if (!APP_SECRET) {
+    return res.status(200).json({ ok:false, reason:'APP_SECRET env is empty' });
+  }
 
-  // --- 1) Достаём юзера из JWT в куке sid
+  // 1) Читаем JWT из куки sid
   const jwt = verifyJwtFromCookie(req.headers.cookie || '', APP_SECRET);
   if (!jwt || !jwt.sub) {
     return res.status(200).json({ ok:false, reason:'no session' });
@@ -57,7 +60,7 @@ module.exports = async function handler(req, res) {
   const userId = String(jwt.sub);
   const tgUser = jwt.tg || null;
 
-  // --- 2) Читаем amount из тела
+  // 2) Количество звёзд из тела запроса
   let amount = 0;
   try {
     amount = Number(req.body?.amount);
@@ -69,21 +72,20 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok:false, reason:'bad amount' });
   }
 
-  // payload для инвойса
   const payload = `stars:${userId}:${Date.now()}`;
 
-  // --- 3) Создаём инвойс Stars через Bot API
+  // 3) Вызов createInvoiceLink для Stars
   const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
 
   const body = {
     title: 'Покупка звёзд',
-    description: 'Пополнение баланса LamboLuck',
+    description: 'Пополнение звёзд для LamboLuck',
     payload,
-    currency: 'XTR',           // Stars
+    currency: 'XTR',                 // Telegram Stars
     prices: [
-      { label: 'Звёзды', amount } // amount = кол-во звёзд
-    ],
-    provider_token: ''         // для Stars должен быть пустой
+      { label: 'Stars', amount }     // amount = количество звёзд
+    ]
+    // provider_token не указываем для Stars
   };
 
   try {
@@ -96,10 +98,18 @@ module.exports = async function handler(req, res) {
     const data = await tgRes.json();
 
     if (!data.ok) {
+      // Прокидываем ошибку наружу для дебага
       return res.status(200).json({
         ok: false,
         reason: 'telegram api error',
-        tg: { error_code: data.error_code, description: data.description }
+        tg: {
+          error_code: data.error_code,
+          description: data.description
+        },
+        debug: {
+          currency: body.currency,
+          amount: body.prices[0].amount
+        }
       });
     }
 
@@ -117,4 +127,3 @@ module.exports = async function handler(req, res) {
     });
   }
 };
-
