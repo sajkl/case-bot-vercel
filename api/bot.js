@@ -1,15 +1,22 @@
 // /api/bot.js
 'use strict';
 
-const db = require('../db');
+// --- мягко подключаем БД (может и не быть) ---
+let db = null;
+try {
+  db = require('../db'); // если файла нет или он падает, мы просто логируем
+  console.log('[bot] db module loaded');
+} catch (e) {
+  console.warn('[bot] db module NOT loaded, will only log star tx. Reason:', e.message || e);
+}
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const WEBAPP_URL = 'https://case-bot-vercel.vercel.app/profile/';
 
-// --- минимальный клиент Bot API ---
+// --- минимальный клиент Telegram Bot API ---
 async function tg(method, payload) {
   if (!BOT_TOKEN) {
-    console.error('tg(): BOT_TOKEN is empty');
+    console.error('[tg] BOT_TOKEN is empty');
     return { ok: false, description: 'BOT_TOKEN empty' };
   }
 
@@ -23,11 +30,11 @@ async function tg(method, payload) {
     });
     const j = await r.json().catch(() => ({}));
     if (!j.ok) {
-      console.error('TG API error:', method, payload, j);
+      console.error('[tg] API error', method, j);
     }
     return j;
   } catch (e) {
-    console.error('TG API fetch error:', method, e);
+    console.error('[tg] fetch error', method, e);
     return { ok: false, description: String(e.message || e) };
   }
 }
@@ -40,19 +47,14 @@ async function sendMessage(chatId, text, replyMarkup) {
   });
 }
 
-// --- логика начисления звёзд в БД ---
+// --- логика начисления звёзд ---
 async function handleStarTransaction(tx) {
-  // tx: наша обёртка вокруг successful_payment / stars_transaction
-
   const userId = tx.user_id;
   if (!userId) {
-    console.warn('star tx without userId', tx);
+    console.warn('[stars] tx without userId', tx);
     return;
   }
 
-  // Пытаемся аккуратно определить кол-во звёзд
-  // Для обычного invoice: total_amount (в минимальных единицах), currency = 'XTR'
-  // Для stars_transaction может быть поле amount / stars — подправим после просмотра логов
   const starsSpent =
     tx.stars ??
     tx.amount ??
@@ -60,11 +62,18 @@ async function handleStarTransaction(tx) {
     0;
 
   if (!starsSpent || starsSpent <= 0) {
-    console.warn('star tx has no stars amount', tx);
+    console.warn('[stars] tx without amount', tx);
     return;
   }
 
-  const addStars = starsSpent; // 1 Star = 1 ★ (можешь поменять курс)
+  const addStars = starsSpent;
+  console.log('[stars] incoming tx', { userId, addStars, raw: tx });
+
+  // Если БД не подключена – просто логируем, чтобы не уронить функцию
+  if (!db) {
+    console.warn('[stars] db not loaded, skipping DB write');
+    return;
+  }
 
   try {
     await db.query('BEGIN');
@@ -92,21 +101,25 @@ async function handleStarTransaction(tx) {
     );
 
     await db.query('COMMIT');
-    console.log('star topup ok', { userId, addStars, current, next });
+    console.log('[stars] topup OK', { userId, addStars, current, next });
   } catch (e) {
-    console.error('star tx db error:', e);
+    console.error('[stars] db error:', e);
     await db.query('ROLLBACK').catch(() => {});
   }
 }
 
 module.exports = async function handler(req, res) {
   try {
-    // --- GET для быстрой проверки токена из браузера ---
+    // Быстрый чек из браузера: /api/bot
     if (req.method === 'GET') {
       const masked = BOT_TOKEN
         ? BOT_TOKEN.slice(0, 6) + '…' + BOT_TOKEN.slice(-4)
         : '(empty)';
-      return res.status(200).json({ ok: true, token_mask: masked });
+      return res.status(200).json({
+        ok: true,
+        token_mask: masked,
+        db_loaded: !!db
+      });
     }
 
     if (req.method !== 'POST') {
@@ -125,11 +138,11 @@ module.exports = async function handler(req, res) {
     }
     update = update || {};
 
-    console.log('TG UPDATE:', JSON.stringify(update, null, 2));
+    console.log('[bot] TG UPDATE:', JSON.stringify(update, null, 2));
 
     const msg = update.message || update.edited_message || null;
 
-    // 1) /start → шлём кнопку с WebApp
+    // 1) /start → кнопка с WebApp
     if (
       msg?.chat?.type === 'private' &&
       typeof msg.text === 'string' &&
@@ -147,7 +160,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 2) pre_checkout_query (ОБЯЗАТЕЛЬНО ответить, иначе таймаут покупки)
+    // 2) pre_checkout_query → ОБЯЗАТЕЛЬНО ответить ok:true
     if (update.pre_checkout_query) {
       await tg('answerPreCheckoutQuery', {
         pre_checkout_query_id: update.pre_checkout_query.id,
@@ -155,10 +168,10 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 3) successful_payment (обычный invoice, в том числе Stars через invoice)
+    // 3) successful_payment (инвойсы, в т.ч. звёздные)
     if (msg && msg.successful_payment) {
       const pay = msg.successful_payment;
-      console.log('SUCCESSFUL PAYMENT:', pay);
+      console.log('[bot] SUCCESSFUL_PAYMENT:', pay);
 
       await handleStarTransaction({
         user_id: msg.from && msg.from.id,
@@ -174,10 +187,10 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    // 4) stars_transaction (если Телеграм шлёт отдельный тип апдейта для Stars)
+    // 4) stars_transaction (если Телеграм пришлёт отдельным полем)
     if (update.stars_transaction) {
       const tx = update.stars_transaction;
-      console.log('STARS TRANSACTION:', tx);
+      console.log('[bot] STARS_TRANSACTION:', tx);
 
       await handleStarTransaction({
         user_id: tx.from && tx.from.id,
@@ -193,10 +206,10 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 5) message.star_transaction (если внезапно приходит так)
+    // 5) message.star_transaction (на всякий случай)
     if (msg && msg.star_transaction) {
       const tx = msg.star_transaction;
-      console.log('MESSAGE.STAR_TRANSACTION:', tx);
+      console.log('[bot] MESSAGE.STAR_TRANSACTION:', tx);
 
       await handleStarTransaction({
         user_id: msg.from && msg.from.id,
@@ -205,12 +218,13 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // ВСЕГДА отвечаем 200 быстро
+    // Всегда отдаём 200, чтобы вебхук не падал
     return res.status(200).json({ ok: true });
   } catch (e) {
-    console.error('bot webhook fatal:', e);
+    console.error('[bot] webhook fatal:', e);
     return res
       .status(200)
       .json({ ok: false, error: String(e?.message || e) });
   }
 };
+
