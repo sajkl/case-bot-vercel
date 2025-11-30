@@ -28,7 +28,7 @@ html,body{margin:0;height:100%;background:#0b0d12;color:var(--text);font-family:
 
 /* локальные двери внутри ячейки */
 .cell-doors{
-  position:absolute;inset:14px; /* поверх картинки, внутри паддинга плитки */
+  position:absolute;inset:14px;
   background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden
 }
 .cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00)}
@@ -75,7 +75,7 @@ function getCaseId(){
 const caseId=getCaseId();
 console.debug('[case] using id =',caseId);
 
-// --- карта ассетов (пути проверь, чтобы PNG лежали именно здесь) ---
+// --- карта ассетов ---
 const ASSETS={
   jiga:{title:'Жига', price:249, stages:[
     '/assets/Case Lada P1.png',
@@ -98,7 +98,6 @@ const ASSETS={
     '/assets/Case Lambo P3.png'
   ]}
 };
-// авто-фолбэк, если какого-то PNG нет
 for(const k in ASSETS){const a=ASSETS[k].stages; if(!a[1]) a[1]=a[0]; if(!a[2]) a[2]=a[1];}
 
 const conf=ASSETS[caseId]||ASSETS.jiga;
@@ -123,10 +122,9 @@ for(let i=0;i<4;i++){
   `;
   grid.appendChild(cell);
 }
-// стартовое P1 на все плитки
 qsa('.crate img').forEach(img=>img.src=conf.stages[0]);
 
-// --- логика кликов: P1→P2→P3→приз с локальными дверьми ---
+// --- логика кликов ---
 grid.addEventListener('click', (e)=>{
   const cell=e.target.closest('.cell'); if(!cell) return;
   vib(12);
@@ -134,16 +132,16 @@ grid.addEventListener('click', (e)=>{
   const img=cell.querySelector('.crate img');
 
   if(stage<2){
-    cell.classList.add('show-hint'); setTimeout(()=>cell.classList.remove('show-hint'),260);
+    cell.classList.add('show-hint'); 
+    setTimeout(()=>cell.classList.remove('show-hint'),260);
     stage+=1; img.src=conf.stages[stage]; cell.dataset.stage=String(stage);
     return;
   }
 
-  // stage === 2 → запрос приза + локальные двери
+  // stage === 2 → открываем
   cell.dataset.stage='3';
   img.style.opacity='0';
 
-  // создать «двери» только в этой ячейке
   const doors=document.createElement('div');
   doors.className='cell-doors';
   doors.innerHTML=`
@@ -157,39 +155,55 @@ grid.addEventListener('click', (e)=>{
   `;
   cell.appendChild(doors);
 
-  // забрать приз с бэкенда
-  fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseId})})
-  .then(r=>r.json())
+  // безопасный запрос к /api/open — даже при 404/HTML не ломаем анимацию
+  fetch('/api/open',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({caseId})
+  })
+  .then(async r=>{
+    let data={};
+    try{ data=await r.json(); }catch(_){}
+    if(!r.ok) console.warn('/api/open status', r.status, data);
+    return data;
+  })
   .then(res=>{
     if(res && res.stars!=null) qs('#bal').textContent=res.stars;
-    const prizeImg= res?.prize?.image || '/assets/prizes/sample.png';
-    const prizeTitle= res?.prize?.title || 'Секретный приз';
-    doors.querySelector('#pimg').src=prizeImg;
-    doors.querySelector('#ptitle').textContent=prizeTitle;
 
-    // анимации именно в этой ячейке
+    const prizeImg  = res?.prize?.image || '/assets/prizes/sample.png';
+    const prizeText = res?.prize?.title || 'Секретный приз';
+
+    doors.querySelector('#pimg').src=prizeImg;
+    doors.querySelector('#ptitle').textContent=prizeText;
+
     cell.classList.add('open');
-    setTimeout(()=>cell.classList.add('reveal'), 380);
+    setTimeout(()=>cell.classList.add('reveal'),380);
 
     doors.querySelector('#ptake').onclick=()=>{
-      // закрываем локально: можно скрыть двери и оставить плитку «пустой»
+      // оставляем открытую пустую плитку
       cell.classList.remove('open','reveal');
       doors.remove();
-      // img.style.opacity='1'; // если нужно вернуть контейнер назад — раскомментируй
+      // если нужно вернуть контейнер, раскомментируй:
+      // img.style.opacity='1';
     };
   })
-  .catch(()=>{
-    // откат при ошибке
-    img.style.opacity='1';
-    cell.dataset.stage='2';
-    doors.remove();
+  .catch(err=>{
+    console.error('open fetch error:', err);
+    // даже при сетевой ошибке просто показываем дефолтный приз
+    cell.classList.add('open');
+    setTimeout(()=>cell.classList.add('reveal'),380);
+    doors.querySelector('#ptitle').textContent='Ошибка, но приз всё равно твой 😎';
   });
 });
 
-// на случай, если ты приходишь на case без query из главной:
-try{ if(!location.search.includes('id=')){ localStorage.setItem('lastCaseId', caseId); } }catch(_){}
+// сохраняем lastCaseId
+try{
+  if(!location.search.includes('id=')){
+    localStorage.setItem('lastCaseId', caseId);
+  }
+}catch(_){}
+
 console.debug('[case] assets:', conf);
 </script>
 </body>
 </html>
-
