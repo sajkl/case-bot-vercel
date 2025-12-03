@@ -388,7 +388,7 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
   border:10px solid #2c313f; border-bottom:none; border-radius:36px 36px 0 0; box-shadow:0 6px 0 #11161f inset
 }
 .cell-doors .spark{position:absolute; width:7px; height:7px; background:#ffd400; border-radius:50%; opacity:0}
-.cell-doors .spark--1{left:20%; top:20%} .spark--2{left:70%; top:35%} .spark--3{left:45%; top:10%}
+.cell-doors .spark--1{left:20%; top:20%} .cell-doors .spark--2{left:70%; top:35%} .cell-doors .spark--3{left:45%; top:10%}
 
 .cell-doors .prize{
   position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:8px;
@@ -454,20 +454,116 @@ button{border:none;background:none;color:inherit;font:inherit;padding:0;cursor:p
 .inv-item img { width:100%; height:72px; object-fit:contain; display:block; }
 .inv-name { margin-top:6px; font-size:12px; opacity:.9; }
 
-/* пополнение */
-.topup-hero { text-align:center; padding:20px 14px 6px; }
-.big-star { width:96px; height:96px; margin:0 auto 6px; object-fit:contain; }
-.topup-hero h1 { font-size:26px; margin:0; font-weight:800; }
-.muted { opacity:.8; }
-.hint { opacity:.6; font-size:12px; margin-top:8px; }
+/* пополнение — экран как на макете */
+.topup-page{
+  padding: 8px 16px 28px;
+}
 
-.topup-form { padding:14px; display:grid; gap:12px; }
-.field label { display:block; font-size:13px; opacity:.85; margin-bottom:6px; }
-.field input { width:100%; padding:12px 14px; border-radius:14px; border:1px solid #222; background:#0b0b0b; color:#fff; }
-.field .row { display:flex; gap:8px; }
-.seg { padding:12px 12px; border-radius:12px; border:1px solid #222; background:#141414; color:#fff; font-weight:700; }
+.topup-hero{
+  display:flex;
+  justify-content:center;
+  margin:10px 0 14px;
+}
+
+.big-star{
+  width:110px;
+  height:110px;
+  object-fit:contain;
+  filter:drop-shadow(0 12px 30px rgba(0,0,0,.65));
+}
+
+/* тёмная карточка с заголовком */
+.topup-card{
+  background:var(--panel);
+  border-radius:24px;
+  padding:20px 18px;
+  text-align:center;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,.04);
+  margin-bottom:18px;
+}
+
+.topup-card h1{
+  margin:0;
+  font-size:24px;
+  line-height:1.25;
+  font-weight:900;
+}
+
+/* блок полей */
+.topup-form{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+/* строка как капсула с иконкой */
+.topup-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 16px;
+  border-radius:18px;
+  background:#141822;
+  border:1px solid var(--border);
+  box-shadow:0 10px 26px rgba(0,0,0,.45);
+}
+
+.topup-icon{
+  font-size:18px;
+  opacity:.8;
+  flex-shrink:0;
+}
+
+/* инпут внутри капсулы */
+.topup-row input{
+  flex:1;
+  border:none;
+  outline:none;
+  background:transparent;
+  color:var(--text);
+  font-size:15px;
+}
+
+.topup-row input::placeholder{
+  color:rgba(255,255,255,.35);
+}
+
+/* кнопка «Себе» справа */
+.topup-chip{
+  flex-shrink:0;
+  padding:6px 14px;
+  border-radius:999px;
+  background:#222735;
+  border:1px solid #2f3544;
+  font-size:13px;
+  font-weight:700;
+  color:#fff;
+  cursor:pointer;
+}
+
+/* основная кнопка пополнения */
+.topup-submit{
+  width:100%;
+  margin-top:4px;
+  border-radius:999px;
+  font-size:18px;
+  font-weight:800;
+}
+
+.muted { opacity: .8; }
+.hint  { opacity: .6; font-size: 12px; margin-top: 8px; }
+
+/* чуть плотнее на узких экранах */
+@media (max-width:390px){
+  .topup-card h1{ font-size:22px; }
+  .big-star{ width:96px; height:96px; }
+  .topup-row{ padding:12px 14px; }
+}
 
 /* утилити */
 .back { color:#9ad; text-decoration:none; }
 .header .balance { display:flex; align-items:center; gap:6px; padding:6px 10px; background:#f7c300; color:#000; border-radius:20px; font-weight:900; }
 .header .balance .star { filter:drop-shadow(0 2px 6px rgba(0,0,0,.2)); }
+
