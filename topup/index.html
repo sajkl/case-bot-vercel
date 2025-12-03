@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Покупка звёзд — Lambo Drop</title>
+  <title>Пополнить аккаунт звёздами — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css?v=13">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -22,44 +22,46 @@
     <!-- Контент пополнения -->
     <main class="topup-page">
 
-      <!-- Картинка сверху (если захочешь – подставь свою) -->
-      <div class="topup-art">
-        <!-- <img src="/assets/topup-star.png" alt=""> -->
-      </div>
+      <!-- Большая звезда -->
+      <section class="topup-hero">
+        <!-- Положи сюда свою картинку звезды -->
+        <img class="big-star" src="/assets/topup-star.png" alt="Звезда">
+      </section>
 
-      <h1 class="topup-title">Покупка звёзд</h1>
-      <p class="topup-subtitle">На Telegram аккаунт и без KYC</p>
-      <p class="topup-note">
-        После покупки вы получите звёзды на аккаунт Telegram (не на баланс приложения)!
-      </p>
+      <!-- Тёмная карточка с заголовком -->
+      <section class="topup-card">
+        <h1>Пополнить аккаунт<br>звёздами</h1>
+      </section>
 
-      <!-- Поле юзернейма -->
-      <section class="topup-field">
-        <div class="label">@ Юзернейм</div>
-        <div class="field-with-button">
+      <!-- Поля ввода -->
+      <section class="topup-form">
+
+        <!-- Юзернейм -->
+        <div class="topup-row">
+          <span class="topup-icon">@</span>
           <input
             id="topup-username"
             type="text"
-            class="input"
-            placeholder="@username">
-          <button id="topup-self" class="small-btn">Себе</button>
+            placeholder="Юзернейм">
+          <button id="topup-self" class="topup-chip">Себе</button>
         </div>
-      </section>
 
-      <!-- Поле количества звёзд -->
-      <section class="topup-field">
-        <div class="label">★ Количество звёзд</div>
-        <input
-          id="topup-amount"
-          type="number"
-          class="input"
-          min="1"
-          step="1"
-          value="10">
+        <!-- Количество звёзд -->
+        <div class="topup-row">
+          <span class="topup-icon">★</span>
+          <input
+            id="topup-amount"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Количество звёзд"
+            value="10">
+        </div>
+
       </section>
 
       <!-- Основная кнопка -->
-      <button id="topup-submit" class="primary big-btn">
+      <button id="topup-submit" class="primary xl topup-submit">
         Пополнить
       </button>
 
@@ -75,115 +77,106 @@
 
   <!-- ЛОГИКА ПОПОЛНЕНИЯ -->
   <script>
-  (async () => {
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    (async () => {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
 
-    const usernameInput = document.getElementById('topup-username');
-    const selfBtn       = document.getElementById('topup-self');
-    const amountInput   = document.getElementById('topup-amount');
-    const submitBtn     = document.getElementById('topup-submit');
-    const balEl         = document.getElementById('balanceValue');
+      const usernameInput = document.getElementById('topup-username');
+      const selfBtn       = document.getElementById('topup-self');
+      const amountInput   = document.getElementById('topup-amount');
+      const submitBtn     = document.getElementById('topup-submit');
+      const balEl         = document.getElementById('balanceValue');
 
-    // 1) Подтягиваем юзера и баланс
-    try {
-      const unsafeUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
-      if (unsafeUser && unsafeUser.username && usernameInput && !usernameInput.value) {
-        usernameInput.value = '@' + unsafeUser.username;
-      }
-
-      const prof = await fetch('/api/profile', { credentials:'include' })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
-
-      if (prof && typeof prof.stars !== 'undefined') {
-        balEl.textContent = prof.stars;
-      }
-    } catch (e) {
-      console.warn('init topup error', e);
-    }
-
-    // 2) Кнопка "Себе"
-    if (selfBtn) {
-      selfBtn.addEventListener('click', () => {
-        try {
-          const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-          if (u && u.username) {
-            usernameInput.value = '@' + u.username;
-          } else {
-            tg.showAlert('Не удалось получить username из Telegram');
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      });
-    }
-
-    // 3) Создание инвойса
-    async function createAndOpenInvoice() {
-      const raw = (amountInput && amountInput.value || '').trim();
-      const amount = Number(raw);
-
-      if (!Number.isInteger(amount) || amount <= 0) {
-        tg.showAlert('Укажи количество звёзд (целое число > 0)');
-        return;
-      }
-
-      submitBtn.disabled = true;
-
+      // 1) Подтягиваем юзера и баланс
       try {
-        const payload = {
-          amount,
-          username: (usernameInput && usernameInput.value || '').trim()
-        };
+        const unsafeUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
+        if (unsafeUser && unsafeUser.username && usernameInput && !usernameInput.value) {
+          usernameInput.value = '@' + unsafeUser.username;
+        }
 
-        const res = await fetch('/api/create-stars-invoice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',              // <-- важно! отправляем sid
-          body: JSON.stringify(payload)
-        }).then(r => r.json());
+        const prof = await fetch('/api/profile', { credentials:'include' })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null);
 
-        console.log('create-stars-invoice:', res);
+        if (prof && typeof prof.stars !== 'undefined') {
+          balEl.textContent = prof.stars;
+        }
+      } catch (e) {
+        console.warn('init topup error', e);
+      }
 
-        if (!res.ok) {
-          const msg =
-            (res.tg && res.tg.description) ||
-            res.reason ||
-            'Неизвестная ошибка при создании счёта';
-          tg.showAlert('Ошибка при создании счёта:\n' + msg);
+      // 2) Кнопка "Себе"
+      if (selfBtn) {
+        selfBtn.addEventListener('click', () => {
+          try {
+            const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+            if (u && u.username) {
+              usernameInput.value = '@' + u.username;
+            } else {
+              tg.showAlert('Не удалось получить username из Telegram');
+            }
+          } catch (e) {
+            console.warn(e);
+          }
+        });
+      }
+
+      // 3) Создание инвойса
+      async function createAndOpenInvoice() {
+        const raw = (amountInput && amountInput.value || '').trim();
+        const amount = Number(raw);
+
+        if (!Number.isInteger(amount) || amount <= 0) {
+          tg.showAlert('Укажи количество звёзд (целое число > 0)');
           return;
         }
 
-    if (!res.ok) {
-  const msg =
-    (res.tg && res.tg.description) ||
-    res.reason ||
-    'Неизвестная ошибка при создании счёта';
-  tg.showAlert('Ошибка при создании счёта:\n' + msg);
-  return;
-}
+        submitBtn.disabled = true;
 
-// всё ок — счёт улетел тебе в личку с ботом
-tg.showAlert('Мы отправили счёт в чат с ботом,\nоплати его там 👌');
+        try {
+          const payload = {
+            amount,
+            username: (usernameInput && usernameInput.value || '').trim()
+          };
 
-      } catch (e) {
-        console.error('buyStars error', e);
-        tg.showAlert('Ошибка сети при создании счёта');
-      } finally {
-        submitBtn.disabled = false;
+          const res = await fetch('/api/create-stars-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          }).then(r => r.json());
+
+          console.log('create-stars-invoice:', res);
+
+          if (!res.ok) {
+            const msg =
+              (res.tg && res.tg.description) ||
+              res.reason ||
+              'Неизвестная ошибка при создании счёта';
+            tg.showAlert('Ошибка при создании счёта:\n' + msg);
+            return;
+          }
+
+          // всё ок — счёт улетел тебе в личку с ботом
+          tg.showAlert('Мы отправили счёт в чат с ботом,\nоплати его там 👌');
+
+        } catch (e) {
+          console.error('buyStars error', e);
+          tg.showAlert('Ошибка сети при создании счёта');
+        } finally {
+          submitBtn.disabled = false;
+        }
       }
-    }
 
-    if (submitBtn) {
-      submitBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        createAndOpenInvoice();
-      });
-    }
-  })();
-</script>
+      if (submitBtn) {
+        submitBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          createAndOpenInvoice();
+        });
+      }
+    })();
+  </script>
 
 </body>
 </html>
