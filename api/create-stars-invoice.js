@@ -1,5 +1,5 @@
 // api/create-stars-invoice.js
-// Вместо createInvoiceLink шлём обычный sendInvoice в ЛС с ботом (Stars)
+// Теперь создаём invoice-линк и оплачиваем прямо в мини-аппе через openInvoice
 
 const crypto = require('crypto');
 
@@ -50,7 +50,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok:false, reason:'BOT_TOKEN env is empty' });
   }
   if (!APP_SECRET) {
-    // Сюда мы попадём только если нет BOT_TOKEN и нет APP_SECRET, но это уже край
     return res.status(200).json({ ok:false, reason:'APP_SECRET resolved empty' });
   }
 
@@ -75,20 +74,20 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok:false, reason:'bad amount' });
   }
 
+  // просто запомним в payload, кому и когда
   const payload = `stars:${userId}:${Date.now()}`;
 
-  // 3) sendInvoice (счёт уходит в ЛС с ботом)
-  const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`;
+  // 3) createInvoiceLink — получаем ссылку на счёт
+  const apiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
 
   const body = {
-    chat_id: userId,
     title: 'Покупка звёзд',
     description: 'Пополнение звёзд в LamboLuck',
     payload,
     provider_token: '',          // для Stars — пусто
     currency: 'XTR',             // Stars
     prices: [
-      { label: 'Stars', amount } // сколько звёзд покупаем
+      { label: 'Stars', amount } // количество звёзд
     ]
   };
 
@@ -112,10 +111,10 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // data.result — это URL счёта
     return res.status(200).json({
       ok: true,
-      message_id: data.result.message_id,
-      chat_id: data.result.chat.id,
+      invoice_url: data.result,
       user: { id: userId, username: tgUser?.username || null }
     });
   } catch (e) {
