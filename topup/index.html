@@ -76,19 +76,20 @@
   </div>
 
   <!-- ЛОГИКА ПОПОЛНЕНИЯ -->
-  <script>
-    (async () => {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      tg.expand();
+<script>
+  (async () => {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-      const usernameInput = document.getElementById('topup-username');
-      const selfBtn       = document.getElementById('topup-self');
-      const amountInput   = document.getElementById('topup-amount');
-      const submitBtn     = document.getElementById('topup-submit');
-      const balEl         = document.getElementById('balanceValue');
+    const usernameInput = document.getElementById('topup-username');
+    const selfBtn       = document.getElementById('topup-self');
+    const amountInput   = document.getElementById('topup-amount');
+    const submitBtn     = document.getElementById('topup-submit');
+    const balEl         = document.getElementById('balanceValue');
 
-      // 1) Подтягиваем юзера и баланс
+    // 1) Подтягиваем юзера и баланс
+    async function loadProfile() {
       try {
         const unsafeUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
         if (unsafeUser && unsafeUser.username && usernameInput && !usernameInput.value) {
@@ -105,78 +106,113 @@
       } catch (e) {
         console.warn('init topup error', e);
       }
+    }
 
-      // 2) Кнопка "Себе"
-      if (selfBtn) {
-        selfBtn.addEventListener('click', () => {
-          try {
-            const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-            if (u && u.username) {
-              usernameInput.value = '@' + u.username;
-            } else {
-              tg.showAlert('Не удалось получить username из Telegram');
-            }
-          } catch (e) {
-            console.warn(e);
+    await loadProfile();
+
+    // 2) Кнопка "Себе"
+    if (selfBtn) {
+      selfBtn.addEventListener('click', () => {
+        try {
+          const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+          if (u && u.username) {
+            usernameInput.value = '@' + u.username;
+          } else {
+            tg.showAlert('Не удалось получить username из Telegram');
           }
-        });
+        } catch (e) {
+          console.warn(e);
+        }
+      });
+    }
+
+    // 3) Создание инвойса и открытие оплаты в мини-аппе
+    async function createAndOpenInvoice() {
+      const raw = (amountInput && amountInput.value || '').trim();
+      const amount = Number(raw);
+
+      if (!Number.isInteger(amount) || amount <= 0) {
+        tg.showAlert('Укажи количество звёзд (целое число > 0)');
+        return;
       }
 
-      // 3) Создание инвойса
-      async function createAndOpenInvoice() {
-        const raw = (amountInput && amountInput.value || '').trim();
-        const amount = Number(raw);
+      submitBtn.disabled = true;
 
-        if (!Number.isInteger(amount) || amount <= 0) {
-          tg.showAlert('Укажи количество звёзд (целое число > 0)');
+      try {
+        const payload = {
+          amount,
+          username: (usernameInput && usernameInput.value || '').trim()
+        };
+
+        const res = await fetch('/api/create-stars-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        }).then(r => r.json());
+
+        console.log('create-stars-invoice:', res);
+
+        if (!res || !res.ok) {
+          const msg =
+            (res && res.tg && res.tg.description) ||
+            (res && res.reason) ||
+            'Неизвестная ошибка при создании счёта';
+          tg.showAlert('Ошибка при создании счёта:\n' + msg);
           return;
         }
 
-        submitBtn.disabled = true;
-
-        try {
-          const payload = {
-            amount,
-            username: (usernameInput && usernameInput.value || '').trim()
-          };
-
-          const res = await fetch('/api/create-stars-invoice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-          }).then(r => r.json());
-
-          console.log('create-stars-invoice:', res);
-
-          if (!res.ok) {
-            const msg =
-              (res.tg && res.tg.description) ||
-              res.reason ||
-              'Неизвестная ошибка при создании счёта';
-            tg.showAlert('Ошибка при создании счёта:\n' + msg);
-            return;
-          }
-
-          // всё ок — счёт улетел тебе в личку с ботом
-          tg.showAlert('Мы отправили счёт в чат с ботом,\nоплати его там 👌');
-
-        } catch (e) {
-          console.error('buyStars error', e);
-          tg.showAlert('Ошибка сети при создании счёта');
-        } finally {
-          submitBtn.disabled = false;
+        if (!res.invoice_url) {
+          tg.showAlert('Сервер не вернул ссылку на счёт');
+          return;
         }
-      }
 
-      if (submitBtn) {
-        submitBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          createAndOpenInvoice();
+        if (!tg.openInvoice) {
+          // fallback, если вдруг клиент старый и не поддерживает openInvoice
+          tg.showAlert('Оплата в Mini App недоступна в этом клиенте Telegram.\n' +
+                       'Счёт: ' + res.invoice_url);
+          return;
+        }
+
+        // Открываем платёж Stars внутри мини-аппа
+        tg.openInvoice(res.invoice_url, async (status) => {
+          console.log('invoice status:', status);
+
+          if (status === 'paid') {
+            tg.showAlert('Оплата прошла успешно! Звёзды скоро появятся на аккаунте 👌');
+
+            // пробуем обновить баланс после оплаты
+            try {
+              await loadProfile();
+            } catch (e) {
+              console.warn('profile reload error', e);
+            }
+          } else if (status === 'cancelled') {
+            tg.showAlert('Оплата отменена');
+          } else if (status === 'failed') {
+            tg.showAlert('Оплата не удалась, попробуй ещё раз');
+          } else {
+            tg.showAlert('Счёт закрыт со статусом: ' + status);
+          }
         });
+
+      } catch (e) {
+        console.error('buyStars error', e);
+        tg.showAlert('Ошибка сети при создании счёта');
+      } finally {
+        submitBtn.disabled = false;
       }
-    })();
-  </script>
+    }
+
+    if (submitBtn) {
+      submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        createAndOpenInvoice();
+      });
+    }
+  })();
+</script>
+
 
 </body>
 </html>
