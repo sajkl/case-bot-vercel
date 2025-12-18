@@ -1,19 +1,20 @@
 // /api/bot.js
 'use strict';
 
-// --- мягко подключаем БД (может и не быть) ---
+// --- Подключаем БД ---
 let db = null;
 try {
-  db = require('../db'); // если файла нет или он падает, мы просто логируем
+  db = require('../db');
   console.log('[bot] db module loaded');
 } catch (e) {
-  console.warn('[bot] db module NOT loaded, will only log star tx. Reason:', e.message || e);
+  console.warn('[bot] db module NOT loaded. Transactions will FAIL properly.', e.message);
 }
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
+// Ссылка на твой Web App (замени, если поменяется домен)
 const WEBAPP_URL = 'https://case-bot-vercel.vercel.app/profile/';
 
-// --- минимальный клиент Telegram Bot API ---
+// --- Утилита для запросов к Telegram ---
 async function tg(method, payload) {
   if (!BOT_TOKEN) {
     console.error('[tg] BOT_TOKEN is empty');
@@ -47,120 +48,108 @@ async function sendMessage(chatId, text, replyMarkup) {
   });
 }
 
-// --- логика начисления звёзд ---
+// --- ЛОГИКА НАЧИСЛЕНИЯ ЗВЁЗД (Самое важное) ---
 async function handleStarTransaction(tx) {
   const userId = tx.user_id;
-  if (!userId) {
-    console.warn('[stars] tx without userId', tx);
+  
+  // Telegram иногда присылает amount, иногда total_amount
+  const starsSpent = tx.stars || tx.amount || tx.total_amount || 0;
+
+  if (!userId || starsSpent <= 0) {
+    console.warn('[stars] Invalid tx data:', tx);
     return;
   }
 
-  const starsSpent =
-    tx.stars ??
-    tx.amount ??
-    tx.total_amount ??
-    0;
+  console.log(`[stars] Processing tx for User ${userId}, Amount: ${starsSpent}`);
 
-  if (!starsSpent || starsSpent <= 0) {
-    console.warn('[stars] tx without amount', tx);
-    return;
-  }
-
-  const addStars = starsSpent;
-  console.log('[stars] incoming tx', { userId, addStars, raw: tx });
-
-  // Если БД не подключена – просто логируем, чтобы не уронить функцию
   if (!db) {
-    console.warn('[stars] db not loaded, skipping DB write');
+    console.error('[stars] DB not connected! Cannot save transaction.');
     return;
   }
 
   try {
     await db.query('BEGIN');
 
-    const curRes = await db.query(
-      `SELECT stars FROM balances WHERE user_id = $1 FOR UPDATE`,
-      [userId]
-    );
-    const current = curRes.rows[0] ? Number(curRes.rows[0].stars) : 0;
-    const next = current + addStars;
+    // 1. ГАРАНТИЯ: Создаем юзера, если его нет (чтобы не упал Foreign Key)
+    // Даже если мы не знаем username, нам нужен хотя бы ID в таблице users
+    await db.query(`
+      INSERT INTO users (telegram_id) VALUES ($1)
+      ON CONFLICT (telegram_id) DO NOTHING
+    `, [userId]);
 
-    await db.query(
-      `INSERT INTO balances (user_id, stars)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET
-         stars = EXCLUDED.stars,
-         updated_at = now()`,
-      [userId, next]
-    );
+    // 2. ОБНОВЛЕНИЕ БАЛАНСА (Upsert)
+    // Сразу прибавляем и возвращаем новое значение
+    const res = await db.query(`
+      INSERT INTO balances (user_id, stars)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        stars = balances.stars + $2,
+        updated_at = NOW()
+      RETURNING stars
+    `, [userId, starsSpent]);
 
-    await db.query(
-      `INSERT INTO balance_tx (user_id, type, amount, balance_before, balance_after, meta)
-       VALUES ($1, 'topup_stars', $2, $3, $4, $5)`,
-      [userId, addStars, current, next, JSON.stringify(tx)]
-    );
+    const newBalance = res.rows[0].stars;
+    const oldBalance = newBalance - starsSpent;
+
+    // 3. ЗАПИСЬ В ИСТОРИЮ
+    await db.query(`
+      INSERT INTO balance_tx (user_id, type, amount, balance_before, balance_after, meta)
+      VALUES ($1, 'topup_stars', $2, $3, $4, $5)
+    `, [userId, starsSpent, oldBalance, newBalance, JSON.stringify(tx)]);
 
     await db.query('COMMIT');
-    console.log('[stars] topup OK', { userId, addStars, current, next });
+    console.log(`[stars] SUCCESS! User ${userId} +${starsSpent}★. New Balance: ${newBalance}`);
+    
   } catch (e) {
-    console.error('[stars] db error:', e);
     await db.query('ROLLBACK').catch(() => {});
+    console.error('[stars] Transaction FAILED:', e);
   }
 }
 
+// --- ОСНОВНОЙ ОБРАБОТЧИК WEBHOOK ---
 module.exports = async function handler(req, res) {
   try {
-    // Быстрый чек из браузера: /api/bot
+    // GET запрос для проверки статуса
     if (req.method === 'GET') {
       const masked = BOT_TOKEN
         ? BOT_TOKEN.slice(0, 6) + '…' + BOT_TOKEN.slice(-4)
         : '(empty)';
       return res.status(200).json({
         ok: true,
-        token_mask: masked,
-        db_loaded: !!db
+        status: 'Bot is running',
+        db_connected: !!db,
+        token_mask: masked
       });
     }
 
     if (req.method !== 'POST') {
-      return res
-        .status(200)
-        .json({ ok: true, hint: 'POST Telegram update JSON here' });
+      return res.status(200).json({ ok: true, hint: 'Send POST with Telegram update' });
     }
 
     let update = req.body;
+    // Парсинг на случай, если пришла строка
     if (typeof update === 'string') {
-      try {
-        update = JSON.parse(update || '{}');
-      } catch {
-        update = {};
-      }
+      try { update = JSON.parse(update); } catch { update = {}; }
     }
     update = update || {};
 
-    console.log('[bot] TG UPDATE:', JSON.stringify(update, null, 2));
+    // Логируем только важные события, чтобы не засорять логи
+    if (update.message || update.pre_checkout_query || update.purchased_paid_media) {
+      console.log('[bot] Update:', JSON.stringify(update).slice(0, 200) + '...');
+    }
 
     const msg = update.message || update.edited_message || null;
 
-    // 1) /start → кнопка с WebApp
-    if (
-      msg?.chat?.type === 'private' &&
-      typeof msg.text === 'string' &&
-      msg.text.trim().startsWith('/start')
-    ) {
-      await sendMessage(msg.chat.id, 'Открой мини-апп 👇', {
-        inline_keyboard: [
-          [
-            {
-              text: '🚀 Открыть Lambo Drop',
-              web_app: { url: WEBAPP_URL }
-            }
-          ]
-        ]
+    // 1) /start
+    if (msg?.text?.startsWith('/start')) {
+      await sendMessage(msg.chat.id, 'Привет! Открой приложение, чтобы испытать удачу 👇', {
+        inline_keyboard: [[{ text: '🚀 Открыть Lambo Drop', web_app: { url: WEBAPP_URL } }]]
       });
     }
 
-    // 2) pre_checkout_query → ОБЯЗАТЕЛЬНО ответить ok:true
+    // 2) PRE_CHECKOUT_QUERY (Критично для оплаты!)
+    // Telegram спрашивает: "Можно провести оплату?" Мы отвечаем: "Да" (ok: true)
     if (update.pre_checkout_query) {
       await tg('answerPreCheckoutQuery', {
         pre_checkout_query_id: update.pre_checkout_query.id,
@@ -168,63 +157,32 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 3) successful_payment (инвойсы, в т.ч. звёздные)
+    // 3) SUCCESSFUL_PAYMENT (Инвойсы)
     if (msg && msg.successful_payment) {
       const pay = msg.successful_payment;
-      console.log('[bot] SUCCESSFUL_PAYMENT:', pay);
-
       await handleStarTransaction({
-        user_id: msg.from && msg.from.id,
+        user_id: msg.from.id,
         total_amount: pay.total_amount,
-        currency: pay.currency,
         payload: pay.invoice_payload,
         raw: pay
       });
-
-      await sendMessage(
-        msg.chat.id,
-        'Оплата прошла успешно ✅ Звёзды зачислены на баланс в приложении.'
-      );
+      // Можно отправить подтверждение
+      await sendMessage(msg.chat.id, `✅ Оплата принята! +${pay.total_amount} звезд.`);
     }
 
-    // 4) stars_transaction (если Телеграм пришлёт отдельным полем)
+    // 4) Обычные Stars транзакции (если приходят отдельно)
     if (update.stars_transaction) {
       const tx = update.stars_transaction;
-      console.log('[bot] STARS_TRANSACTION:', tx);
-
       await handleStarTransaction({
-        user_id: tx.from && tx.from.id,
-        amount: tx.amount,
-        raw: tx
-      });
-
-      if (tx.from?.id) {
-        await sendMessage(
-          tx.from.id,
-          `⭐ Успешная звёздная транзакция на ${tx.amount} звёзд. Баланс обновлён.`
-        );
-      }
-    }
-
-    // 5) message.star_transaction (на всякий случай)
-    if (msg && msg.star_transaction) {
-      const tx = msg.star_transaction;
-      console.log('[bot] MESSAGE.STAR_TRANSACTION:', tx);
-
-      await handleStarTransaction({
-        user_id: msg.from && msg.from.id,
+        user_id: tx.from.id, // ВАЖНО: проверить структуру update, id может быть в user
         amount: tx.amount,
         raw: tx
       });
     }
 
-    // Всегда отдаём 200, чтобы вебхук не падал
     return res.status(200).json({ ok: true });
   } catch (e) {
-    console.error('[bot] webhook fatal:', e);
-    return res
-      .status(200)
-      .json({ ok: false, error: String(e?.message || e) });
+    console.error('[bot] Fatal error:', e);
+    return res.status(200).json({ ok: false, error: e.message });
   }
 };
-
