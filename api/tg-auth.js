@@ -2,8 +2,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const db = require('../db'); // <--- 1. ВАЖНО: Подключаем базу данных
 
-const BOT_TOKEN  = (process.env.BOT_TOKEN || '').trim(); // пока не используем, но пусть будет
+const BOT_TOKEN   = (process.env.BOT_TOKEN || '').trim();
 const APP_SECRET = (process.env.APP_SECRET || (BOT_TOKEN + ':dev')).trim();
 
 function signJwt(payload, secret, expSec = 60 * 60 * 24 * 7) {
@@ -57,6 +58,40 @@ module.exports = async function handler(req, res) {
     if (!user || !user.id) {
       return res.status(200).json({ ok: false, reason: 'no user in initData' });
     }
+
+    // --- 2. НАЧАЛО ВСТАВКИ БД ---
+    // Сохраняем пользователя в Neon и создаем баланс, если их нет
+    try {
+      // А. Upsert пользователя (создать или обновить фото/имя)
+      await db.query(`
+        INSERT INTO users (telegram_id, username, first_name, photo_url)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (telegram_id)
+        DO UPDATE SET
+          username = EXCLUDED.username,
+          first_name = EXCLUDED.first_name,
+          photo_url = EXCLUDED.photo_url
+      `, [
+        user.id,
+        user.username || null,
+        user.first_name || '',
+        user.photo_url || null
+      ]);
+
+      // Б. Создаем кошелек с 0 балансом (если его нет)
+      await db.query(`
+        INSERT INTO balances (user_id, stars)
+        VALUES ($1, 0)
+        ON CONFLICT (user_id) DO NOTHING
+      `, [user.id]);
+
+      console.log(`[auth] User ${user.id} synced with DB`);
+    } catch (dbErr) {
+      console.error('[auth] DB Error:', dbErr);
+      // Мы не прерываем выполнение, чтобы авторизация прошла даже если БД глючит,
+      // но в идеале здесь можно делать return res.status(500)...
+    }
+    // --- КОНЕЦ ВСТАВКИ БД ---
 
     // ⚠️ ВАЖНО: без проверки подписи! ТОЛЬКО для разработки.
     const token = signJwt(
