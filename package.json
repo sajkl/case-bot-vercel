@@ -4,5 +4,8 @@
   "scripts": {
     "vercel-build": "echo \"Build step not required\""
   },
-  "dependencies": {"@telegram-apps/init-data-node": "^1.2.0"}
+  "dependencies": {
+    "@telegram-apps/init-data-node": "^1.2.0",
+    "pg": "^8.11.3" 
+  }
 }
