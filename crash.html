@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Crash — Lambo Drop</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Специфичные стили для Crash, можно потом перенести в styles.css */
+    .crash-area {
+      position: relative;
+      margin: 10px 16px;
+      height: 280px;
+      background: #171b24;
+      border-radius: 24px;
+      border: 1px solid #232838;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .crash-counter {
+      position: relative;
+      z-index: 2;
+      font-size: 56px;
+      font-weight: 900;
+      color: #fff;
+      font-feature-settings: "tnum"; /* моноширинные цифры, чтобы не скакало */
+      text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    
+    .crash-counter.crashed {
+      color: var(--b-red);
+    }
+
+    .controls-panel {
+      margin: 0 16px;
+      padding: 16px;
+      background: #1d212b;
+      border-radius: 24px;
+      border: 1px solid #2a2f3d;
+    }
+
+    .bet-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .bet-input-wrap {
+      flex: 1;
+      background: #11141b;
+      border: 1px solid #232838;
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bet-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      font-size: 20px;
+      font-weight: 900;
+      text-transform: uppercase;
+      transition: 0.1s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    /* Состояния кнопки */
+    .btn-start {
+      background: var(--accent);
+      color: #111;
+    }
+    .btn-cashout {
+      background: #ff9f00; /* Оранжевый для вывода */
+      color: #111;
+      box-shadow: 0 0 20px rgba(255, 159, 0, 0.4);
+    }
+    .btn-wait {
+      background: #2c313f;
+      color: #777;
+      pointer-events: none;
+    }
+
+    /* История коэффициентов (сверху) */
+    .history-bar {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 10px;
+      overflow-x: auto;
+      mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    }
+    .hist-pill {
+      background: #232838;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #a5abb8;
+      white-space: nowrap;
+    }
+    .hist-pill.high { color: var(--b-green); }
+    .hist-pill.low { color: var(--b-red); }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="/" class="back" style="padding: 8px 14px; border-radius: 12px;">← Назад</a>
+      <div class="balance" id="balance">
+        <span class="star">★</span><span class="value" id="balanceValue">0</span>
+      </div>
+    </header>
+
+    <div class="history-bar" id="historyBar">
+      <div class="hist-pill">1.20x</div>
+      <div class="hist-pill high">5.40x</div>
+    </div>
+
+    <div class="crash-area">
+      <canvas id="gameCanvas"></canvas>
+      <div class="crash-counter" id="counter">1.00x</div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="bet-row">
+        <div class="bet-input-wrap">
+          <span class="star" style="color:var(--accent)">★</span>
+          <input type="number" id="betAmount" class="bet-input" value="10" placeholder="Ставка">
+        </div>
+        <button class="btn" style="padding:10px; font-size:12px;" onclick="setBet(50)">50</button>
+        <button class="btn" style="padding:10px; font-size:12px;" onclick="setBet(100)">100</button>
+      </div>
+      
+      <button id="mainBtn" class="action-btn btn-start">Ставка</button>
+    </div>
+
+    <nav class="nav">
+      <a class="btn" href="/">Кейсы</a>
+      <a class="btn active" href="/crash.html">Crash</a>
+      <a class="btn" href="/profile/">Профиль</a>
+    </nav>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    // --- НАСТРОЙКИ ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const counterEl = document.getElementById('counter');
+    const btn = document.getElementById('mainBtn');
+    const historyBar = document.getElementById('historyBar');
+    
+    let width, height;
+    let animationId;
+    let startTime;
+    let gameState = 'IDLE'; // IDLE, PLAYING, CRASHED
+    let currentMultiplier = 1.00;
+    let crashPoint = 0; // Определим при старте
+    
+    // Подстройка размера канваса
+    function resize() {
+      const parent = canvas.parentElement;
+      width = parent.clientWidth;
+      height = parent.clientHeight;
+      canvas.width = width * 2; // Retina fix
+      canvas.height = height * 2;
+      ctx.scale(2, 2);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- ЛОГИКА ИГРЫ (ФРОНТЕНД СИМУЛЯЦИЯ) ---
+    
+    // Эйзинг для красивого роста (экспонента)
+    function getMultiplier(ms) {
+      // E^ (ms / 10000) -- растет медленно, потом быстро
+      // Простая формула для примера: 1 + 0.06 * t + exp...
+      // Используем стандартную логику Crash: 
+      // Multiplier = e^(0.00006 * ms) 
+      // (60ms = 1.01x)
+      return Math.pow(Math.E, 0.00006 * ms);
+    }
+
+    function drawGraph(progress) {
+      ctx.clearRect(0, 0, width, height);
+      
+      // Рисуем сетку (фон)
+      ctx.strokeStyle = '#232838';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      // Горизонтальные линии
+      for(let i=1; i<5; i++) {
+        const y = height - (i * height / 5);
+        ctx.moveTo(0, y); ctx.lineTo(width, y);
+      }
+      ctx.stroke();
+
+      if (gameState === 'IDLE') return;
+
+      // Рисуем кривую
+      ctx.beginPath();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = gameState === 'CRASHED' ? '#ff4d4d' : '#ffd400';
+      ctx.lineCap = 'round';
+
+      // Математика кривой (Bezier)
+      // Начало в левом нижнем углу
+      const startX = 0;
+      const startY = height;
+      
+      // Конец (зависит от времени)
+      // Мы просто двигаем точку по диагонали вверх-вправо
+      // t = 0..1 (где 1 это момент краша или текущий момент)
+      
+      // Для красоты просто рисуем линию, которая загибается вверх
+      // X движется линейно, Y экспоненциально
+      
+      // Нормализуем прогресс для анимации (чтобы график всегда был на экране)
+      // Если множитель > 2, начинаем "сдвигать" график влево
+      
+      ctx.moveTo(0, height);
+      
+      // Простая квадратичная кривая для визуализации
+      // cpX, cpY - контрольная точка
+      let endX = width * 0.8; 
+      let endY = height * 0.2;
+      
+      if (gameState === 'CRASHED') {
+         // Линия обрывается
+      }
+
+      // Рисуем параболу
+      ctx.quadraticCurveTo(width * 0.4, height, width - 40, height - 40);
+      ctx.stroke();
+
+      // Рисуем "Ракету" (кружок) на конце
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(width - 40, height - 40, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Свет от ракеты
+      ctx.fillStyle = 'rgba(255, 212, 0, 0.3)';
+      ctx.beginPath();
+      ctx.arc(width - 40, height - 40, 15 + Math.sin(Date.now()/100)*5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function gameLoop() {
+      if (gameState !== 'PLAYING') return;
+      
+      const now = Date.now();
+      const elapsed = now - startTime;
+      currentMultiplier = getMultiplier(elapsed); // Рост коэффициента
+
+      counterEl.textContent = currentMultiplier.toFixed(2) + 'x';
+      
+      drawGraph(); // В реальности тут нужно считать координаты точки от времени
+
+      // Проверка на краш
+      if (currentMultiplier >= crashPoint) {
+        crash();
+      } else {
+        animationId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function startGame() {
+      // 1. Проверка баланса (здесь должна быть валидация)
+      // 2. Определяем точку краша (в реальной игре это делает сервер)
+      // Для теста: рандом от 1.00 до 10.00
+      crashPoint = (1 + Math.random() * 5).toFixed(2); 
+      // Иногда делаем мгновенный краш (1.00)
+      if (Math.random() < 0.2) crashPoint = 1.05;
+
+      console.log('Server result:', crashPoint);
+
+      gameState = 'PLAYING';
+      startTime = Date.now();
+      counterEl.classList.remove('crashed');
+      counterEl.style.color = '#fff';
+      
+      // UI
+      btn.className = 'action-btn btn-cashout';
+      btn.textContent = 'ЗАБРАТЬ';
+      btn.onclick = cashOut;
+
+      gameLoop();
+    }
+
+    function cashOut() {
+      if (gameState !== 'PLAYING') return;
+      
+      gameState = 'IDLE'; // Выиграл
+      cancelAnimationFrame(animationId);
+      
+      const winAmount = Math.floor(document.getElementById('betAmount').value * currentMultiplier);
+      // Тут отправляем запрос на сервер /api/crash/win
+      
+      btn.className = 'action-btn btn-start';
+      btn.textContent = `ВЫИГРЫШ: ${winAmount}`;
+      btn.style.background = '#2ad06c'; // Зеленый
+      
+      addHistory(currentMultiplier.toFixed(2), true);
+      
+      setTimeout(() => {
+        resetBtn();
+      }, 2000);
+    }
+
+    function crash() {
+      gameState = 'CRASHED';
+      cancelAnimationFrame(animationId);
+      
+      counterEl.textContent = crashPoint + 'x';
+      counterEl.classList.add('crashed');
+      
+      btn.className = 'action-btn btn-wait';
+      btn.textContent = 'КРАШ';
+      
+      addHistory(crashPoint, false);
+      
+      setTimeout(() => {
+        resetBtn();
+      }, 2000);
+    }
+
+    function resetBtn() {
+      gameState = 'IDLE';
+      btn.className = 'action-btn btn-start';
+      btn.textContent = 'СТАВКА';
+      btn.onclick = startGame;
+      ctx.clearRect(0, 0, width, height); // Очистить график
+      counterEl.textContent = '1.00x';
+      counterEl.style.color = '#fff';
+    }
+
+    function addHistory(val, win) {
+      const el = document.createElement('div');
+      el.className = `hist-pill ${win ? 'high' : 'low'}`;
+      el.textContent = val + 'x';
+      historyBar.prepend(el);
+      if(historyBar.children.length > 10) historyBar.lastChild.remove();
+    }
+
+    function setBet(val) {
+      document.getElementById('betAmount').value = val;
+    }
+
+    // Инициализация
+    btn.onclick = startGame;
+    
+    // Получить баланс (как в index.html)
+    const balEl = document.getElementById('balanceValue');
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.stars) balEl.textContent = d.stars; })
+      .catch(()=>{});
+
+  </script>
+</body>
+</html>
