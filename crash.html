@@ -159,12 +159,7 @@
       if (gameState === 'IDLE') return;
 
       // Рисуем ракету
-      const time = (Date.now() - startTime) / 1000; // секунды
-      
       // Простая визуализация: кривая идет вверх
-      // X: время, Y: высота
-      // Чтобы график всегда был красивым, мы "зумим" его по мере роста
-      
       ctx.beginPath();
       ctx.lineWidth = 5;
       ctx.strokeStyle = gameState === 'CRASHED' ? '#ff4d4d' : '#ffd400';
@@ -211,9 +206,13 @@
       btn.disabled = true;
 
       try {
+        // !!! ВАЖНО: Добавили X-Telegram-Data !!!
         const res = await fetch('/api/crash', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Data': tg.initData // Отправляем данные для проверки
+          },
           body: JSON.stringify({ action: 'start', bet: betVal })
         }).then(r => r.json());
 
@@ -242,6 +241,7 @@
       } catch (e) {
         console.error(e);
         btn.disabled = false;
+        tg.showAlert("Ошибка соединения");
       }
     }
 
@@ -253,9 +253,13 @@
       btn.textContent = '...';
 
       try {
+        // !!! ВАЖНО: Добавили X-Telegram-Data !!!
         const res = await fetch('/api/crash', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Data': tg.initData
+          },
           body: JSON.stringify({ action: 'cashout', gameId: gameId })
         }).then(r => r.json());
 
@@ -304,6 +308,7 @@
       btn.textContent = 'СТАВКА';
       btn.onclick = startGame;
       btn.disabled = false;
+      btn.style.background = ''; // Сброс цвета
       
       ctx.clearRect(0, 0, width, height);
       counterEl.textContent = '1.00x';
@@ -322,7 +327,9 @@
     }
 
     // Загрузка баланса при входе
-    fetch('/api/profile').then(r=>r.json()).then(d=>{
+    fetch('/api/profile', {
+        headers: { 'X-Telegram-Data': tg.initData } // Добавил и сюда, чтобы было красиво
+    }).then(r=>r.json()).then(d=>{
       if(d && d.stars) balEl.textContent = d.stars;
     }).catch(console.error);
     
