@@ -6,11 +6,11 @@
   <title>Crash — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
-    /* Стили специально для Crash */
+    /* === Стили Crash (Game Area) === */
     .crash-area {
       position: relative;
       margin: 0 16px 16px;
-      height: 300px;
+      height: 260px;
       background: #171b24;
       border-radius: 24px;
       border: 1px solid #232838;
@@ -22,54 +22,96 @@
     }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
     
+    .crash-info {
+      position: relative; z-index: 2; text-align: center;
+    }
     .crash-counter {
-      position: relative; z-index: 2;
-      font-size: 64px; font-weight: 900; color: #fff;
+      font-size: 56px; font-weight: 900; color: #fff;
       font-feature-settings: "tnum";
       text-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
+    .crash-status {
+      font-size: 14px; font-weight: 700; color: #a5abb8; text-transform: uppercase; letter-spacing: 1px;
+    }
     .crash-counter.crashed { color: var(--b-red); }
+    .crash-counter.loading { color: var(--accent); font-size: 42px; }
 
+    /* Панель управления */
     .controls-panel {
-      margin: 0 16px; padding: 18px;
+      margin: 0 16px 20px; padding: 16px;
       background: #1d212b; border-radius: 24px; border: 1px solid #2a2f3d;
     }
-    .bet-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .bet-row { display: flex; gap: 10px; margin-bottom: 12px; }
     .bet-input-wrap {
       flex: 1; background: #11141b;
       border: 1px solid #232838; border-radius: 16px;
-      padding: 12px 16px; display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; display: flex; align-items: center; gap: 8px;
     }
     .bet-input {
       width: 100%; background: transparent; border: none;
       color: #fff; font-size: 18px; font-weight: 700; outline: none;
     }
+    
     .action-btn {
-      width: 100%; padding: 18px; border-radius: 18px;
+      width: 100%; padding: 16px; border-radius: 16px;
       font-size: 20px; font-weight: 900; text-transform: uppercase;
       transition: 0.1s; cursor: pointer; border: none;
     }
     .btn-start { background: var(--accent); color: #111; box-shadow: 0 4px 15px rgba(255, 212, 0, 0.3); }
     .btn-cashout { background: #ff9f00; color: #111; box-shadow: 0 0 20px rgba(255, 159, 0, 0.4); }
-    .btn-wait { background: #2c313f; color: #777; pointer-events: none; }
+    .btn-wait { background: #2c313f; color: #777; pointer-events: none; opacity: 0.7; }
     
-    /* Пресеты ставок */
     .preset-btn {
       background: #2c313f; border: 1px solid #363c4a; color: #fff;
-      border-radius: 12px; padding: 0 14px; font-weight: 700; font-size: 13px;
+      border-radius: 12px; padding: 0 12px; font-weight: 700; font-size: 13px;
     }
 
-    /* История */
+    /* История (pill bar) */
     .history-bar {
-      display: flex; gap: 8px; padding: 0 16px 12px;
+      display: flex; gap: 6px; padding: 0 16px 10px;
       overflow-x: auto; scrollbar-width: none;
+      mask-image: linear-gradient(to right, black 85%, transparent 100%);
     }
     .hist-pill {
-      background: #232838; padding: 6px 12px; border-radius: 10px;
-      font-size: 13px; font-weight: 800; color: #a5abb8; white-space: nowrap;
+      background: #232838; padding: 5px 10px; border-radius: 8px;
+      font-size: 12px; font-weight: 800; color: #a5abb8; white-space: nowrap;
     }
     .hist-pill.high { color: var(--b-green); background: rgba(42, 208, 108, 0.15); }
     .hist-pill.low { color: var(--b-red); background: rgba(255, 77, 77, 0.15); }
+
+    /* === СПИСОК СТАВОК (LIVE BETS) === */
+    .bets-container {
+      margin: 0 16px 80px; /* отступ под навбар */
+    }
+    .bets-header {
+      font-size: 14px; font-weight: 700; color: #a5abb8; margin-bottom: 8px;
+      display: flex; justify-content: space-between;
+    }
+    .bets-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .player-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #171b24; padding: 10px 14px; border-radius: 14px;
+      border: 1px solid #232838;
+    }
+    .player-info { display: flex; align-items: center; gap: 10px; }
+    .player-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: #2c313f;
+      display: grid; place-items: center; font-size: 14px; font-weight: 700; color: #777;
+    }
+    .player-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .player-bet { font-size: 14px; font-weight: 700; color: var(--accent); }
+    
+    .player-win {
+      text-align: right;
+    }
+    .win-mult { display: block; font-size: 12px; color: var(--b-green); font-weight: 800; }
+    .win-val { font-size: 14px; font-weight: 800; color: #fff; }
+    
+    .player-row.success { border-color: rgba(42, 208, 108, 0.3); background: rgba(42, 208, 108, 0.05); }
+    .player-row.crash { opacity: 0.6; }
+
   </style>
 </head>
 <body>
@@ -87,7 +129,10 @@
 
     <div class="crash-area">
       <canvas id="gameCanvas"></canvas>
-      <div class="crash-counter" id="counter">1.00x</div>
+      <div class="crash-info">
+        <div class="crash-counter" id="counter">1.00x</div>
+        <div class="crash-status" id="statusText">ЗАГРУЗКА...</div>
+      </div>
     </div>
 
     <div class="controls-panel">
@@ -101,7 +146,16 @@
         <button class="preset-btn" onclick="setBet(500)">500</button>
       </div>
       
-      <button id="mainBtn" class="action-btn btn-start">СТАВКА</button>
+      <button id="mainBtn" class="action-btn btn-wait">...</button>
+    </div>
+
+    <div class="bets-container">
+      <div class="bets-header">
+        <span>ИГРОКИ</span>
+        <span id="playersCount">0</span>
+      </div>
+      <div class="bets-list" id="betsList">
+        </div>
     </div>
 
     <nav class="nav">
@@ -112,41 +166,43 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
-    // Инициализация
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
-    // Элементы
+    // === ЭЛЕМЕНТЫ ===
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const counterEl = document.getElementById('counter');
+    const statusEl = document.getElementById('statusText');
     const btn = document.getElementById('mainBtn');
     const balEl = document.getElementById('balanceValue');
     const historyBar = document.getElementById('historyBar');
-    
-    // Переменные игры
-    let width, height;
-    let animationId;
-    let startTime;
-    let gameState = 'IDLE'; // IDLE, PLAYING, CRASHED
-    let gameId = null;
-    let currentMultiplier = 1.00;
+    const betsListEl = document.getElementById('betsList');
+    const playersCountEl = document.getElementById('playersCount');
 
-    // Ресайз канваса
+    // === ПЕРЕМЕННЫЕ СОСТОЯНИЯ ===
+    let myId = tg.initDataUnsafe?.user?.id || 0; // ID текущего юзера
+    let currentRoundId = null;
+    let serverStartTime = 0; // Время старта с сервера
+    let serverPhase = 'LOADING'; // BETTING, FLYING, CRASHED
+    
+    let myBet = null; // { id: gameId, amount: 100 } если я поставил
+    let myCashout = false; // Успел ли я забрать
+
+    // === ГРАФИКА ===
+    let width, height;
     function resize() {
-      const parent = canvas.parentElement;
-      width = parent.clientWidth;
-      height = parent.clientHeight;
-      canvas.width = width * 2; 
-      canvas.height = height * 2;
+      width = canvas.parentElement.clientWidth;
+      height = canvas.parentElement.clientHeight;
+      canvas.width = width * 2; canvas.height = height * 2;
       ctx.scale(2, 2);
     }
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', resize); resize();
 
-    // Функция отрисовки графика
-    function drawGraph() {
+    // === ЛОГИКА ОТРИСОВКИ ===
+    function drawGraph(multiplier) {
       ctx.clearRect(0, 0, width, height);
+      if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') return;
 
       // Сетка
       ctx.strokeStyle = '#232838'; ctx.lineWidth = 1; ctx.beginPath();
@@ -156,185 +212,254 @@
       }
       ctx.stroke();
 
-      if (gameState === 'IDLE') return;
-
-      // Рисуем ракету
-      // Простая визуализация: кривая идет вверх
+      // Кривая
       ctx.beginPath();
       ctx.lineWidth = 5;
-      ctx.strokeStyle = gameState === 'CRASHED' ? '#ff4d4d' : '#ffd400';
+      ctx.strokeStyle = serverPhase === 'CRASHED' ? '#ff4d4d' : '#ffd400';
       ctx.lineCap = 'round';
       
       const startX = 0; const startY = height;
-      const endX = width * 0.8; 
-      const endY = height * 0.2;
+      const endX = width * 0.8; const endY = height * 0.2;
 
       ctx.moveTo(startX, startY);
+      // Простая анимация кривой
       ctx.quadraticCurveTo(width * 0.4, height, endX, endY);
       ctx.stroke();
 
-      // Кружок ракеты
-      if (gameState !== 'CRASHED') {
-        ctx.fillStyle = '#fff'; ctx.beginPath();
-        ctx.arc(endX, endY, 6, 0, Math.PI*2); ctx.fill();
-        // Свечение
-        ctx.fillStyle = 'rgba(255, 212, 0, 0.4)'; ctx.beginPath();
-        ctx.arc(endX, endY, 16 + Math.sin(Date.now()/50)*4, 0, Math.PI*2); ctx.fill();
+      if (serverPhase === 'FLYING') {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255, 212, 0, 0.4)'; ctx.beginPath(); ctx.arc(endX, endY, 15 + Math.sin(Date.now()/50)*4, 0, Math.PI*2); ctx.fill();
       }
     }
 
-    // Игровой цикл
-    function gameLoop() {
-      if (gameState !== 'PLAYING') return;
-
+    // === ГЛАВНЫЙ ЦИКЛ (Визуализация) ===
+    function renderLoop() {
       const now = Date.now();
-      const ms = now - startTime;
-      // ТА САМАЯ ФОРМУЛА, совпадающая с сервером
-      currentMultiplier = Math.pow(Math.E, 0.00006 * ms);
-      
-      counterEl.textContent = currentMultiplier.toFixed(2) + 'x';
-      drawGraph();
 
-      animationId = requestAnimationFrame(gameLoop);
+      if (serverPhase === 'BETTING') {
+        // Обратный отсчет
+        const timeLeft = Math.max(0, Math.ceil((serverStartTime - now) / 1000));
+        counterEl.textContent = `00:0${timeLeft}`;
+        counterEl.classList.add('loading');
+        statusEl.textContent = "ПРИЕМ СТАВОК";
+        ctx.clearRect(0, 0, width, height);
+      } 
+      else if (serverPhase === 'FLYING') {
+        // Считаем множитель локально для плавности
+        // Формула должна совпадать с сервером!
+        const ms = now - serverStartTime;
+        if (ms < 0) { // Рассинхрон небольшой
+           counterEl.textContent = "1.00x";
+        } else {
+           const mult = Math.pow(Math.E, 0.00006 * ms);
+           counterEl.textContent = mult.toFixed(2) + 'x';
+           drawGraph(mult);
+        }
+        counterEl.classList.remove('loading', 'crashed');
+        statusEl.textContent = "В ПОЛЕТЕ";
+      }
+      // CRASHED обрабатывается в pollState (замораживаем число)
+      
+      requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    // === СИНХРОНИЗАЦИЯ С СЕРВЕРОМ (POLLING) ===
+    // Каждую секунду спрашиваем: "Как дела?"
+    async function pollState() {
+      try {
+        const res = await fetch('/api/state').then(r => r.json());
+        
+        // Обновляем фазу
+        const prevPhase = serverPhase;
+        serverPhase = res.phase;
+        
+        // Если пришел новый раунд
+        if (currentRoundId !== res.roundId) {
+          currentRoundId = res.roundId;
+          // Сброс локального состояния
+          myBet = null;
+          myCashout = false;
+          btn.onclick = placeBet; // Возвращаем кнопку в режим ставки
+        }
+
+        // Если фаза поменялась на CRASHED - добавим в историю
+        if (prevPhase === 'FLYING' && serverPhase === 'CRASHED') {
+           addHistory(res.value); // res.value это финальный кэф
+           counterEl.textContent = res.value.toFixed(2) + 'x';
+           counterEl.classList.add('crashed');
+           statusEl.textContent = "CRASHED";
+           tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        // Обновляем список игроков
+        renderBets(res.bets);
+        
+        // Если фаза BETTING - обновляем время старта (если рассинхрон)
+        if (serverPhase === 'BETTING') {
+           serverStartTime = Date.now() + res.value; // value это ms до старта
+        } else if (serverPhase === 'FLYING') {
+           // Если мы зашли посередине полета - восстановим startTime
+           // Текущий mult = e^(0.00006 * t) -> t = ln(mult)/0.00006
+           // startTime = now - t
+           const elapsed = Math.log(res.value) / 0.00006;
+           serverStartTime = Date.now() - elapsed;
+        }
+
+        updateButtonState();
+
+      } catch (e) {
+        console.error("Poll error", e);
+      }
+    }
+    // Запускаем опрос
+    setInterval(pollState, 1000);
+    pollState(); // Сразу первый вызов
+
+    // === КНОПКА (UI) ===
+    function updateButtonState() {
+      // 1. Если фаза ставок
+      if (serverPhase === 'BETTING') {
+        if (myBet) {
+          btn.className = 'action-btn btn-wait';
+          btn.textContent = 'ЖДЕМ ВЗЛЕТ...';
+          btn.onclick = null;
+        } else {
+          btn.className = 'action-btn btn-start';
+          btn.textContent = 'СТАВКА';
+          btn.onclick = placeBet;
+        }
+      }
+      // 2. Если летим
+      else if (serverPhase === 'FLYING') {
+        if (myBet && !myCashout) {
+          btn.className = 'action-btn btn-cashout';
+          btn.textContent = 'ЗАБРАТЬ';
+          btn.onclick = doCashout;
+        } else if (myCashout) {
+          btn.className = 'action-btn btn-wait';
+          btn.textContent = 'УСПЕХ';
+          btn.style.background = '#2ad06c'; // Зеленый
+          btn.style.color = '#fff';
+        } else {
+          btn.className = 'action-btn btn-wait';
+          btn.textContent = 'ЖДЕМ РАУНД';
+          btn.style.background = ''; // Сброс
+        }
+      }
+      // 3. Краш
+      else {
+        btn.className = 'action-btn btn-wait';
+        btn.textContent = 'КРАШ';
+        btn.style.background = '';
+      }
     }
 
-    // 1. СТАРТ ИГРЫ
-    async function startGame() {
-      const betVal = parseInt(document.getElementById('betAmount').value);
-      if(!betVal || betVal < 1) return tg.showAlert('Введите ставку!');
+    // === ДЕЙСТВИЯ (API) ===
+    async function placeBet() {
+      const amount = parseInt(document.getElementById('betAmount').value);
+      if(!amount || amount < 1) return tg.showAlert("Введите сумму");
 
+      btn.textContent = "...";
       btn.disabled = true;
 
       try {
-        // !!! ВАЖНО: Добавили X-Telegram-Data !!!
         const res = await fetch('/api/crash', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Data': tg.initData // Отправляем данные для проверки
-          },
-          body: JSON.stringify({ action: 'start', bet: betVal })
-        }).then(r => r.json());
-
-        if (!res.ok) {
-          tg.showAlert(res.error || 'Ошибка');
-          btn.disabled = false;
-          return;
-        }
-
-        // Старт успешен
-        gameId = res.gameId;
-        startTime = res.startTime; // Берем время сервера!
-        if(res.balance !== undefined) balEl.textContent = res.balance;
-
-        gameState = 'PLAYING';
-        counterEl.classList.remove('crashed');
-        counterEl.style.color = '#fff';
-        
-        btn.disabled = false;
-        btn.className = 'action-btn btn-cashout';
-        btn.textContent = 'ЗАБРАТЬ';
-        btn.onclick = cashOut;
-
-        gameLoop();
-
-      } catch (e) {
-        console.error(e);
-        btn.disabled = false;
-        tg.showAlert("Ошибка соединения");
-      }
-    }
-
-    // 2. ЗАБРАТЬ ДЕНЬГИ
-    async function cashOut() {
-      if (gameState !== 'PLAYING' || !gameId) return;
-      
-      btn.disabled = true; 
-      btn.textContent = '...';
-
-      try {
-        // !!! ВАЖНО: Добавили X-Telegram-Data !!!
-        const res = await fetch('/api/crash', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Data': tg.initData
-          },
-          body: JSON.stringify({ action: 'cashout', gameId: gameId })
+          headers: { 'Content-Type': 'application/json', 'X-Telegram-Data': tg.initData },
+          body: JSON.stringify({ action: 'start', bet: amount })
         }).then(r => r.json());
 
         if (res.ok) {
-          // Победа!
-          finishGame(true, res.multiplier, res.win);
-          if(res.balance !== undefined) balEl.textContent = res.balance;
+          myBet = { id: res.gameId, amount: amount };
+          tg.HapticFeedback.impactOccurred('medium');
+          if(res.balance) balEl.textContent = res.balance;
         } else {
-          // Не успел (Краш был раньше)
-          finishGame(false, res.crashPoint || currentMultiplier.toFixed(2));
+          tg.showAlert(res.error || "Ошибка");
         }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // Завершение раунда
-    function finishGame(win, point, amount) {
-      gameState = win ? 'IDLE' : 'CRASHED';
-      cancelAnimationFrame(animationId);
-      
-      counterEl.textContent = parseFloat(point).toFixed(2) + 'x';
-      
-      if (win) {
-        btn.className = 'action-btn btn-start';
-        btn.textContent = `ВЫИГРЫШ: +${amount}`;
-        btn.style.background = '#2ad06c';
-        addHistory(point, true);
-        tg.HapticFeedback.notificationOccurred('success');
-      } else {
-        counterEl.classList.add('crashed');
-        btn.className = 'action-btn btn-wait';
-        btn.textContent = 'КРАШ';
-        addHistory(point, false);
-        tg.HapticFeedback.notificationOccurred('error');
-      }
-      
-      gameId = null;
-      setTimeout(resetBtn, 2000);
-    }
-
-    function resetBtn() {
-      if (gameState === 'PLAYING') return; // защита
-      gameState = 'IDLE';
-      btn.className = 'action-btn btn-start';
-      btn.textContent = 'СТАВКА';
-      btn.onclick = startGame;
+      } catch (e) { console.error(e); }
       btn.disabled = false;
-      btn.style.background = ''; // Сброс цвета
+      pollState(); // Обновим сразу
+    }
+
+    async function doCashout() {
+      if (!myBet) return;
+      btn.textContent = "...";
       
-      ctx.clearRect(0, 0, width, height);
-      counterEl.textContent = '1.00x';
-      counterEl.style.color = '#fff';
+      try {
+        const res = await fetch('/api/crash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Telegram-Data': tg.initData },
+          body: JSON.stringify({ action: 'cashout', gameId: myBet.id })
+        }).then(r => r.json());
+
+        if (res.ok) {
+          myCashout = true;
+          tg.HapticFeedback.notificationOccurred('success');
+          if(res.balance) balEl.textContent = res.balance;
+          // Кнопка обновится в updateButtonState
+        } else {
+          // Не успел
+          tg.HapticFeedback.notificationOccurred('error');
+        }
+      } catch(e) { console.error(e); }
+      pollState();
+    }
+
+    // === ОТРИСОВКА СПИСКА ИГРОКОВ ===
+    function renderBets(bets) {
+      if(!bets) return;
+      playersCountEl.textContent = bets.length;
+      
+      betsListEl.innerHTML = bets.map(b => {
+        // Определяем состояние
+        const isMe = (b.user_id == myId);
+        const isWin = (b.status === 'cashed_out');
+        const profit = isWin ? Math.floor(b.bet_amount * b.cashout_point) : 0;
+        
+        let rowClass = 'player-row';
+        if (isWin) rowClass += ' success';
+        else if (b.status === 'busted') rowClass += ' crash';
+
+        // Имя (маскируем ID)
+        let name = isMe ? "ВЫ" : `User ${b.user_id.toString().slice(0,3)}...`;
+        
+        return `
+        <div class="${rowClass}">
+          <div class="player-info">
+            <div class="player-avatar">${name[0]}</div>
+            <div>
+              <div class="player-name">${name}</div>
+              <div class="player-bet">${b.bet_amount} ★</div>
+            </div>
+          </div>
+          <div class="player-win">
+            ${isWin ? `
+              <span class="win-mult">${b.cashout_point}x</span>
+              <span class="win-val">+${profit}</span>
+            ` : (b.status === 'active' ? '<span style="color:#aaa">...</span>' : '')}
+          </div>
+        </div>
+        `;
+      }).join('');
     }
 
     // Хелперы
     function setBet(val) { document.getElementById('betAmount').value = val; }
-    
-    function addHistory(val, isWin) {
+    function addHistory(val) {
       const el = document.createElement('div');
-      el.className = `hist-pill ${isWin ? 'high' : 'low'}`;
-      el.textContent = parseFloat(val).toFixed(2) + 'x';
+      const num = parseFloat(val);
+      el.className = `hist-pill ${num >= 2.0 ? 'high' : 'low'}`;
+      el.textContent = num.toFixed(2) + 'x';
       historyBar.prepend(el);
-      if(historyBar.children.length > 15) historyBar.lastChild.remove();
+      if(historyBar.children.length > 20) historyBar.lastChild.remove();
     }
 
-    // Загрузка баланса при входе
-    fetch('/api/profile', {
-        headers: { 'X-Telegram-Data': tg.initData } // Добавил и сюда, чтобы было красиво
-    }).then(r=>r.json()).then(d=>{
-      if(d && d.stars) balEl.textContent = d.stars;
-    }).catch(console.error);
-    
-    // Инит кнопки
-    btn.onclick = startGame;
+    // Загрузка баланса при старте
+    fetch('/api/profile', { headers: { 'X-Telegram-Data': tg.initData } })
+      .then(r=>r.json())
+      .then(d=>{ if(d.stars) balEl.textContent = d.stars; });
+
   </script>
 </body>
 </html>
