@@ -1,123 +1,127 @@
 // api/open.js
-const db = require('../db');
-const { CASES } = require('./data'); // Подключаем твои настройки с RTP
+const { query } = require('../db');
 const crypto = require('crypto');
 
-// Секрет для проверки токена (тот же, что в auth)
-const APP_SECRET = (process.env.APP_SECRET || (process.env.BOT_TOKEN + ':dev')).trim();
+// === НАСТРОЙКИ ===
+// Цены должны совпадать с тем, что на фронтенде!
+const CASE_PRICES = {
+  'jiga': 209,
+  'camry': 629,
+  'bmw': 1499,
+  'lambo': 3899
+};
 
-// Функция проверки авторизации
-function verifyJwt(token, secret) {
-  try {
-    const parts = String(token).split('.');
-    if (parts.length !== 3) return null;
-    const [h, p, s] = parts;
-    const sig = crypto.createHmac('sha256', (secret || '').trim()).update(`${h}.${p}`).digest('base64url');
-    if (s !== sig) return null;
-    return JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
-  } catch { return null; }
+// === ВАЛИДАЦИЯ TELEGRAM (Твоя текущая система) ===
+function verifyTelegramWebAppData(telegramInitData) {
+  if (!telegramInitData) return null;
+  const encoded = decodeURIComponent(telegramInitData);
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
+  const arr = encoded.split('&');
+  const hashIndex = arr.findIndex(str => str.startsWith('hash='));
+  const hash = arr.splice(hashIndex, 1)[0].split('=')[1];
+  arr.sort((a, b) => a.localeCompare(b));
+  const _hash = crypto.createHmac('sha256', secret).update(arr.join('\n')).digest('hex');
+  if (_hash !== hash) return null;
+  return JSON.parse(arr.find(s => s.startsWith('user=')).split('user=')[1]);
 }
 
-// ГЛАВНАЯ ФУНКЦИЯ РАНДОМА (Рулетка)
-// Выбирает предмет на основе поля 'chance'
-function spinRoulette(items) {
-  // Генерируем число от 0 до 100 (можно до суммарного веса, если он не ровно 100)
-  const totalChance = items.reduce((acc, item) => acc + item.chance, 0);
-  const random = Math.random() * totalChance;
-  
-  let currentWeight = 0;
-  for (const item of items) {
-    currentWeight += item.chance;
-    if (random <= currentWeight) {
-      return item;
-    }
-  }
-  // На всякий случай возвращаем последний (fallback)
-  return items[items.length - 1];
-}
-
+// === ГЛАВНЫЙ ХЕНДЛЕР ===
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST' });
+  // Настройка заголовков для WebApp
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Telegram-Data');
 
-  // 1. АВТОРИЗАЦИЯ (Безопасная, через куки/токен)
-  const cookie = req.headers.cookie || '';
-  let token = cookie.split(';').map(s => s.trim()).find(s => s.startsWith('sid='))?.slice(4);
-  if (!token && req.headers.authorization) token = req.headers.authorization.slice(7);
-
-  const jwt = verifyJwt(token, APP_SECRET);
-  if (!jwt || !jwt.sub) return res.status(401).json({ error: 'Unauthorized' });
-  const userId = jwt.sub;
-
-  // 2. Получаем ID кейса
-  const { caseId } = req.body;
-  if (!caseId) return res.status(400).json({ error: 'No caseId' });
-
-  // 3. Ищем кейс в конфиге
-  const targetCase = CASES[caseId];
-  if (!targetCase) return res.status(404).json({ error: 'Case not found' });
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST allowed' });
 
   try {
-    // 4. КРУТИМ РУЛЕТКУ (Математика)
-    // Делаем это ДО базы данных, чтобы знать, что писать
-    const prize = spinRoulette(targetCase.items);
+    // 1. АВТОРИЗАЦИЯ
+    const initData = req.headers['x-telegram-data'];
+    const user = verifyTelegramWebAppData(initData);
+    
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid Telegram Data' });
+    }
+    const userId = user.id;
 
-    // 5. ТРАНЗАКЦИЯ В БД
-    await db.query('BEGIN');
+    // 2. ПОЛУЧАЕМ ID КЕЙСА
+    const { caseId } = req.body;
+    const price = CASE_PRICES[caseId];
+
+    if (!price) return res.status(400).json({ error: 'Неверный или несуществующий кейс' });
+
+    // 3. ПРОВЕРЯЕМ БАЛАНС
+    const balRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
+    const currentBalance = balRes.rows[0]?.stars || 0;
+
+    if (currentBalance < price) {
+      return res.status(402).json({ error: 'Недостаточно звезд для открытия' });
+    }
+
+    // 4. ПОЛУЧАЕМ ПРЕДМЕТЫ ИЗ БД (Вместо data.js)
+    const itemsRes = await query('SELECT * FROM items WHERE case_id = $1', [caseId]);
+    const items = itemsRes.rows;
+
+    if (items.length === 0) {
+      return res.status(500).json({ error: 'Кейс пуст (обратитесь в поддержку)' });
+    }
+
+    // 5. КРУТИМ РУЛЕТКУ (Математика)
+    // Считаем общий вес шансов
+    const totalChance = items.reduce((acc, item) => acc + parseFloat(item.chance), 0);
+    let random = Math.random() * totalChance;
+    let prize = null;
+
+    for (const item of items) {
+      random -= parseFloat(item.chance);
+      if (random <= 0) {
+        prize = item;
+        break;
+      }
+    }
+    // Страховка на случай ошибок округления JS
+    if (!prize) prize = items[items.length - 1];
+
+    // 6. ТРАНЗАКЦИЯ В БД (ACID)
+    await query('BEGIN');
 
     // А) Списываем деньги
-    // Проверяем, хватает ли средств (stars >= price)
-    const balanceRes = await db.query(`
-      UPDATE balances 
-      SET stars = stars - $2, updated_at = NOW()
-      WHERE user_id = $1 AND stars >= $2
-      RETURNING stars
-    `, [userId, targetCase.price]);
+    await query('UPDATE balances SET stars = stars - $1 WHERE user_id = $2', [price, userId]);
 
-    // Если баланс не вернулся, значит денег не хватило
-    if (balanceRes.rows.length === 0) {
-      await db.query('ROLLBACK');
-      return res.status(402).json({ error: 'Недостаточно звезд' });
-    }
+    // Б) Добавляем предмет в инвентарь
+    // Мы пишем только item_id, остальные данные подтянутся джойном при просмотре
+    await query(
+      `INSERT INTO inventory (user_id, item_id, status) VALUES ($1, $2, 'active')`, 
+      [userId, prize.id]
+    );
 
-    const newBalance = balanceRes.rows[0].stars;
+    // В) (Опционально) Запись в историю транзакций, если таблица balance_tx есть
+    // await query(
+    //   `INSERT INTO balance_tx (user_id, type, amount, created_at) VALUES ($1, 'open_case', $2, NOW())`,
+    //   [userId, -price]
+    // );
 
-    // Б) Пишем в историю транзакций
-    await db.query(`
-      INSERT INTO balance_tx (user_id, type, amount, balance_before, balance_after, meta)
-      VALUES ($1, 'open_case', $2, $3, $4, $5)
-    `, [
-      userId, 
-      targetCase.price, 
-      newBalance + targetCase.price, // было
-      newBalance,                    // стало
-      JSON.stringify({ caseId, prizeId: prize.id, prizeName: prize.name })
-    ]);
+    await query('COMMIT');
 
-    // В) Выдаем приз в инвентарь
-    // Сохраняем item_id, название, картинку и редкость
-    await db.query(`
-      INSERT INTO inventory (user_id, item_id, name, image_url, rarity)
-      VALUES ($1, $2, $3, $4, $5)
-    `, [userId, prize.id, prize.name, prize.image, prize.rarity]);
+    // Получаем актуальный баланс после списания
+    const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
 
-    await db.query('COMMIT');
-
-    // 6. ОТДАЕМ РЕЗУЛЬТАТ
-    // Возвращаем и новый баланс, и данные о призе (включая его ценность value для отображения)
+    // 7. ОТДАЕМ РЕЗУЛЬТАТ
     return res.json({
       success: true,
-      stars: newBalance,
+      stars: newBalRes.rows[0].stars,
       prize: {
         id: prize.id,
-        title: prize.name,
-        image: prize.image,
-        rarity: prize.rarity,
-        value: prize.value // Фронт может показать "Вы выиграли предмет стоимостью X звезд"
+        title: prize.name,      // Название из БД
+        image: prize.image_url, // Картинка из БД
+        rarity: prize.is_rare ? 'rare' : 'common',
+        value: prize.stars_cost // Ценность подарка
       }
     });
 
   } catch (e) {
-    await db.query('ROLLBACK');
+    await query('ROLLBACK');
     console.error('[Open Case Error]', e);
     return res.status(500).json({ error: 'Server error' });
   }
