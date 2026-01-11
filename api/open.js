@@ -3,7 +3,6 @@ const { query } = require('../db');
 const crypto = require('crypto');
 
 // === НАСТРОЙКИ ===
-// Цены должны совпадать с тем, что на фронтенде!
 const CASE_PRICES = {
   'jiga': 209,
   'camry': 629,
@@ -11,7 +10,7 @@ const CASE_PRICES = {
   'lambo': 3899
 };
 
-// === ВАЛИДАЦИЯ TELEGRAM (Твоя текущая система) ===
+// === ВАЛИДАЦИЯ TELEGRAM ===
 function verifyTelegramWebAppData(telegramInitData) {
   if (!telegramInitData) return null;
   const encoded = decodeURIComponent(telegramInitData);
@@ -27,7 +26,6 @@ function verifyTelegramWebAppData(telegramInitData) {
 
 // === ГЛАВНЫЙ ХЕНДЛЕР ===
 module.exports = async (req, res) => {
-  // Настройка заголовков для WebApp
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Telegram-Data');
@@ -49,26 +47,25 @@ module.exports = async (req, res) => {
     const { caseId } = req.body;
     const price = CASE_PRICES[caseId];
 
-    if (!price) return res.status(400).json({ error: 'Неверный или несуществующий кейс' });
+    if (!price) return res.status(400).json({ error: 'Неверный кейс' });
 
     // 3. ПРОВЕРЯЕМ БАЛАНС
     const balRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
     const currentBalance = balRes.rows[0]?.stars || 0;
 
     if (currentBalance < price) {
-      return res.status(402).json({ error: 'Недостаточно звезд для открытия' });
+      return res.status(402).json({ error: 'Недостаточно звезд' });
     }
 
-    // 4. ПОЛУЧАЕМ ПРЕДМЕТЫ ИЗ БД (Вместо data.js)
+    // 4. ПОЛУЧАЕМ ПРЕДМЕТЫ
     const itemsRes = await query('SELECT * FROM items WHERE case_id = $1', [caseId]);
     const items = itemsRes.rows;
 
     if (items.length === 0) {
-      return res.status(500).json({ error: 'Кейс пуст (обратитесь в поддержку)' });
+      return res.status(500).json({ error: 'Кейс пуст' });
     }
 
-    // 5. КРУТИМ РУЛЕТКУ (Математика)
-    // Считаем общий вес шансов
+    // 5. РУЛЕТКА
     const totalChance = items.reduce((acc, item) => acc + parseFloat(item.chance), 0);
     let random = Math.random() * totalChance;
     let prize = null;
@@ -80,43 +77,40 @@ module.exports = async (req, res) => {
         break;
       }
     }
-    // Страховка на случай ошибок округления JS
     if (!prize) prize = items[items.length - 1];
 
-    // 6. ТРАНЗАКЦИЯ В БД (ACID)
+    // 6. ТРАНЗАКЦИЯ (Исправлено!)
     await query('BEGIN');
 
     // А) Списываем деньги
     await query('UPDATE balances SET stars = stars - $1 WHERE user_id = $2', [price, userId]);
 
-    // Б) Добавляем предмет в инвентарь
-    // Мы пишем только item_id, остальные данные подтянутся джойном при просмотре
-    await query(
-      `INSERT INTO inventory (user_id, item_id, status) VALUES ($1, $2, 'active')`, 
+    // Б) Добавляем предмет и ПОЛУЧАЕМ ЕГО ID (RETURNING id)
+    // !!! ВОТ ТУТ БЫЛО ИЗМЕНЕНИЕ !!!
+    const invRes = await query(
+      `INSERT INTO inventory (user_id, item_id, status) 
+       VALUES ($1, $2, 'active') 
+       RETURNING id`, 
       [userId, prize.id]
     );
-
-    // В) (Опционально) Запись в историю транзакций, если таблица balance_tx есть
-    // await query(
-    //   `INSERT INTO balance_tx (user_id, type, amount, created_at) VALUES ($1, 'open_case', $2, NOW())`,
-    //   [userId, -price]
-    // );
+    const newInventoryId = invRes.rows[0].id; // Сохраняем ID новой записи
 
     await query('COMMIT');
 
-    // Получаем актуальный баланс после списания
+    // Получаем новый баланс
     const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
 
-    // 7. ОТДАЕМ РЕЗУЛЬТАТ
+    // 7. ОТДАЕМ РЕЗУЛЬТАТ С INVENTORY ID
     return res.json({
       success: true,
+      inventoryId: newInventoryId, // <--- ЭТО ВАЖНО ДЛЯ ПРОДАЖИ
       stars: newBalRes.rows[0].stars,
       prize: {
         id: prize.id,
-        title: prize.name,      // Название из БД
-        image: prize.image_url, // Картинка из БД
+        title: prize.name,
+        image: prize.image_url,
         rarity: prize.is_rare ? 'rare' : 'common',
-        value: prize.stars_cost // Ценность подарка
+        value: prize.stars_cost
       }
     });
 
