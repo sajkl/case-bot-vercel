@@ -56,6 +56,19 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 }
 .overlay.show { opacity: 1; pointer-events: auto; }
 
+/* КНОПКА ЗАКРЫТИЯ ОВЕРЛЕЯ (НОВОЕ) */
+.close-overlay-btn {
+  position: absolute; top: 24px; right: 24px;
+  background: rgba(255, 255, 255, 0.1); border: none; color: #fff;
+  font-size: 32px; line-height: 1; width: 44px; height: 44px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 10001; transition: background 0.2s, transform 0.2s;
+  padding-bottom: 4px; /* Центровка крестика */
+}
+.close-overlay-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+.close-overlay-btn:active { transform: scale(0.95); }
+
+
 /* Лучи света (God Rays) */
 .rays {
   position: absolute; width: 600px; height: 600px;
@@ -106,6 +119,20 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .loader.show { display: inline-block; }
 @keyframes rotation { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
 
+/* Стили для списка призов снизу */
+.prize-item {
+  background: #0b0d12; border-radius: 16px; padding: 10px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  border: 1px solid #232838; position: relative;
+}
+.prize-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 212, 0, 0.15); }
+.prize-img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 8px; }
+.prize-name { font-size: 11px; font-weight: 700; color: #a5abb8; line-height: 1.2; }
+.rare-badge {
+  position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000;
+  font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
+}
+
 </style>
 </head>
 <body>
@@ -121,14 +148,17 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   <div class="price-wrap"><div id="price" class="price">★ 0</div></div>
 
   <div class="prizes-section" style="margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838;">
-    <div style="text-align:center; font-weight:800; margin-bottom:16px;">СОДЕРЖИМОЕ</div>
-    <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(70px, 1fr)); gap:10px;"></div>
+    <div style="text-align:center; font-weight:800; margin-bottom:16px; color:#fff">СОДЕРЖИМОЕ КЕЙСА</div>
+    <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:12px;">
+       <div style="grid-column: 1/-1; text-align: center; color: #555; font-size: 13px;">Загрузка...</div>
+    </div>
   </div>
 </div>
 
 <div id="overlay" class="overlay">
-  <div class="rays"></div>
+  <button id="btnCloseOverlay" class="close-overlay-btn">&times;</button>
   
+  <div class="rays"></div>
   <div class="loader" id="loader"></div>
 
   <div class="overlay-card" id="cardResult" style="display:none">
@@ -168,6 +198,7 @@ qs('#price').textContent=`★ ${conf.price}`;
 
 // --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
 const overlay = qs('#overlay');
+const btnCloseOverlay = qs('#btnCloseOverlay'); // НОВОЕ
 const loader = qs('#loader');
 const cardResult = qs('#cardResult');
 const winImg = qs('#winImg');
@@ -224,6 +255,7 @@ grid.addEventListener('click', async (e)=>{
     overlay.classList.add('show');
     loader.classList.add('show');
     cardResult.style.display = 'none';
+    btnCloseOverlay.style.display = 'flex'; // Показываем крестик
   }, 300); // Чуть ждем пока двери откроются
 
   // 3. Запрос к серверу
@@ -303,6 +335,14 @@ btnKeep.onclick = () => {
   finishRound();
 };
 
+// 3. ЗАКРЫТЬ КРЕСТИКОМ (НОВОЕ)
+btnCloseOverlay.onclick = () => {
+   vib(10);
+   // Просто закрываем, считаем что пользователь решил "Оставить" молча
+   finishRound();
+};
+
+
 function finishRound() {
   resetOverlay();
   // Сбрасываем ячейку
@@ -314,6 +354,7 @@ function resetOverlay() {
   overlay.classList.remove('show');
   loader.classList.remove('show');
   cardResult.style.display = 'none';
+  btnCloseOverlay.style.display = 'none'; // Скрываем крестик
 }
 
 function resetCell(cell, img, doors) {
@@ -328,12 +369,21 @@ function resetCell(cell, img, doors) {
 
 // Загрузка призов в список снизу
 fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
-  const l=qs('#prizesList');
-  if(!items.length)return;
-  items.forEach(i=>{
-    const d=document.createElement('div');
-    d.innerHTML=`<img src="${i.image_url}" style="width:100%;border-radius:12px;border:${i.is_rare?'1px solid #ffd400':'1px solid #333'}">`;
-    l.appendChild(d);
+  const list = qs('#prizesList');
+  list.innerHTML = '';
+  if(items.length === 0) {
+      list.innerHTML = '<div style="color:#777; grid-column:1/-1; text-align:center">Нет данных</div>';
+      return;
+  }
+  items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = `prize-item ${item.is_rare ? 'rare' : ''}`;
+      el.innerHTML = `
+        ${item.is_rare ? '<div class="rare-badge">RARE</div>' : ''}
+        <img class="prize-img" src="${item.image_url}" onerror="this.src='/assets/prizes/sample.png'">
+        <div class="prize-name">${item.name}</div>
+      `;
+      list.appendChild(el);
   });
 });
 
