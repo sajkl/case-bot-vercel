@@ -11,72 +11,100 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .page{max-width:520px;margin:0 auto;padding:14px 16px 40px}
 
 /* Верхняя панель */
-.top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
 .back{background:var(--accent);color:#171a1f;font-weight:900;border:none;border-radius:16px;padding:12px 16px;cursor:pointer}
 .logo{height:32px}
 .balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px}
 
 .h1{font-weight:900;font-size:42px;margin:16px 2px 8px;text-align:center}
 
-/* Сетка кейсов 2x2 */
+/* Сетка кейсов */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
 .cell{
   position:relative;background:rgba(255,255,255,.03);border:none;border-radius:24px;
   padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;
-  aspect-ratio: 1/1; cursor:pointer;
+  aspect-ratio: 1/1; cursor:pointer; z-index: 1;
 }
 .crate{width:100%;height:100%;display:grid;place-items:center}
 .crate img{width:92%;height:92%;object-fit:contain;transition:opacity .15s}
 .hint{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.18s}
 .cell.show-hint .hint{opacity:1}
 
-/* Цена */
 .price-wrap{display:flex;justify-content:center;margin:24px 0 32px}
 .price{background:var(--accent);color:#171a1f;padding:12px 24px;border-radius:16px;font-weight:900;font-size:18px;box-shadow:0 0 22px rgba(255,212,0,.35)}
 
-/* === ТАБЛИЦА ПРИЗОВ (НОВОЕ) === */
-.prizes-section {
-  background: #151921; border-radius: 24px; padding: 20px;
-  border: 1px solid #232838;
-}
-.prizes-header {
-  font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 16px;
-  text-transform: uppercase; letter-spacing: 0.5px; text-align: center;
-}
-.prizes-grid {
-  display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 12px;
-}
-.prize-item {
-  background: #0b0d12; border-radius: 16px; padding: 10px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  border: 1px solid #232838; position: relative;
-}
-.prize-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 212, 0, 0.15); }
-.prize-img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 8px; }
-.prize-name { font-size: 11px; font-weight: 700; color: #a5abb8; line-height: 1.2; }
-.rare-badge {
-  position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000;
-  font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
-}
-
-/* Анимация дверей и открытия */
+/* Анимация дверей в ячейке */
 .cell-doors{
   position:absolute;inset:14px;
-  background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden
+  background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden; pointer-events: none;
 }
 .cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00)}
 .cell-door.l{left:0;transform-origin:left center}
 .cell-door.r{right:0;transform-origin:right center}
-@keyframes doorL{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(-72deg) translateX(-10%)}}
-@keyframes doorR{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(72deg) translateX(10%)}}
-.cell.open .cell-door.l{animation:doorL .55s ease forwards}
-.cell.open .cell-door.r{animation:doorR .55s ease forwards}
-.prize-box{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:14px;opacity:0}
-.cell.reveal .prize-box{animation:prizeIn .35s .1s ease both}
-@keyframes prizeIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
-.prize-box img{max-width:72%;max-height:60%}
-.prize-title{font-weight:900;font-size:20px;margin-top:8px}
-.prize-btn{margin-top:10px;background:var(--accent);color:#171a1f;border:none;border-radius:12px;padding:10px 16px;font-weight:900;cursor:pointer}
+@keyframes doorL{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(-80deg) translateX(-10%)}}
+@keyframes doorR{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(80deg) translateX(10%)}}
+.cell.open .cell-door.l{animation:doorL .4s ease forwards}
+.cell.open .cell-door.r{animation:doorR .4s ease forwards}
+
+/* === FULL SCREEN OVERLAY === */
+.overlay {
+  position: fixed; inset: 0; 
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+
+/* Лучи света (God Rays) */
+.rays {
+  position: absolute; width: 600px; height: 600px;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.2) 20deg, transparent 40deg, rgba(255, 212, 0, 0.2) 60deg, transparent 80deg, rgba(255, 212, 0, 0.2) 100deg, transparent 120deg, rgba(255, 212, 0, 0.2) 140deg, transparent 160deg, rgba(255, 212, 0, 0.2) 180deg, transparent 200deg, rgba(255, 212, 0, 0.2) 220deg, transparent 240deg, rgba(255, 212, 0, 0.2) 260deg, transparent 280deg, rgba(255, 212, 0, 0.2) 300deg, transparent 320deg, rgba(255, 212, 0, 0.2) 340deg, transparent 360deg);
+  animation: spin 10s linear infinite;
+  z-index: -1; pointer-events: none;
+}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Карточка приза в оверлее */
+.overlay-card {
+  transform: scale(0.5); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex; flex-direction: column; align-items: center;
+}
+.overlay.show .overlay-card { transform: scale(1); }
+
+.overlay-img {
+  width: 220px; height: 220px; object-fit: contain;
+  filter: drop-shadow(0 0 30px rgba(255, 212, 0, 0.6));
+  margin-bottom: 20px;
+}
+.overlay-title {
+  font-size: 32px; font-weight: 900; text-transform: uppercase;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 30px;
+}
+
+/* Кнопки действий */
+.actions {
+  display: flex; flex-direction: column; gap: 12px; width: 280px;
+}
+.act-btn {
+  border: none; padding: 16px; border-radius: 16px;
+  font-size: 18px; font-weight: 900; cursor: pointer;
+  text-transform: uppercase; width: 100%; transition: transform 0.1s;
+}
+.act-btn:active { transform: scale(0.97); }
+
+.btn-sell {
+  background: var(--accent); color: #111;
+  box-shadow: 0 0 20px rgba(255,212,0,0.4);
+}
+.btn-keep {
+  background: #2c313f; color: #fff; border: 1px solid #3e4554;
+}
+
+/* Спиннер загрузки */
+.loader { display:none; width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; margin-bottom: 20px;}
+.loader.show { display: inline-block; }
+@keyframes rotation { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
 
 </style>
 </head>
@@ -89,190 +117,230 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   </div>
 
   <div id="caseTitle" class="h1">Кейс</div>
-
   <div id="grid" class="grid"></div>
-
   <div class="price-wrap"><div id="price" class="price">★ 0</div></div>
 
-  <div class="prizes-section">
-    <div class="prizes-header">Содержимое кейса</div>
-    <div class="prizes-grid" id="prizesList">
-       <div style="grid-column: 1/-1; text-align: center; color: #555; font-size: 13px;">Загрузка призов...</div>
+  <div class="prizes-section" style="margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838;">
+    <div style="text-align:center; font-weight:800; margin-bottom:16px;">СОДЕРЖИМОЕ</div>
+    <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(70px, 1fr)); gap:10px;"></div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="rays"></div>
+  
+  <div class="loader" id="loader"></div>
+
+  <div class="overlay-card" id="cardResult" style="display:none">
+    <img id="winImg" class="overlay-img" src="">
+    <div id="winTitle" class="overlay-title">PRIZE NAME</div>
+    
+    <div class="actions">
+      <button id="btnSell" class="act-btn btn-sell">Продать (+100)</button>
+      <button id="btnKeep" class="act-btn btn-keep">Оставить в инвентаре</button>
     </div>
   </div>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-const qs=s=>document.querySelector(s), qsa=s=>[...document.querySelectorAll(s)];
+const qs=s=>document.querySelector(s);
 const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
-
 const vib=(t=15)=>('vibrate'in navigator)&&navigator.vibrate(t);
 
-// --- определить текущий caseId ---
+// --- КОНФИГ ---
 function getCaseId(){
-  const urlId=(new URLSearchParams(location.search)).get('case'); // поменял 'id' на 'case' чтобы совпадало с index.html
-  if(urlId) return urlId.toLowerCase();
-  return 'jiga';
+  const urlId=(new URLSearchParams(location.search)).get('case');
+  return urlId ? urlId.toLowerCase() : 'jiga';
 }
 const caseId=getCaseId();
-console.debug('[case] using id =',caseId);
 
-// --- карта ассетов (ЦЕНЫ RTP 75%) ---
 const ASSETS={
-  jiga:{title:'Жига', price:209, stages:[
-    '/assets/Case Lada P1.png', '/assets/Case Lada P2.png', '/assets/Case Lada P3.png'
-  ]},
-  camry:{title:'Камри', price:629, stages:[
-    '/assets/Case Cam P1.png', '/assets/Case Cam P2.png', '/assets/Case Cam P3.png'
-  ]},
-  bmw:{title:'Бэха', price:1499, stages:[
-    '/assets/Case BMW P1.png', '/assets/Case BMW P2.png', '/assets/Case BMW P3.png'
-  ]},
-  lambo:{title:'Ламбо', price:3899, stages:[
-    '/assets/Case Lambo P1.png', '/assets/Case Lambo P2.png', '/assets/Case Lambo P3.png'
-  ]}
+  jiga:{title:'Жига', price:209, stages:['/assets/Case Lada P1.png', '/assets/Case Lada P2.png', '/assets/Case Lada P3.png']},
+  camry:{title:'Камри', price:629, stages:['/assets/Case Cam P1.png', '/assets/Case Cam P2.png', '/assets/Case Cam P3.png']},
+  bmw:{title:'Бэха', price:1499, stages:['/assets/Case BMW P1.png', '/assets/Case BMW P2.png', '/assets/Case BMW P3.png']},
+  lambo:{title:'Ламбо', price:3899, stages:['/assets/Case Lambo P1.png', '/assets/Case Lambo P2.png', '/assets/Case Lambo P3.png']}
 };
-// Safe check
 const conf=ASSETS[caseId]||ASSETS.jiga;
 qs('#caseTitle').textContent=conf.title;
 qs('#price').textContent=`★ ${conf.price}`;
 
-// --- ЗАГРУЗКА ПРИЗОВ (НОВОЕ) ---
-fetch(`/api/case-items?caseId=${caseId}`)
-  .then(r=>r.json())
-  .then(items => {
-    const list = qs('#prizesList');
-    list.innerHTML = '';
-    
-    if(items.length === 0) {
-      list.innerHTML = '<div style="color:#777; grid-column:1/-1; text-align:center">Нет данных</div>';
-      return;
-    }
+// --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
+const overlay = qs('#overlay');
+const loader = qs('#loader');
+const cardResult = qs('#cardResult');
+const winImg = qs('#winImg');
+const winTitle = qs('#winTitle');
+const btnSell = qs('#btnSell');
+const btnKeep = qs('#btnKeep');
 
-    items.forEach(item => {
-      const el = document.createElement('div');
-      el.className = `prize-item ${item.is_rare ? 'rare' : ''}`;
-      el.innerHTML = `
-        ${item.is_rare ? '<div class="rare-badge">RARE</div>' : ''}
-        <img class="prize-img" src="${item.image_url}" onerror="this.src='/assets/prizes/sample.png'">
-        <div class="prize-name">${item.name}</div>
-      `;
-      list.appendChild(el);
-    });
-  })
-  .catch(e => console.error('Prizes load error:', e));
+// Текущее состояние для продажи
+let currentWin = null; // { inventoryId, price, cellElement }
 
-// баланс
-fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-  .then(r=>r.ok?r.json():null).then(d=>{
-    if(d && typeof d.stars!=='undefined') qs('#bal').textContent=d.stars;
-  }).catch(()=>{});
-
-// --- рендер сетки 2×2 ---
+// --- СЕТКА ---
 const grid=qs('#grid');
 for(let i=0;i<4;i++){
   const cell=document.createElement('button');
-  cell.type='button';
   cell.className='cell';
   cell.dataset.stage='0';
-  cell.innerHTML=`
-    <div class="crate"><img alt="container"></div>
-    <div class="hint">ЖМИ</div>
-  `;
+  cell.innerHTML=`<div class="crate"><img src="${conf.stages[0]}"></div><div class="hint">ЖМИ</div>`;
   grid.appendChild(cell);
 }
-qsa('.crate img').forEach(img=>img.src=conf.stages[0]);
 
-// --- логика кликов ---
-grid.addEventListener('click', (e)=>{
-  const cell=e.target.closest('.cell'); if(!cell) return;
+// --- КЛИК ПО ЯЩИКУ ---
+grid.addEventListener('click', async (e)=>{
+  const cell=e.target.closest('.cell'); 
+  if(!cell || cell.classList.contains('open') || cell.classList.contains('processing')) return;
+  
   vib(12);
-  let stage=+cell.dataset.stage;
-  const img=cell.querySelector('.crate img');
+  let stage = +cell.dataset.stage;
+  const img = cell.querySelector('.crate img');
 
-  if(stage<2){
+  // Этапы 0-1: просто кликаем
+  if(stage < 2){
     cell.classList.add('show-hint'); 
-    setTimeout(()=>cell.classList.remove('show-hint'),260);
-    stage+=1; img.src=conf.stages[stage]; cell.dataset.stage=String(stage);
+    setTimeout(()=>cell.classList.remove('show-hint'), 260);
+    stage += 1; img.src = conf.stages[stage]; cell.dataset.stage = String(stage);
     return;
   }
 
-  // stage === 2 → открываем
-  cell.dataset.stage='3';
-  img.style.opacity='0';
+  // Этап 2 -> 3: ОТКРЫТИЕ
+  cell.classList.add('processing'); 
+  cell.dataset.stage = '3';
+  img.style.opacity = '0'; // Скрываем ящик
 
-  const doors=document.createElement('div');
-  doors.className='cell-doors';
-  doors.innerHTML=`
-    <div class="cell-door l"></div>
-    <div class="cell-door r"></div>
-    <div class="prize-box">
-      <img id="pimg" src="/assets/prizes/sample.png" alt="">
-      <div class="prize-title" id="ptitle">Ваш приз!</div>
-      <button class="prize-btn" id="ptake">Забрать</button>
-    </div>
-  `;
+  // Добавляем двери (для анимации)
+  const doors = document.createElement('div');
+  doors.className = 'cell-doors';
+  doors.innerHTML = `<div class="cell-door l"></div><div class="cell-door r"></div>`;
   cell.appendChild(doors);
 
-  // ОТПРАВКА НА СЕРВЕР
-  fetch('/api/open',{
-    method:'POST',
-    headers:{
-       'Content-Type':'application/json',
-       'X-Telegram-Data': tg.initData
-    },
-    body:JSON.stringify({caseId})
-  })
-  .then(async r=>{
-    let data={};
-    try{ data=await r.json(); }catch(_){}
-    if(!r.ok) {
-       tg.showAlert(data.error || 'Ошибка открытия');
-       // Возвращаем как было (сброс)
-       cell.dataset.stage='2'; img.style.opacity='1'; doors.remove();
-       return null;
+  // 1. Анимация дверей
+  cell.classList.add('open'); // CSS анимация дверей
+
+  // 2. Показываем загрузку в оверлее (пока ждем сервер)
+  setTimeout(() => {
+    overlay.classList.add('show');
+    loader.classList.add('show');
+    cardResult.style.display = 'none';
+  }, 300); // Чуть ждем пока двери откроются
+
+  // 3. Запрос к серверу
+  try {
+    const res = await fetch('/api/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Data': tg.initData },
+      body: JSON.stringify({ caseId })
+    }).then(r => r.json());
+
+    loader.classList.remove('show'); // Скрываем лоадер
+
+    if (res.error) {
+      tg.showAlert(res.error);
+      resetOverlay();
+      resetCell(cell, img, doors);
+      return;
     }
-    return data;
-  })
-  .then(res=>{
-    if(!res) return; // Ошибка уже обработана выше
 
-    if(res.stars!=null) qs('#bal').textContent=res.stars;
-
-    const prizeImg  = res.prize?.image || '/assets/prizes/sample.png';
-    const prizeText = res.prize?.title || 'Приз';
-
-    doors.querySelector('#pimg').src=prizeImg;
-    doors.querySelector('#ptitle').textContent=prizeText;
-
-    cell.classList.add('open');
-    setTimeout(()=>cell.classList.add('reveal'),380);
+    // Успех!
+    if (res.stars != null) qs('#bal').textContent = res.stars;
     
-    // Вибрация успеха
+    // Показываем результат
+    const p = res.prize;
+    winImg.src = p.image;
+    winTitle.textContent = p.title;
+    btnSell.textContent = `ПРОДАТЬ (+${p.value} ★)`;
+    
+    cardResult.style.display = 'flex'; // Показываем карточку
     tg.HapticFeedback.notificationOccurred('success');
 
-    doors.querySelector('#ptake').onclick=(e)=>{
-      e.stopPropagation();
-      // Убираем двери, оставляем "открытый" пустой слот или ресетим
-      // Для красоты можно просто скрыть приз и вернуть контейнер
-      cell.classList.remove('open','reveal');
-      doors.remove();
-      // Возвращаем контейнер в начало (можно так, чтобы игрок мог открыть еще раз)
-      cell.dataset.stage='0';
-      img.src=conf.stages[0];
-      img.style.opacity='1';
+    // Сохраняем контекст для кнопок
+    currentWin = {
+      inventoryId: res.inventoryId,
+      sellPrice: p.value,
+      cell: cell,
+      img: img,
+      doors: doors
     };
-  })
-  .catch(err=>{
-    console.error('open fetch error:', err);
-    tg.showAlert('Ошибка сети');
-    cell.dataset.stage='2'; img.style.opacity='1'; doors.remove();
+
+  } catch (err) {
+    console.error(err);
+    tg.showAlert("Ошибка сети");
+    resetOverlay();
+    resetCell(cell, img, doors);
+  }
+});
+
+// --- ЛОГИКА КНОПОК ОВЕРЛЕЯ ---
+
+// 1. ПРОДАТЬ
+btnSell.onclick = async () => {
+  if(!currentWin) return;
+  btnSell.textContent = '...';
+  
+  try {
+    const res = await fetch('/api/sell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Data': tg.initData },
+      body: JSON.stringify({ itemId: currentWin.inventoryId })
+    }).then(r => r.json());
+
+    if(res.success) {
+      qs('#bal').textContent = res.balance;
+      tg.showAlert(`Продано за ${res.added} звезд!`);
+    } else {
+      tg.showAlert(res.error || 'Ошибка');
+    }
+  } catch(e) { console.error(e); }
+
+  finishRound();
+};
+
+// 2. ОСТАВИТЬ
+btnKeep.onclick = () => {
+  tg.showAlert("Предмет добавлен в инвентарь");
+  finishRound();
+};
+
+function finishRound() {
+  resetOverlay();
+  // Сбрасываем ячейку
+  if(currentWin) resetCell(currentWin.cell, currentWin.img, currentWin.doors);
+  currentWin = null;
+}
+
+function resetOverlay() {
+  overlay.classList.remove('show');
+  loader.classList.remove('show');
+  cardResult.style.display = 'none';
+}
+
+function resetCell(cell, img, doors) {
+  cell.classList.remove('open', 'processing');
+  if(doors) doors.remove();
+  
+  // Плавный сброс ящика обратно в закрытое состояние
+  cell.dataset.stage = '0';
+  img.src = conf.stages[0];
+  img.style.opacity = '1';
+}
+
+// Загрузка призов в список снизу
+fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
+  const l=qs('#prizesList');
+  if(!items.length)return;
+  items.forEach(i=>{
+    const d=document.createElement('div');
+    d.innerHTML=`<img src="${i.image_url}" style="width:100%;border-radius:12px;border:${i.is_rare?'1px solid #ffd400':'1px solid #333'}">`;
+    l.appendChild(d);
   });
 });
 
-console.debug('[case] assets:', conf);
+// Баланс
+fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
+  .then(r=>r.ok?r.json():null).then(d=>{if(d?.stars!=null)qs('#bal').textContent=d.stars}).catch(()=>{});
+
 </script>
 </body>
 </html>
