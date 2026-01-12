@@ -4,181 +4,252 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Профиль — Lambo Drop</title>
-  <link rel="stylesheet" href="/styles.css?v=13">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/styles.css">
   <style>
-    /* На всякий случай — чтобы аватар был виден даже без стилей проекта */
-    .profile-hero .avatar {
-      width: 88px; height: 88px; border-radius: 50%;
-      background: #1f1f1f center/cover no-repeat;
-      border: 1px solid rgba(255,255,255,.08);
+    /* === ПРОФИЛЬ === */
+    .profile-hero {
+      display: flex; flex-direction: column; align-items: center;
+      margin-top: 20px; margin-bottom: 24px;
     }
+    .avatar {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: #2c313f center/cover no-repeat;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 20px rgba(255,212,0,0.15);
+      margin-bottom: 12px;
+    }
+    .username {
+      font-size: 20px; font-weight: 900; color: #fff;
+    }
+    .user-id {
+      font-size: 13px; font-weight: 700; color: #777; margin-top: 4px;
+    }
+
+    /* === ИНВЕНТАРЬ === */
+    .inventory-section {
+      background: #151921; border-radius: 24px; padding: 16px;
+      border: 1px solid #232838; margin-bottom: 80px;
+    }
+    .section-title {
+      font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .inv-count { background: #232838; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #aaa; }
+    
+    .inv-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px;
+    }
+    .inv-item {
+      background: #0b0d12; border: 1px solid #232838; border-radius: 16px;
+      padding: 10px; text-align: center; cursor: pointer; position: relative;
+      transition: transform 0.1s;
+    }
+    .inv-item:active { transform: scale(0.96); }
+    .inv-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255,212,0,0.1); }
+    
+    .inv-img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 8px; }
+    .inv-name { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .inv-price { font-size: 10px; font-weight: 700; color: #777; margin-top: 4px; }
+    
+    .empty-state {
+      grid-column: 1 / -1; text-align: center; padding: 30px 0; color: #555; font-size: 14px;
+    }
+
+    /* === MODAL (Item Details) === */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+      z-index: 1000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { display: flex; opacity: 1; }
+    
+    .modal-card {
+      background: #1d212b; width: 90%; max-width: 320px; border-radius: 24px; padding: 24px;
+      border: 1px solid #2a2f3d; text-align: center; transform: scale(0.9); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-card { transform: scale(1); }
+    
+    .modal-img { width: 120px; height: 120px; object-fit: contain; margin-bottom: 16px; }
+    .modal-title { font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 8px; }
+    .modal-price { font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 24px; }
+    
+    .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+    .modal-btn {
+      padding: 14px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; width: 100%;
+    }
+    .btn-sell { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
+    .btn-withdraw { background: var(--accent); color: #111; }
+    .btn-close { background: transparent; color: #777; margin-top: 8px; font-size: 14px; }
+
   </style>
 </head>
 <body>
   <div class="container">
     <header class="header">
-      <a class="back" href="/"><span>Закрыть</span></a>
-      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
-      <a class="balance" id="balance" href="/topup/">
-        <span class="star">★</span><span class="value" id="balanceValue">0</span>
-      </a>
+      <a class="back" href="/">← Назад</a>
+      <div style="font-weight:900; font-size:20px;">ПРОФИЛЬ</div>
+      <div class="balance">
+        <span class="star">★</span><span class="value" id="balanceValue">...</span>
+      </div>
     </header>
 
-    <!-- Аватар/юзернейм -->
     <section class="profile-hero">
       <div class="avatar" id="avatar"></div>
-      <div class="username" id="username">@username</div>
+      <div class="username" id="username">Loading...</div>
+      <div class="user-id" id="userId">ID: ...</div>
     </section>
 
-    <!-- Кнопки действий -->
-    <section class="cards-vertical">
-      <a class="row-btn" href="/promo/"><span>🎟️ Активировать промокод</span></a>
-      <a class="row-btn" href="/history/payments/"><span>↔️ История транзакций</span></a>
-      <a class="row-btn" href="/history/bets/"><span>🕒 История ставок</span></a>
-    </section>
-
-    <!-- Реферальная система -->
-    <section class="ref-card">
-      <h3>Реферальная система</h3>
-      <p class="muted">Приглашай друзей и получай бонусы за каждого нового пользователя</p>
-
-      <div class="ref-grid">
-        <div class="ref-stat">
-          <div class="big">+10%</div>
-          <div class="small">За каждого друга</div>
-        </div>
-        <div class="ref-stat">
-          <div class="pill"><span id="earned">0.0</span> ★ заработано</div>
-          <div class="small"><span id="invited">0</span> ч. Приглашено</div>
-        </div>
+    <section class="inventory-section">
+      <div class="section-title">
+        <span>ТВОИ ПРЕДМЕТЫ</span>
+        <span class="inv-count" id="invCount">0</span>
       </div>
-
-      <div class="ref-actions">
-        <button id="inviteBtn" class="primary">Пригласить друзей</button>
-        <button id="copyLink" class="icon-btn" aria-label="Скопировать ссылку">🔗</button>
-      </div>
-    </section>
-
-    <!-- Инвентарь как секция профиля -->
-    <section class="inventory">
-      <h3>Инвентарь</h3>
       <div class="inv-grid" id="invGrid">
-        <!-- элементы инвентаря сюда из /api/inventory -->
+        <div class="empty-state">Загрузка...</div>
       </div>
     </section>
 
-    <div class="nav-spacer" aria-hidden="true"></div>
     <nav class="nav">
       <a class="btn active" href="/profile/">Профиль</a>
-      <a class="btn" href="/vote/">Голосование</a>
+      <a class="btn" href="/crash.html">Crash</a>
+      <a class="btn" href="/">Кейсы</a>
     </nav>
   </div>
 
+  <div class="modal-overlay" id="itemModal">
+    <div class="modal-card">
+      <img src="" class="modal-img" id="mImg">
+      <div class="modal-title" id="mTitle">Title</div>
+      <div class="modal-price" id="mPrice">0 ★</div>
+      
+      <div class="modal-actions">
+        <button class="modal-btn btn-withdraw" id="btnWithdraw">ЗАБРАТЬ (Подарок)</button>
+        <button class="modal-btn btn-sell" id="btnSellModal">ПРОДАТЬ</button>
+        <button class="modal-btn btn-close" onclick="closeModal()">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
-    (async () => {
-      // 0) Безопасная инициализация Telegram WebApp
-      const tg = window.Telegram?.WebApp;
-      if (!tg) {
-        console.warn('Telegram WebApp SDK not found');
-        return;
-      }
-      tg.ready();
-      try { tg.expand(); } catch (_) {}
+    const tg = window.Telegram.WebApp;
+    tg.ready(); tg.expand();
 
-      // Лог длины initData (удобно для отладки)
-      console.log('initData len:', (tg.initData || '').length);
+    // Элементы
+    const els = {
+       bal: document.getElementById('balanceValue'),
+       user: document.getElementById('username'),
+       uid: document.getElementById('userId'),
+       ava: document.getElementById('avatar'),
+       grid: document.getElementById('invGrid'),
+       count: document.getElementById('invCount'),
+       modal: document.getElementById('itemModal')
+    };
 
-      // 1) Авторизация (кука + возврат JWT в теле на случай проблем с куками в WebView)
-      let auth = null;
-      try {
-        auth = await fetch('/api/tg-auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
-        }).then(r => r.json());
-      } catch (e) {
-        console.warn('tg-auth network error', e);
-      }
+    let currentItem = null; // Выбранный предмет
 
-      console.log('AUTH:', auth);
-      if (!auth?.ok) {
-        console.warn('Auth failed:', auth);
-        // Можно показать пользователю нотификацию:
-        try { tg.showAlert('Не удалось авторизоваться. Открой через кнопку бота.'); } catch(_) {}
-        return;
-      }
+    // 1. Загрузка профиля
+    const u = tg.initDataUnsafe?.user;
+    if(u) {
+       els.user.textContent = u.username ? `@${u.username}` : u.first_name;
+       els.uid.textContent = `ID: ${u.id}`;
+       if(u.photo_url) els.ava.style.backgroundImage = `url(${u.photo_url})`;
+       else els.ava.textContent = u.first_name[0]; // Буква если нет фото
+    }
 
-      // 2) Готовим headers для запросов после авторизации
-      if (auth.token) {
-        try { localStorage.setItem('sid_token', auth.token); } catch(_) {}
-      }
-      const bearer = (localStorage.getItem('sid_token') || auth.token) ? { Authorization: 'Bearer ' + (localStorage.getItem('sid_token') || auth.token) } : {};
-      const commonFetch = (url) => fetch(url, { credentials: 'include', headers: bearer }).then(r => r.ok ? r.json() : null).catch(() => null);
+    // Баланс
+    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
+      .then(r=>r.json()).then(d=>{ if(d.stars) els.bal.textContent = d.stars });
 
-      // 3) Параллельно тянем данные профиля/баланса/рефералок/инвентаря
-      const [meData, prof, ref, linkRes, inv] = await Promise.all([
-        commonFetch('/api/me'),
-        commonFetch('/api/profile'),
-        commonFetch('/api/referral/stats'),
-        commonFetch('/api/referral/link'),
-        commonFetch('/api/inventory'),
-      ]);
+    // 2. Загрузка инвентаря
+    loadInventory();
 
-      // 4) Обновляем UI
-      const balEl   = document.getElementById('balanceValue');
-      const userEl  = document.getElementById('username');
-      const avatarEl= document.getElementById('avatar');
+    function loadInventory() {
+       fetch('/api/inventory', {headers:{'X-Telegram-Data':tg.initData}})
+         .then(r=>r.json())
+         .then(res => {
+            const items = res.items || [];
+            els.count.textContent = items.length;
+            els.grid.innerHTML = '';
 
-      if (prof && typeof prof.stars === 'number') {
-        balEl.textContent = String(prof.stars);
-      }
+            if(items.length === 0) {
+               els.grid.innerHTML = '<div class="empty-state">Пусто 🕸️<br>Открой кейс!</div>';
+               return;
+            }
 
-      if (meData?.ok && meData.user) {
-        const u = meData.user;
-        // username / FIO
-        userEl.textContent = u.username ? '@' + u.username :
-          [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Без имени';
+            items.forEach(item => {
+               const el = document.createElement('div');
+               el.className = `inv-item ${item.is_rare ? 'rare' : ''}`;
+               el.innerHTML = `
+                 <img class="inv-img" src="${item.image_url}">
+                 <div class="inv-name">${item.name}</div>
+                 <div class="inv-price">${item.stars_cost} ★</div>
+               `;
+               // Клик -> Открыть модалку
+               el.onclick = () => openModal(item);
+               els.grid.appendChild(el);
+            });
+         })
+         .catch(e => {
+            els.grid.innerHTML = '<div class="empty-state">Ошибка сети</div>';
+         });
+    }
 
-        // аватар: приоритеты photo_url -> проф.аватар -> proxy tg-avatar
-        const src = u.photo_url || (prof?.avatarUrl) || (u.id ? `/api/tg-avatar?user_id=${u.id}` : '');
-        if (src) avatarEl.style.backgroundImage = `url("${src}")`;
-      } else {
-        console.warn('/api/me returned no session', meData);
-      }
+    // --- МОДАЛКА ---
+    function openModal(item) {
+       currentItem = item;
+       document.getElementById('mImg').src = item.image_url;
+       document.getElementById('mTitle').textContent = item.name;
+       document.getElementById('mPrice').textContent = `Цена: ${item.stars_cost} ★`;
+       
+       document.getElementById('btnSellModal').textContent = `ПРОДАТЬ (+${item.stars_cost} ★)`;
+       
+       els.modal.classList.add('open');
+       tg.HapticFeedback.selectionChanged();
+    }
 
-      if (ref) {
-        const earnedEl = document.getElementById('earned');
-        const invitedEl= document.getElementById('invited');
-        if (earnedEl)  earnedEl.textContent  = ((ref.earned ?? 0) * 1).toFixed(1);
-        if (invitedEl) invitedEl.textContent = ref.invited ?? 0;
-      }
+    function closeModal() {
+       els.modal.classList.remove('open');
+       currentItem = null;
+    }
 
-      const inviteUrl = linkRes?.url || location.origin;
-      const inviteBtn = document.getElementById('inviteBtn');
-      const copyBtn   = document.getElementById('copyLink');
+    // --- ДЕЙСТВИЯ ---
+    
+    // 1. ПРОДАТЬ
+    document.getElementById('btnSellModal').onclick = async () => {
+       if(!currentItem) return;
+       const btn = document.getElementById('btnSellModal');
+       btn.textContent = '...';
+       
+       try {
+         const res = await fetch('/api/sell', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
+            body: JSON.stringify({ itemId: currentItem.id })
+         }).then(r=>r.json());
 
-      if (inviteBtn) inviteBtn.onclick = () => {
-        try { tg.openTelegramLink(inviteUrl); }
-        catch { location.href = inviteUrl; }
-      };
-      if (copyBtn) copyBtn.onclick = async () => {
-        try { await navigator.clipboard.writeText(inviteUrl); tg.showAlert('Ссылка скопирована'); }
-        catch { tg.showAlert(inviteUrl); }
-      };
+         if(res.success) {
+            tg.showAlert(`Продано! +${res.added} звезд`);
+            els.bal.textContent = res.balance;
+            closeModal();
+            loadInventory(); // Перезагружаем список
+         } else {
+            tg.showAlert(res.error || 'Ошибка');
+         }
+       } catch(e) { tg.showAlert('Ошибка сети'); }
+    };
 
-      // Инвентарь
-      const grid = document.getElementById('invGrid');
-      if (grid && inv?.items?.length) {
-        inv.items.forEach(it => {
-          const el = document.createElement('div');
-          el.className = 'inv-item';
-          el.innerHTML = `<img src="${it.icon}" alt=""><div class="inv-name">${it.name}</div>`;
-          grid.appendChild(el);
-        });
-      }
-    })();
+    // 2. ЗАБРАТЬ (Создать заявку на вывод)
+    document.getElementById('btnWithdraw').onclick = async () => {
+       if(!currentItem) return;
+       
+       if(!confirm('Отправить заявку админу на получение подарка в Telegram?')) return;
+       
+       // Тут можно вызвать /api/withdraw (который мы делали ранее)
+       // Но нужно слегка доработать его для приема ID предмета, а не суммы.
+       // Пока сделаем заглушку:
+       tg.showAlert('Функция вывода в разработке! Пока можешь продать предмет.');
+    };
+
   </script>
 </body>
 </html>
-
