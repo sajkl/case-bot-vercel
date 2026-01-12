@@ -1,52 +1,39 @@
-// api/inventory.js
-const db = require('../db');
+const { query } = require('../db');
 const crypto = require('crypto');
 
-// Секрет для проверки (как обычно)
-const APP_SECRET = (process.env.APP_SECRET || (process.env.BOT_TOKEN + ':dev')).trim();
-
-function verifyJwt(token, secret) {
-  try {
-    const parts = String(token).split('.');
-    if (parts.length !== 3) return null;
-    const [h, p, s] = parts;
-    const sig = crypto.createHmac('sha256', (secret || '').trim()).update(`${h}.${p}`).digest('base64url');
-    if (s !== sig) return null;
-    return JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
-  } catch { return null; }
+// Хелпер проверки (можно вынести в отдельный lib/auth.js)
+function verifyTelegramWebAppData(telegramInitData) {
+  if (!telegramInitData) return null;
+  const encoded = decodeURIComponent(telegramInitData);
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
+  const arr = encoded.split('&');
+  const hashIndex = arr.findIndex(str => str.startsWith('hash='));
+  const hash = arr.splice(hashIndex, 1)[0].split('=')[1];
+  arr.sort((a, b) => a.localeCompare(b));
+  const _hash = crypto.createHmac('sha256', secret).update(arr.join('\n')).digest('hex');
+  if (_hash !== hash) return null;
+  return JSON.parse(arr.find(s => s.startsWith('user=')).split('user=')[1]);
 }
 
 module.exports = async (req, res) => {
-  // 1. Авторизация
-  const cookie = req.headers.cookie || '';
-  let token = cookie.split(';').map(s => s.trim()).find(s => s.startsWith('sid='))?.slice(4);
-  if (!token && req.headers.authorization) token = req.headers.authorization.slice(7);
-
-  const jwt = verifyJwt(token, APP_SECRET);
-  if (!jwt || !jwt.sub) return res.status(401).json({ error: 'Unauthorized' });
-
-  const userId = jwt.sub;
-
   try {
-    // 2. Забираем предметы из базы (сначала новые)
-    const result = await db.query(`
-      SELECT item_id, name, image_url, created_at 
-      FROM inventory 
-      WHERE user_id = $1 
-      ORDER BY created_at DESC
-    `, [userId]);
+    const initData = req.headers['x-telegram-data'];
+    const user = verifyTelegramWebAppData(initData);
+    if (!user) return res.json({ items: [] }); // Не авторизован = пустой инвентарь
 
-    // Преобразуем для фронтенда (если нужно менять названия полей)
-    const items = result.rows.map(row => ({
-      id: row.item_id,
-      name: row.name,
-      icon: row.image_url, // Твой фронт ждет поле 'icon'
-      date: row.created_at
-    }));
+    // Выбираем только АКТИВНЫЕ предметы (не проданные)
+    // JOIN items, чтобы получить картинку и название
+    const result = await query(`
+      SELECT inv.id, i.name, i.image_url, i.stars_cost, i.is_rare 
+      FROM inventory inv
+      JOIN items i ON inv.item_id = i.id
+      WHERE inv.user_id = $1 AND inv.status = 'active'
+      ORDER BY inv.created_at DESC
+    `, [user.id]);
 
-    res.status(200).json({ items });
+    return res.json({ items: result.rows });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'DB Error' });
+    return res.status(500).json({ items: [] });
   }
 };
