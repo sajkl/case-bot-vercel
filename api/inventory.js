@@ -1,7 +1,7 @@
 const { query } = require('../db');
 const crypto = require('crypto');
 
-// Хелпер проверки (можно вынести в отдельный lib/auth.js)
+// Хелпер проверки
 function verifyTelegramWebAppData(telegramInitData) {
   if (!telegramInitData) return null;
   const encoded = decodeURIComponent(telegramInitData);
@@ -19,14 +19,14 @@ module.exports = async (req, res) => {
   try {
     const initData = req.headers['x-telegram-data'];
     const user = verifyTelegramWebAppData(initData);
-    if (!user) return res.json({ items: [] }); // Не авторизован = пустой инвентарь
+    if (!user) return res.json({ items: [] }); 
 
-    // Выбираем только АКТИВНЫЕ предметы (не проданные)
-    // JOIN items, чтобы получить картинку и название
+    // === ИСПРАВЛЕНИЕ ===
+    // Добавили ::uuid к inv.item_id, чтобы PostgreSQL понял сравнение
     const result = await query(`
       SELECT inv.id, i.name, i.image_url, i.stars_cost, i.is_rare 
       FROM inventory inv
-      JOIN items i ON inv.item_id = i.id
+      JOIN items i ON inv.item_id::uuid = i.id
       WHERE inv.user_id = $1 AND inv.status = 'active'
       ORDER BY inv.created_at DESC
     `, [user.id]);
