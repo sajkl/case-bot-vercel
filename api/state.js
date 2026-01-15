@@ -4,7 +4,7 @@ const { query } = require('../db');
 const BETTING_TIME_MS = 10000; // 10 секунд на ставки
 const HOUSE_EDGE = 0.30;       // RTP 70%
 
-// Генератор краша (тот же алгоритм)
+// Генератор краша
 const generateCrashPoint = () => {
   const r = Math.random();
   const result = (1 - HOUSE_EDGE) / (1 - r);
@@ -21,9 +21,19 @@ module.exports = async (req, res) => {
   try {
     const now = Date.now();
 
-    // 1. Ищем последний активный раунд
-    // Мы ищем раунд, который либо "pending", либо "flying" (но не старый "ended")
-    // Или просто берем самый последний созданный
+    // 1. ПОЛУЧАЕМ ИСТОРИЮ (НОВОЕ!)
+    // Берем последние 15 завершенных раундов для отображения сверху
+    const historyRes = await query(`
+      SELECT crash_point 
+      FROM rounds 
+      WHERE status = 'ended' 
+      ORDER BY created_at DESC 
+      LIMIT 15
+    `);
+    // Превращаем результат в простой массив чисел [2.10, 1.05, ...]
+    const history = historyRes.rows.map(r => parseFloat(r.crash_point));
+
+    // 2. Ищем последний активный раунд
     const lastRoundRes = await query('SELECT * FROM rounds ORDER BY created_at DESC LIMIT 1');
     let currentRound = lastRoundRes.rows[0];
 
@@ -36,21 +46,26 @@ module.exports = async (req, res) => {
       // Если раунд существует, проверим, не пора ли его закончить
       const flightStart = parseInt(currentRound.start_time);
       
-      // Если ракета уже должна была крашнуться (прошло много времени с начала полета)
-      // Рассчитаем длительность полета до точки краша:
-      // Multiplier = e^(0.00006 * t)  =>  ln(M) = 0.00006 * t  =>  t = ln(M) / 0.00006
-      const flightDuration = Math.log(parseFloat(currentRound.crash_point)) / 0.00006;
+      // Если это старый "зависший" раунд или он уже прошел
+      // Рассчитаем длительность полета
+      const crashP = parseFloat(currentRound.crash_point);
+      const flightDuration = Math.log(crashP) / 0.00006;
       
-      // Время окончания = Время старта + Длительность полета + 3 секунды запаса на анимацию взрыва
-      const roundEndTime = flightStart + flightDuration + 3000;
+      // Время окончания = Старт + Полет + 4 секунды (запас на анимацию взрыва)
+      const roundEndTime = flightStart + flightDuration + 4000;
 
       if (now > roundEndTime) {
         needNewRound = true;
       }
     }
 
-    // 2. СОЗДАНИЕ НОВОГО РАУНДА (Если нужно)
+    // 3. СОЗДАНИЕ НОВОГО РАУНДА (Если нужно)
     if (needNewRound) {
+      // ВАЖНО: Помечаем старый раунд как 'ended', чтобы он попал в историю
+      if (currentRound) {
+        await query("UPDATE rounds SET status = 'ended' WHERE id = $1", [currentRound.id]);
+      }
+
       const crashPoint = generateCrashPoint();
       // Ракета взлетит через 10 секунд от "сейчас"
       const startTime = now + BETTING_TIME_MS; 
@@ -63,10 +78,10 @@ module.exports = async (req, res) => {
       currentRound = newRound.rows[0];
     }
 
-    // 3. ОПРЕДЕЛЯЕМ ТЕКУЩЕЕ СОСТОЯНИЕ ДЛЯ ИГРОКА
+    // 4. ОПРЕДЕЛЯЕМ ТЕКУЩЕЕ СОСТОЯНИЕ ДЛЯ ИГРОКА
     const startTime = parseInt(currentRound.start_time);
     let phase = 'BETTING';
-    let timeBoard = 0; // Время на табло (либо обратный отсчет, либо кэф)
+    let timeBoard = 0; // Время на табло
 
     if (now < startTime) {
       // Фаза СТАВОК
@@ -74,8 +89,6 @@ module.exports = async (req, res) => {
       timeBoard = (startTime - now); // Сколько мс осталось до взлета
     } else {
       // Фаза ПОЛЕТА
-      phase = 'FLYING';
-      // Считаем текущий кэф
       const elapsed = now - startTime;
       
       // Проверяем, не долетели ли мы до краша
@@ -86,27 +99,27 @@ module.exports = async (req, res) => {
         phase = 'CRASHED';
         timeBoard = crashP; // Показываем финальный кэф
       } else {
+        phase = 'FLYING';
         timeBoard = currentMult; // Показываем текущий полет
       }
     }
 
-    // 4. ПОЛУЧАЕМ СПИСОК СТАВОК (КТО ИГРАЕТ?)
-    // Берем юзеров, их ставки и статус (вывел/не вывел)
-    // Можно добавить JOIN users, чтобы получить имена, но пока по id
+    // 5. ПОЛУЧАЕМ СПИСОК СТАВОК
     const betsRes = await query(
       `SELECT user_id, bet_amount, status, cashout_point 
        FROM crash_games 
        WHERE round_id = $1 
-       ORDER BY bet_amount DESC`, // Сортируем: крутые ставки сверху
+       ORDER BY bet_amount DESC LIMIT 50`,
       [currentRound.id]
     );
 
-    // Отдаем клиенту всё инфо
+    // Отдаем клиенту всё инфо + ИСТОРИЮ
     return res.json({
       roundId: currentRound.id,
       phase: phase,           // BETTING, FLYING, CRASHED
-      value: timeBoard,       // Либо мс до старта, либо текущий кэф
-      bets: betsRes.rows      // Список игроков в этом раунде
+      value: timeBoard,       // Таймер или Кэф
+      bets: betsRes.rows,     // Игроки
+      history: history        // <-- Массив истории для полоски сверху
     });
 
   } catch (e) {
