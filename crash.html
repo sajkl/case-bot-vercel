@@ -71,6 +71,7 @@
       display: flex; gap: 6px; padding: 0 16px 10px;
       overflow-x: auto; scrollbar-width: none;
       mask-image: linear-gradient(to right, black 85%, transparent 100%);
+      min-height: 36px; /* Чтобы не прыгало при загрузке */
     }
     .hist-pill {
       background: #232838; padding: 5px 10px; border-radius: 8px;
@@ -155,7 +156,7 @@
         <span id="playersCount">0</span>
       </div>
       <div class="bets-list" id="betsList">
-        </div>
+      </div>
     </div>
 
     <nav class="nav">
@@ -265,10 +266,17 @@
     requestAnimationFrame(renderLoop);
 
     // === СИНХРОНИЗАЦИЯ С СЕРВЕРОМ (POLLING) ===
-    // Каждую секунду спрашиваем: "Как дела?"
     async function pollState() {
       try {
         const res = await fetch('/api/state').then(r => r.json());
+        
+        // 1. ПЕРВИЧНАЯ ЗАГРУЗКА ИСТОРИИ (НОВОЕ!)
+        if (historyBar.children.length === 0 && res.history && res.history.length > 0) {
+           // Сервер присылает от новых к старым. Переворачиваем для отрисовки слева направо
+           for (let i = res.history.length - 1; i >= 0; i--) {
+              addHistory(res.history[i]); 
+           }
+        }
         
         // Обновляем фазу
         const prevPhase = serverPhase;
@@ -283,9 +291,16 @@
           btn.onclick = placeBet; // Возвращаем кнопку в режим ставки
         }
 
-        // Если фаза поменялась на CRASHED - добавим в историю
+        // Если фаза поменялась на CRASHED - добавим в историю (live)
         if (prevPhase === 'FLYING' && serverPhase === 'CRASHED') {
-           addHistory(res.value); // res.value это финальный кэф
+           // Проверка на дубликат (если вдруг сервер прислал историю раньше)
+           const lastVal = historyBar.firstElementChild?.textContent;
+           const newVal = res.value.toFixed(2) + 'x';
+           
+           if (lastVal !== newVal) {
+              addHistory(res.value); 
+           }
+
            counterEl.textContent = res.value.toFixed(2) + 'x';
            counterEl.classList.add('crashed');
            statusEl.textContent = "CRASHED";
@@ -295,13 +310,10 @@
         // Обновляем список игроков
         renderBets(res.bets);
         
-        // Если фаза BETTING - обновляем время старта (если рассинхрон)
+        // Синхронизация времени старта
         if (serverPhase === 'BETTING') {
-           serverStartTime = Date.now() + res.value; // value это ms до старта
+           serverStartTime = Date.now() + res.value; 
         } else if (serverPhase === 'FLYING') {
-           // Если мы зашли посередине полета - восстановим startTime
-           // Текущий mult = e^(0.00006 * t) -> t = ln(mult)/0.00006
-           // startTime = now - t
            const elapsed = Math.log(res.value) / 0.00006;
            serverStartTime = Date.now() - elapsed;
         }
@@ -318,7 +330,6 @@
 
     // === КНОПКА (UI) ===
     function updateButtonState() {
-      // 1. Если фаза ставок
       if (serverPhase === 'BETTING') {
         if (myBet) {
           btn.className = 'action-btn btn-wait';
@@ -330,7 +341,6 @@
           btn.onclick = placeBet;
         }
       }
-      // 2. Если летим
       else if (serverPhase === 'FLYING') {
         if (myBet && !myCashout) {
           btn.className = 'action-btn btn-cashout';
@@ -347,7 +357,6 @@
           btn.style.background = ''; // Сброс
         }
       }
-      // 3. Краш
       else {
         btn.className = 'action-btn btn-wait';
         btn.textContent = 'КРАШ';
@@ -397,9 +406,7 @@
           myCashout = true;
           tg.HapticFeedback.notificationOccurred('success');
           if(res.balance) balEl.textContent = res.balance;
-          // Кнопка обновится в updateButtonState
         } else {
-          // Не успел
           tg.HapticFeedback.notificationOccurred('error');
         }
       } catch(e) { console.error(e); }
@@ -412,7 +419,6 @@
       playersCountEl.textContent = bets.length;
       
       betsListEl.innerHTML = bets.map(b => {
-        // Определяем состояние
         const isMe = (b.user_id == myId);
         const isWin = (b.status === 'cashed_out');
         const profit = isWin ? Math.floor(b.bet_amount * b.cashout_point) : 0;
@@ -421,7 +427,6 @@
         if (isWin) rowClass += ' success';
         else if (b.status === 'busted') rowClass += ' crash';
 
-        // Имя (маскируем ID)
         let name = isMe ? "ВЫ" : `User ${b.user_id.toString().slice(0,3)}...`;
         
         return `
@@ -446,11 +451,14 @@
 
     // Хелперы
     function setBet(val) { document.getElementById('betAmount').value = val; }
+    
     function addHistory(val) {
       const el = document.createElement('div');
       const num = parseFloat(val);
       el.className = `hist-pill ${num >= 2.0 ? 'high' : 'low'}`;
       el.textContent = num.toFixed(2) + 'x';
+      
+      // Вставляем в начало списка
       historyBar.prepend(el);
       if(historyBar.children.length > 20) historyBar.lastChild.remove();
     }
