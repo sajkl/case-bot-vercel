@@ -8,7 +8,7 @@
     :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400;--green:#2ad06c;--red:#ff4d4d}
     * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
     html,body{ margin:0; min-height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Futura PT",sans-serif; overflow-x:hidden; }
-    .page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Увеличил отступ снизу для навигации */
+    .page{max-width:520px;margin:0 auto;padding:14px 16px 0;}
 
     /* Верхняя панель */
     .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:16px;}
@@ -37,19 +37,17 @@
       margin-bottom: 16px;
     }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
-    
     .crash-info { position: relative; z-index: 2; text-align: center; }
     
-    /* Счетчик множителя */
     .crash-counter {
       font-size: 64px; font-weight: 900; color: #fff;
       font-feature-settings: "tnum"; text-shadow: 0 4px 30px rgba(0,0,0,0.5);
-      transition: color 0.1s linear; /* Плавная смена цвета */
+      transition: color 0.1s linear;
     }
     .crash-status { font-size: 14px; font-weight: 700; color: #777; letter-spacing: 1px; margin-top: -5px; }
     .crash-counter.crashed { color: var(--red) !important; animation: shake 0.4s; }
 
-    /* Анимация цифр обратного отсчета */
+    /* Анимация цифр */
     .countdown-num {
       font-size: 80px; font-weight: 900; color: var(--accent);
       opacity: 0; transform: scale(0.5);
@@ -116,11 +114,36 @@
     .p-bet { color: var(--accent); font-weight: 700; font-size: 14px; }
     .p-profit { color: var(--green); font-weight: 800; font-size: 14px; }
 
-    /* === ИСПРАВЛЕННАЯ НАВИГАЦИЯ === */
-  
-    .nav-btn.active { color: var(--accent); }
-    /* Иконки (эмодзи) чуть крупнее */
-   
+    /* === НАВИГАЦИЯ ИЗ ПРОФИЛЯ === */
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(11,13,18,0.95); 
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #1f232e;
+      padding: 12px 16px 34px; /* Чуть больше снизу для iPhone */
+      display: flex; justify-content: space-around;
+      z-index: 100;
+    }
+    
+    .nav .btn {
+      color: #5d6470; 
+      text-decoration: none; 
+      font-weight: 800; 
+      font-size: 14px;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      gap: 4px;
+      transition: transform 0.1s;
+    }
+    
+    .nav .btn:active { transform: scale(0.95); }
+
+    /* Активная кнопка (желтая) */
+    .nav .btn.active { color: #ffd400; }
+
+    /* Распорка, чтобы контент не перекрывался меню */
+    .nav-spacer { height: 90px; }
 
   </style>
 </head>
@@ -162,11 +185,13 @@
       <div id="betsContainer"></div>
     </div>
 
-   <nav class="nav">
-    <a class="btn active" href="/">Кейсы</a>
-    <a class="btn" href="/crash.html">Crash 🚀</a>
-    <a class="btn" href="/profile/">Профиль</a>
-  </nav>
+    <div class="nav-spacer"></div>
+
+    <nav class="nav">
+      <a class="btn" href="/">Кейсы</a>
+      <a class="btn active" href="/crash.html">Crash 🚀</a>
+      <a class="btn" href="/profile/">Профиль</a>
+    </nav>
 
   </div>
 
@@ -220,7 +245,6 @@
       ctx.beginPath();
       ctx.lineWidth = 5;
       
-      // Цвет линии тоже сделаем адаптивным
       if(mult < 2.0) ctx.strokeStyle = '#fff';
       else if(mult < 5.0) ctx.strokeStyle = '#2ad06c'; 
       else ctx.strokeStyle = '#ffd400'; 
@@ -242,30 +266,20 @@
     function updateCounterColor(mult) {
       if (serverPhase === 'CRASHED') return; 
 
-      // 1.00 -> 2.00: БЕЛЫЙ (255,255,255) -> ЗЕЛЕНЫЙ (42, 208, 108)
       if (mult < 2.00) {
-        const pct = (mult - 1.0); // 0..1
-        const r = 255 - (213 * pct); // 255 -> 42
-        const g = 255 - (47 * pct);  // 255 -> 208
-        const b = 255 - (147 * pct); // 255 -> 108
+        const pct = (mult - 1.0); 
+        const r = 255 - (213 * pct); 
+        const g = 255 - (47 * pct);  
+        const b = 255 - (147 * pct); 
         counterEl.style.color = `rgb(${r}, ${g}, ${b})`;
       } 
-      // 2.00 -> 5.00: ЗЕЛЕНЫЙ (42, 208, 108) -> ЖЕЛТЫЙ (255, 212, 0)
       else if (mult < 5.00) {
-         // Процент от 0 до 1 в диапазоне от 2 до 5
-         // (mult - 2) / 3
          const pct = (mult - 2.0) / 3.0;
-         
-         // R: 42 -> 255 (растет)
          const r = 42 + (213 * pct);
-         // G: 208 -> 212 (почти не меняется)
          const g = 208 + (4 * pct);
-         // B: 108 -> 0 (падает)
          const b = 108 - (108 * pct);
-         
          counterEl.style.color = `rgb(${r}, ${g}, ${b})`;
       } 
-      // 5.00+: ЧИСТОЕ ЗОЛОТО
       else {
          counterEl.style.color = '#ffd400';
       }
