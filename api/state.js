@@ -5,12 +5,30 @@ const BETTING_TIME_MS = 10000; // 10 секунд на ставки
 const HOUSE_EDGE = 0.30;       // RTP 70%
 
 // Генератор краша
+// --- НОВАЯ ЛОГИКА ГЕНЕРАЦИИ ---
 const generateCrashPoint = () => {
   const r = Math.random();
+  // Базовая формула (E = 1 / (1-r)) * (1 - HouseEdge)
   const result = (1 - HOUSE_EDGE) / (1 - r);
+  
   let crashPoint = Math.floor(result * 100) / 100;
+
+  // Ограничители
   if (crashPoint < 1.00) crashPoint = 1.00;
   if (crashPoint > 100) crashPoint = 100.00;
+
+  // === ТВОЕ УСЛОВИЕ: Обработка 1.00x ===
+  if (crashPoint === 1.00) {
+     // Кидаем монетку (50/50)
+     if (Math.random() > 0.5) {
+        // Меняем 1.00 на случайное число от 1.01 до 1.10
+        // (Math.random() * (max - min) + min)
+        const lowCrash = (Math.random() * (1.10 - 1.01) + 1.01);
+        crashPoint = Math.floor(lowCrash * 100) / 100;
+     }
+     // Иначе оставляем 1.00 (Мгновенная смерть)
+  }
+
   return crashPoint;
 };
 
