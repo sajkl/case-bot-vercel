@@ -2,7 +2,7 @@ const { query } = require('../db');
 
 // === НАСТРОЙКИ ===
 const BETTING_TIME_MS = 10000; // 10 секунд на ставки
-const HOUSE_EDGE = 0.26;       // RTP 70%
+const HOUSE_EDGE = 0.27;       // RTP 70%
 
 // Генератор краша
 // --- НОВАЯ ЛОГИКА ГЕНЕРАЦИИ ---
@@ -20,7 +20,7 @@ const generateCrashPoint = () => {
   // === ТВОЕ УСЛОВИЕ: Обработка 1.00x ===
   if (crashPoint === 1.00) {
      // Кидаем монетку (50/50)
-     if (Math.random() > 0.7) {
+     if (Math.random() > 0.6) {
         // Меняем 1.00 на случайное число от 1.01 до 1.10
         // (Math.random() * (max - min) + min)
         const lowCrash = (Math.random() * (1.10 - 1.01) + 1.01);
