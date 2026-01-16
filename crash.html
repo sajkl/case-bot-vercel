@@ -117,32 +117,10 @@
     .p-profit { color: var(--green); font-weight: 800; font-size: 14px; }
 
     /* === ИСПРАВЛЕННАЯ НАВИГАЦИЯ === */
-    .nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(11,13,18,0.95); backdrop-filter: blur(10px);
-      border-top: 1px solid #1f232e;
-      padding: 10px 16px 20px; /* Удобные отступы */
-      display: flex; 
-      justify-content: space-between; /* Равномерное распределение */
-      align-items: center;
-      z-index: 100;
-    }
-    .nav-btn {
-      flex: 1; /* Кнопки занимают равную ширину */
-      text-decoration: none; 
-      color: #5d6470; 
-      font-weight: 800; 
-      font-size: 12px; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 5px;
-      padding: 5px 0;
-      transition: color 0.2s;
-    }
+  
     .nav-btn.active { color: var(--accent); }
     /* Иконки (эмодзи) чуть крупнее */
-    .nav-icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+   
 
   </style>
 </head>
@@ -184,20 +162,12 @@
       <div id="betsContainer"></div>
     </div>
 
-    <nav class="nav">
-      <a href="/" class="nav-btn">
-        <span class="nav-icon">🎒</span>
-        <span>Кейсы</span>
-      </a>
-      <a href="/crash.html" class="nav-btn active">
-        <span class="nav-icon">🚀</span>
-        <span>Crash</span>
-      </a>
-      <a href="/profile/" class="nav-btn">
-        <span class="nav-icon">👤</span>
-        <span>Профиль</span>
-      </a>
-    </nav>
+   <nav class="nav">
+    <a class="btn active" href="/">Кейсы</a>
+    <a class="btn" href="/crash.html">Crash 🚀</a>
+    <a class="btn" href="/profile/">Профиль</a>
+  </nav>
+
   </div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
