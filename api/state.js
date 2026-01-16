@@ -20,7 +20,7 @@ const generateCrashPoint = () => {
   // === ТВОЕ УСЛОВИЕ: Обработка 1.00x ===
   if (crashPoint === 1.00) {
      // Кидаем монетку (50/50)
-     if (Math.random() > 0.5) {
+     if (Math.random() > 0.7) {
         // Меняем 1.00 на случайное число от 1.01 до 1.10
         // (Math.random() * (max - min) + min)
         const lowCrash = (Math.random() * (1.10 - 1.01) + 1.01);
