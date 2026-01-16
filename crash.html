@@ -5,18 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Crash — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
+  
   <style>
-    /* === Стили Crash (Game Area) === */
-    :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400;--green:#2ad06c;--red:#ff4d4d}
-    * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-    html,body{ margin:0; min-height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Futura PT",sans-serif; overflow-x:hidden; }
-    .page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Отступ под навигацию */
+    /* === Локальные стили ТОЛЬКО для игры Crash === */
+    :root{--green:#2ad06c;--red:#ff4d4d}
+    
+    /* Отступ снизу для контента, чтобы меню не перекрывало (90px) */
+    .page {
+      max-width: 520px; margin: 0 auto; padding: 14px 16px 90px;
+    }
 
     /* Верхняя панель */
-    .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:16px;}
-    .back{background:none;color:#fff;font-weight:900;border:none;font-size:24px;cursor:pointer;padding:0;}
-    .balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:6px 14px;display:flex;gap:6px;font-size:15px;}
-
+    .top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .back { background: none; color: #fff; font-weight: 900; border: none; font-size: 24px; cursor: pointer; padding: 0; text-decoration: none; }
+    
     /* История */
     .history-bar {
       display: flex; gap: 6px; padding-bottom: 12px;
@@ -39,10 +41,8 @@
       margin-bottom: 16px;
     }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
-    
     .crash-info { position: relative; z-index: 2; text-align: center; }
     
-    /* Счетчик множителя */
     .crash-counter {
       font-size: 64px; font-weight: 900; color: #fff;
       font-feature-settings: "tnum"; text-shadow: 0 4px 30px rgba(0,0,0,0.5);
@@ -51,31 +51,13 @@
     .crash-status { font-size: 14px; font-weight: 700; color: #777; letter-spacing: 1px; margin-top: -5px; }
     .crash-counter.crashed { color: var(--red) !important; animation: shake 0.4s; }
 
-    /* Анимация цифр */
-    .countdown-num {
-      font-size: 80px; font-weight: 900; color: var(--accent);
-      opacity: 0; transform: scale(0.5);
-    }
-    .countdown-num.pop {
-      animation: popIn 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-    @keyframes popIn {
-      0% { opacity: 0; transform: scale(0.5); }
-      20% { opacity: 1; transform: scale(1.1); }
-      40% { transform: scale(1); }
-      80% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0; transform: scale(1.2); }
-    }
-    @keyframes shake {
-      0% { transform: translate(1px, 1px) rotate(0deg); }
-      20% { transform: translate(-3px, 0px) rotate(1deg); }
-      40% { transform: translate(1px, -1px) rotate(1deg); }
-      60% { transform: translate(-3px, 1px) rotate(0deg); }
-      80% { transform: translate(-1px, -1px) rotate(1deg); }
-      100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
+    /* Анимации игры */
+    .countdown-num { font-size: 80px; font-weight: 900; color: var(--accent); opacity: 0; transform: scale(0.5); }
+    .countdown-num.pop { animation: popIn 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes popIn { 0% { opacity:0;transform:scale(0.5) } 20% { opacity:1;transform:scale(1.1) } 100% { opacity:0;transform:scale(1.2) } }
+    @keyframes shake { 0%,100% {transform:translate(0,0)} 25% {transform:translate(-2px,2px)} 75% {transform:translate(2px,-2px)} }
 
-    /* Панель управления */
+    /* Кнопки управления игрой (не путать с навигацией) */
     .controls {
       background: #1d212b; padding: 16px; border-radius: 24px; border: 1px solid #2a2f3d;
       margin-bottom: 20px;
@@ -117,48 +99,12 @@
     .p-name { font-weight: 700; font-size: 14px; }
     .p-bet { color: var(--accent); font-weight: 700; font-size: 14px; }
     .p-profit { color: var(--green); font-weight: 800; font-size: 14px; }
-
-    /* === СТАРАЯ НАВИГАЦИЯ (Кнопки-плашки) === */
-    .nav-spacer { height: 90px; }
-    
-    .nav {
-      position: fixed; 
-      left: 50%; transform: translateX(-50%);
-      bottom: 0; 
-      width: 100%; max-width: 520px;
-      background: rgba(10,11,16,.95); 
-      backdrop-filter: blur(10px);
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
-      padding: 12px 16px 16px; 
-      border-top: 1px solid #141824;
-      z-index: 9999;
-    }
-    
-    .nav .btn, .nav .btn:visited, .nav .btn:focus { text-decoration: none; }
-    
-    .nav .btn {
-      background: #12141b;
-      border: 1px solid #1b1e26;
-      color: #e7e9ee;
-      border-radius: 22px;
-      padding: 14px 10px;
-      text-align: center;
-      font-weight: 700;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-      display: block; /* Чтобы ссылка работала как блок */
-    }
-    
-    .nav .btn.active {
-      outline: 2px solid rgba(255,200,0,.4);
-      color: #fff;
-    }
-
   </style>
 </head>
 <body>
   <div class="page">
     <div class="top">
-      <button class="back" onclick="location.href='/'">←</button>
+      <a class="back" href="/">←</a>
       <div style="font-weight:900; font-size:20px;">CRASH</div>
       <div class="balance">★ <span id="bal">...</span></div>
     </div>
@@ -192,16 +138,13 @@
       <div class="bets-header"><span>ИГРОКИ</span> <span id="plCount">0</span></div>
       <div id="betsContainer"></div>
     </div>
-
-    <div class="nav-spacer"></div>
-
-    <nav class="nav">
-      <a class="btn" href="/">Кейсы</a>
-      <a class="btn active" href="/crash.html">Crash 🚀</a>
-      <a class="btn" href="/profile/">Профиль</a>
-    </nav>
-
   </div>
+
+  <nav class="nav">
+    <a class="btn" href="/">Кейсы</a>
+    <a class="btn active" href="/crash.html">Crash 🚀</a>
+    <a class="btn" href="/profile/">Профиль</a>
+  </nav>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
@@ -226,7 +169,7 @@
     let serverStartTime = 0;
     let myBet = null;
     let myCashout = false;
-    let lastSecond = -1; // Для анимации таймера
+    let lastSecond = -1;
 
     // === ГРАФИКА ===
     function resize() {
