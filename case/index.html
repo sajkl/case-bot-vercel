@@ -108,13 +108,31 @@ html,body{
 .close-overlay-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
 .close-overlay-btn:active { transform: scale(0.95); }
 
+/* === Лучи света (God Rays) - ИСПРАВЛЕНО === */
 .rays {
-  position: absolute; width: 600px; height: 600px;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.2) 20deg, transparent 40deg, rgba(255, 212, 0, 0.2) 60deg, transparent 80deg, rgba(255, 212, 0, 0.2) 100deg, transparent 120deg, rgba(255, 212, 0, 0.2) 140deg, transparent 160deg, rgba(255, 212, 0, 0.2) 180deg, transparent 200deg, rgba(255, 212, 0, 0.2) 220deg, transparent 240deg, rgba(255, 212, 0, 0.2) 260deg, transparent 280deg, rgba(255, 212, 0, 0.2) 300deg, transparent 320deg, rgba(255, 212, 0, 0.2) 340deg, transparent 360deg);
-  animation: spin 10s linear infinite;
-  z-index: -1; pointer-events: none;
+  position: absolute;
+  /* Центрируем точку вращения точно посередине экрана */
+  top: 50%;
+  left: 50%;
+  /* Делаем их огромными, чтобы гарантированно покрыть любой экран */
+  width: 200vmax; 
+  height: 200vmax;
+  /* Твой градиент */
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.15) 20deg, transparent 40deg, rgba(255, 212, 0, 0.15) 60deg, transparent 80deg, rgba(255, 212, 0, 0.15) 100deg, transparent 120deg, rgba(255, 212, 0, 0.15) 140deg, transparent 160deg, rgba(255, 212, 0, 0.15) 180deg, transparent 200deg, rgba(255, 212, 0, 0.15) 220deg, transparent 240deg, rgba(255, 212, 0, 0.15) 260deg, transparent 280deg, rgba(255, 212, 0, 0.15) 300deg, transparent 320deg, rgba(255, 212, 0, 0.15) 340deg, transparent 360deg);
+  /* Используем новую анимацию */
+  animation: spinCentered 15s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%; /* Скругляем края */
 }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Новая анимация вращения, которая учитывает центрирование */
+@keyframes spinCentered {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Старый @keyframes spin удали, если он больше нигде не нужен */
 
 .overlay-card {
   transform: scale(0.5); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
