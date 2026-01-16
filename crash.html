@@ -8,7 +8,7 @@
     :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400;--green:#2ad06c;--red:#ff4d4d}
     * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
     html,body{ margin:0; min-height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Futura PT",sans-serif; overflow-x:hidden; }
-    .page{max-width:520px;margin:0 auto;padding:14px 16px 80px;}
+    .page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Увеличил отступ снизу для навигации */
 
     /* Верхняя панель */
     .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:16px;}
@@ -26,7 +26,6 @@
       background: #232838; padding: 6px 10px; border-radius: 8px;
       font-size: 12px; font-weight: 800; color: #a5abb8; white-space: nowrap;
     }
-    /* УСЛОВИЕ 3: Зеленый от 1.49 */
     .hist-pill.high { color: var(--green); background: rgba(42, 208, 108, 0.15); }
     .hist-pill.low { color: var(--red); background: rgba(255, 77, 77, 0.15); }
 
@@ -48,10 +47,9 @@
       transition: color 0.1s linear; /* Плавная смена цвета */
     }
     .crash-status { font-size: 14px; font-weight: 700; color: #777; letter-spacing: 1px; margin-top: -5px; }
-    
     .crash-counter.crashed { color: var(--red) !important; animation: shake 0.4s; }
 
-    /* Анимация обратного отсчета (ЦИФРЫ) */
+    /* Анимация цифр обратного отсчета */
     .countdown-num {
       font-size: 80px; font-weight: 900; color: var(--accent);
       opacity: 0; transform: scale(0.5);
@@ -68,15 +66,10 @@
     }
     @keyframes shake {
       0% { transform: translate(1px, 1px) rotate(0deg); }
-      10% { transform: translate(-1px, -2px) rotate(-1deg); }
       20% { transform: translate(-3px, 0px) rotate(1deg); }
-      30% { transform: translate(3px, 2px) rotate(0deg); }
       40% { transform: translate(1px, -1px) rotate(1deg); }
-      50% { transform: translate(-1px, 2px) rotate(-1deg); }
       60% { transform: translate(-3px, 1px) rotate(0deg); }
-      70% { transform: translate(3px, 1px) rotate(-1deg); }
       80% { transform: translate(-1px, -1px) rotate(1deg); }
-      90% { transform: translate(1px, 2px) rotate(0deg); }
       100% { transform: translate(1px, -2px) rotate(-1deg); }
     }
 
@@ -123,15 +116,34 @@
     .p-bet { color: var(--accent); font-weight: 700; font-size: 14px; }
     .p-profit { color: var(--green); font-weight: 800; font-size: 14px; }
 
-    /* Навигация */
+    /* === ИСПРАВЛЕННАЯ НАВИГАЦИЯ === */
     .nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(11,13,18,0.95); backdrop-filter: blur(10px);
-      border-top: 1px solid #1f232e; padding: 12px 16px 24px;
-      display: flex; justify-content: space-around; z-index: 100;
+      border-top: 1px solid #1f232e;
+      padding: 10px 16px 20px; /* Удобные отступы */
+      display: flex; 
+      justify-content: space-between; /* Равномерное распределение */
+      align-items: center;
+      z-index: 100;
     }
-    .nav a { color: #5d6470; text-decoration: none; font-weight: 800; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .nav a.active { color: var(--accent); }
+    .nav-btn {
+      flex: 1; /* Кнопки занимают равную ширину */
+      text-decoration: none; 
+      color: #5d6470; 
+      font-weight: 800; 
+      font-size: 12px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      gap: 5px;
+      padding: 5px 0;
+      transition: color 0.2s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    /* Иконки (эмодзи) чуть крупнее */
+    .nav-icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+
   </style>
 </head>
 <body>
@@ -173,9 +185,18 @@
     </div>
 
     <nav class="nav">
-      <a href="/">Кейсы</a>
-      <a href="/crash.html" class="active">Crash 🚀</a>
-      <a href="/profile/">Профиль</a>
+      <a href="/" class="nav-btn">
+        <span class="nav-icon">🎒</span>
+        <span>Кейсы</span>
+      </a>
+      <a href="/crash.html" class="nav-btn active">
+        <span class="nav-icon">🚀</span>
+        <span>Crash</span>
+      </a>
+      <a href="/profile/" class="nav-btn">
+        <span class="nav-icon">👤</span>
+        <span>Профиль</span>
+      </a>
     </nav>
   </div>
 
@@ -216,7 +237,6 @@
     function drawGraph(mult) {
       ctx.clearRect(0, 0, width, height);
       
-      // Сетка
       ctx.strokeStyle = '#232838'; ctx.lineWidth = 1; ctx.beginPath();
       for(let i=1; i<5; i++) {
         const y = height - (i * height / 5);
@@ -225,18 +245,17 @@
       ctx.stroke();
 
       if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') return;
-      if (mult <= 1.00) return; // Не рисуем линию если 1.00
+      if (mult <= 1.00) return; 
 
-      // Линия графика
       ctx.beginPath();
       ctx.lineWidth = 5;
       
-      // Цвет линии меняется вместе с кэфом
+      // Цвет линии тоже сделаем адаптивным
       if(mult < 2.0) ctx.strokeStyle = '#fff';
-      else if(mult < 10.0) ctx.strokeStyle = '#2ad06c'; // Green
-      else ctx.strokeStyle = '#ffd400'; // Gold
+      else if(mult < 5.0) ctx.strokeStyle = '#2ad06c'; 
+      else ctx.strokeStyle = '#ffd400'; 
 
-      const progress = Math.min(1, Math.log(mult) / 4); // Условный прогресс
+      const progress = Math.min(1, Math.log(mult) / 4);
       const endX = width * 0.1 + (width * 0.8 * progress);
       const endY = height * 0.9 - (height * 0.8 * progress);
 
@@ -245,33 +264,40 @@
       ctx.stroke();
 
       if (serverPhase === 'FLYING') {
-         // Точка на конце
          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI*2); ctx.fill();
       }
     }
 
-    // === ЦВЕТОВОЙ ГРАДИЕНТ (Задание 4) ===
+    // === ПЛАВНЫЙ ЦВЕТОВОЙ ПЕРЕХОД ===
     function updateCounterColor(mult) {
-      if (serverPhase === 'CRASHED') return; // При краше цвет красный ставится классом
+      if (serverPhase === 'CRASHED') return; 
 
-      // 1.00 -> 2.00 (Белый -> Зеленый)
+      // 1.00 -> 2.00: БЕЛЫЙ (255,255,255) -> ЗЕЛЕНЫЙ (42, 208, 108)
       if (mult < 2.00) {
-        // Процент от 0 до 1
-        const pct = (mult - 1.0) / 1.0; 
-        // Интерполяция RGB: White(255,255,255) -> Green(42, 208, 108)
-        // R: 255 -> 42
-        // G: 255 -> 208
-        // B: 255 -> 108
-        const r = 255 - (213 * pct);
-        const g = 255 - (47 * pct);
-        const b = 255 - (147 * pct);
+        const pct = (mult - 1.0); // 0..1
+        const r = 255 - (213 * pct); // 255 -> 42
+        const g = 255 - (47 * pct);  // 255 -> 208
+        const b = 255 - (147 * pct); // 255 -> 108
         counterEl.style.color = `rgb(${r}, ${g}, ${b})`;
       } 
-      // 2.00+ -> Зеленый -> Золотой (плавно или просто золотой)
+      // 2.00 -> 5.00: ЗЕЛЕНЫЙ (42, 208, 108) -> ЖЕЛТЫЙ (255, 212, 0)
       else if (mult < 5.00) {
-         counterEl.style.color = '#2ad06c'; // Чисто зеленый
-      } else {
-         counterEl.style.color = '#ffd400'; // Золотой для высоких
+         // Процент от 0 до 1 в диапазоне от 2 до 5
+         // (mult - 2) / 3
+         const pct = (mult - 2.0) / 3.0;
+         
+         // R: 42 -> 255 (растет)
+         const r = 42 + (213 * pct);
+         // G: 208 -> 212 (почти не меняется)
+         const g = 208 + (4 * pct);
+         // B: 108 -> 0 (падает)
+         const b = 108 - (108 * pct);
+         
+         counterEl.style.color = `rgb(${r}, ${g}, ${b})`;
+      } 
+      // 5.00+: ЧИСТОЕ ЗОЛОТО
+      else {
+         counterEl.style.color = '#ffd400';
       }
     }
 
@@ -282,16 +308,15 @@
       if (serverPhase === 'BETTING') {
         const timeLeft = Math.max(0, Math.ceil((serverStartTime - now) / 1000));
         
-        // УСЛОВИЕ 1: Анимация цифр (появляются и исчезают)
         if (timeLeft !== lastSecond) {
            lastSecond = timeLeft;
-           counterEl.className = 'countdown-num'; // Сброс класса
-           void counterEl.offsetWidth; // Триггер рефлоу для перезапуска анимации
+           counterEl.className = 'countdown-num'; 
+           void counterEl.offsetWidth; 
            counterEl.textContent = timeLeft;
            counterEl.classList.add('pop');
-           counterEl.style.color = 'var(--accent)'; // Желтый для таймера
+           counterEl.style.color = 'var(--accent)'; 
            statusEl.textContent = "ПРИЕМ СТАВОК";
-           ctx.clearRect(0, 0, width, height); // Чистим график
+           ctx.clearRect(0, 0, width, height); 
         }
       } 
       else if (serverPhase === 'FLYING') {
@@ -299,11 +324,11 @@
         let mult = 1.00;
         if (ms > 0) mult = Math.pow(Math.E, 0.00006 * ms);
 
-        counterEl.className = 'crash-counter'; // Обычный стиль
+        counterEl.className = 'crash-counter'; 
         counterEl.textContent = mult.toFixed(2) + 'x';
         statusEl.textContent = "В ПОЛЕТЕ";
         
-        updateCounterColor(mult); // Градиент
+        updateCounterColor(mult); 
         drawGraph(mult);
       }
       
@@ -316,7 +341,6 @@
       try {
         const res = await fetch('/api/state').then(r => r.json());
 
-        // Загрузка истории
         if (historyBar.children.length === 0 && res.history?.length) {
           for(let i=res.history.length-1; i>=0; i--) addHistory(res.history[i]);
         }
@@ -324,24 +348,19 @@
         const prevPhase = serverPhase;
         serverPhase = res.phase;
 
-        // Новый раунд
         if (currentRoundId !== res.roundId) {
           currentRoundId = res.roundId;
           myBet = null; myCashout = false;
-          // Сброс таймера для анимации
           lastSecond = -1;
         }
 
-        // КРАШ (Обработка)
         if (prevPhase === 'FLYING' && serverPhase === 'CRASHED') {
           handleCrash(res.value);
         }
-        // УСЛОВИЕ 2: Если мы зашли, а там уже краш (даже 1.00x), надо показать
         if (serverPhase === 'CRASHED' && prevPhase !== 'CRASHED') {
            handleCrash(res.value);
         }
 
-        // Синхрон времени
         if (serverPhase === 'BETTING') serverStartTime = Date.now() + res.value;
         else if (serverPhase === 'FLYING') {
            const elapsed = Math.log(res.value) / 0.00006;
@@ -357,31 +376,26 @@
     pollState();
 
     function handleCrash(val) {
-      // Добавляем в историю
       const lastVal = historyBar.firstElementChild?.textContent;
       const newVal = val.toFixed(2) + 'x';
       if (lastVal !== newVal) addHistory(val);
 
-      // Визуал краша
       counterEl.className = 'crash-counter crashed';
       counterEl.textContent = newVal;
-      counterEl.style.color = ''; // Сброс инлайн цвета, чтобы сработал CSS класс .crashed
+      counterEl.style.color = ''; 
       statusEl.textContent = "CRASHED";
       tg.HapticFeedback.notificationOccurred('error');
     }
 
-    // УСЛОВИЕ 3: История (1.49+)
     function addHistory(val) {
       const el = document.createElement('div');
       const num = parseFloat(val);
-      // Зеленый если >= 1.49, иначе Красный
       el.className = `hist-pill ${num >= 1.49 ? 'high' : 'low'}`;
       el.textContent = num.toFixed(2) + 'x';
       historyBar.prepend(el);
       if(historyBar.children.length > 20) historyBar.lastChild.remove();
     }
 
-    // Кнопки
     function updateBtn() {
       if (serverPhase === 'BETTING') {
          if (myBet) {
@@ -405,7 +419,6 @@
       }
     }
 
-    // API Actions
     async function doBet() {
       const amount = +document.getElementById('betAmount').value;
       if(!amount) return;
@@ -444,7 +457,6 @@
 
     function setBet(v){document.getElementById('betAmount').value=v}
     
-    // Init balance
     fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}}).then(r=>r.json()).then(d=>{if(d.stars) balEl.textContent=d.stars});
   </script>
 </body>
