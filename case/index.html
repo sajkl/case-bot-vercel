@@ -7,6 +7,9 @@
 <style>
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
+  touch-action: manipulation; /* <-- ВАЖНО: Отключает зум по двойному тапу */
+  -webkit-tap-highlight-color: transparent; /* Убирает мигание */
+  user-select: none;
 html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
 .page{max-width:520px;margin:0 auto;padding:14px 16px 80px;} /* Отступ снизу под навбар */
 
