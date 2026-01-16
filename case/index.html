@@ -2,16 +2,26 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Открытие кейса</title>
 <style>
+/* 2. ЗАПРЕТ ЗУМА ЧЕРЕЗ CSS (ОБЯЗАТЕЛЬНО) */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
-*{box-sizing:border-box}
-  touch-action: manipulation; /* <-- ВАЖНО: Отключает зум по двойному тапу */
-  -webkit-tap-highlight-color: transparent; /* Убирает мигание */
-  user-select: none;
-html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 80px;} /* Отступ снизу под навбар */
+* {
+  box-sizing: border-box;
+  touch-action: manipulation; /* <--- Самое важное: отключает зум по двойному тапу */
+  -webkit-tap-highlight-color: transparent; /* Убирает синюю подсветку при клике */
+  user-select: none; /* Запрещает выделять текст при быстром нажатии */
+  -webkit-user-select: none;
+}
+
+html,body{
+  margin:0; min-height:100%; 
+  background:#0b0d12; color:var(--text); 
+  font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+  overflow-x: hidden; /* Защита от скролла влево-вправо */
+}
+.page{max-width:520px;margin:0 auto;padding:14px 16px 80px;}
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -53,8 +63,8 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   position: absolute; inset: 0; 
   display: flex; flex-direction: column; 
   align-items: center; justify-content: center;
-  z-index: 1; /* Под дверями, но над дном */
-  pointer-events: auto; /* Чтобы кликать кнопки */
+  z-index: 1; 
+  pointer-events: auto;
 }
 .prize-box img {
   width: 60%; height: 60%; object-fit: contain; 
@@ -149,7 +159,7 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
 
-/* Навигация (обновленная) */
+/* Навигация */
 .nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: rgba(11,13,18,0.95); backdrop-filter: blur(10px);
@@ -169,7 +179,7 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 <body>
 <div class="page">
   <div class="top">
-    <button class="back" onclick="location.href='/'">← Назад</button>
+    <button class="back" onclick="history.back()" style="visibility:hidden">←</button>
     <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
     <div class="balance">★ <span id="bal">...</span></div>
   </div>
