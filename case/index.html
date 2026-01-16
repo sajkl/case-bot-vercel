@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Открытие кейса</title>
+<link rel="stylesheet" href="/styles.css"> 
 <style>
+/* Локальные стили для кейсов */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 0;}
+.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Отступ снизу под навигацию */
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -160,35 +162,8 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
 
-  .nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(11,13,18,0.95); 
-      backdrop-filter: blur(10px);
-      border-top: 1px solid #1f232e;
-      padding: 12px 16px 34px; /* Чуть больше снизу для iPhone */
-      display: flex; justify-content: space-around;
-      z-index: 100;
-    }
-    
-    .nav .btn {
-      color: #5d6470; 
-      text-decoration: none; 
-      font-weight: 800; 
-      font-size: 14px;
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 4px;
-      transition: transform 0.1s;
-    }
-    
-    .nav .btn:active { transform: scale(0.95); }
-
-    /* Активная кнопка (желтая) */
-    .nav .btn.active { color: #ffd400; }
-
-    /* Распорка, чтобы контент не перекрывался меню */
-    .nav-spacer { height: 90px; }
+/* Навигация берется из styles.css */
+.nav-spacer { height: 90px; }
 
 </style>
 </head>
@@ -214,12 +189,11 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   <div class="nav-spacer"></div>
 </div>
 
-
-    <nav class="nav">
-      <a class="btn" href="/">Кейсы</a>
-      <a class="btn active" href="/crash.html">Crash 🚀</a>
-      <a class="btn" href="/profile/">Профиль</a>
-    </nav>
+<nav class="nav">
+  <a class="btn active" href="/">Кейсы</a>
+  <a class="btn" href="/crash.html">Crash 🚀</a>
+  <a class="btn" href="/profile/">Профиль</a>
+</nav>
 
 <div id="overlay" class="overlay">
   <button id="btnCloseOverlay" class="close-overlay-btn">&times;</button>
