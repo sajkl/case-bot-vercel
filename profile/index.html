@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Профиль — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
@@ -35,16 +35,16 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     
-    /* Контейнер для правой части (Кнопка + Счетчик) */
+    /* Контейнер справа для кнопки и счетчика */
     .section-right {
       display: flex; align-items: center; gap: 10px;
     }
 
     .inv-count { background: #232838; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #aaa; }
     
-    /* СТИЛЬ КНОПКИ "ПРОДАТЬ ВСЕ" */
+    /* СТИЛЬ НОВОЙ КНОПКИ */
     .btn-sell-all {
-      display: none; /* Скрыта пока нет предметов */
+      display: none; /* Скрыта по умолчанию */
       background: rgba(255, 77, 77, 0.15);
       color: #ff4d4d;
       border: 1px solid #ff4d4d;
@@ -100,37 +100,6 @@
     .btn-withdraw { background: var(--accent); color: #111; }
     .btn-close { background: transparent; color: #777; margin-top: 8px; font-size: 14px; }
 
-    /* === НАВИГАЦИЯ (Из твоего кода) === */
-    .nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(11,13,18,0.95); 
-      backdrop-filter: blur(10px);
-      border-top: 1px solid #1f232e;
-      padding: 12px 16px 34px; /* Чуть больше снизу для iPhone */
-      display: flex; justify-content: space-around;
-      z-index: 100;
-    }
-    
-    .nav .btn {
-      color: #5d6470; 
-      text-decoration: none; 
-      font-weight: 800; 
-      font-size: 14px;
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 4px;
-      transition: transform 0.1s;
-    }
-    
-    .nav .btn:active { transform: scale(0.95); }
-
-    /* Активная кнопка (желтая) */
-    .nav .btn.active { color: #ffd400; }
-
-    /* Распорка, чтобы контент не перекрывался меню */
-    .nav-spacer { height: 90px; }
-
   </style>
 </head>
 <body>
@@ -161,16 +130,13 @@
         <div class="empty-state">Загрузка...</div>
       </div>
     </section>
-    
-    <div class="nav-spacer"></div>
-  </div>
-
 
     <nav class="nav">
       <a class="btn" href="/">Кейсы</a>
-      <a class="btn active" href="/crash.html">Crash 🚀</a>
-      <a class="btn" href="/profile/">Профиль</a>
+      <a class="btn" href="/crash.html">Crash 🚀</a>
+      <a class="btn active" href="/profile/">Профиль</a>
     </nav>
+  </div>
 
   <div class="modal-overlay" id="itemModal">
     <div class="modal-card">
@@ -200,7 +166,7 @@
        grid: document.getElementById('invGrid'),
        count: document.getElementById('invCount'),
        modal: document.getElementById('itemModal'),
-       btnSellAll: document.getElementById('btnSellAll') // Кнопка продать все
+       btnSellAll: document.getElementById('btnSellAll') // Новая кнопка
     };
 
     let currentItem = null; 
@@ -212,7 +178,7 @@
        els.user.textContent = u.username ? `@${u.username}` : u.first_name;
        els.uid.textContent = `ID: ${u.id}`;
        if(u.photo_url) els.ava.style.backgroundImage = `url(${u.photo_url})`;
-       else els.ava.textContent = u.first_name[0];
+       else els.ava.textContent = u.first_name[0]; 
     }
 
     // Баланс
@@ -227,12 +193,12 @@
          .then(r=>r.json())
          .then(res => {
             const items = res.items || [];
-            allItems = items; // Сохраняем в переменную
+            allItems = items; // Сохраняем глобально для продажи всех
             
             els.count.textContent = items.length;
             els.grid.innerHTML = '';
 
-            // Показываем кнопку "Продать все" только если есть предметы
+            // Управление видимостью кнопки "Продать все"
             if(items.length > 0) {
                els.btnSellAll.style.display = 'block';
             } else {
@@ -262,15 +228,15 @@
     els.btnSellAll.onclick = async () => {
        if(allItems.length === 0) return;
        
-       // Считаем общую стоимость
+       // Считаем сумму
        const totalValue = allItems.reduce((sum, item) => sum + parseInt(item.stars_cost), 0);
        
        if(!confirm(`Вы точно хотите продать ВСЕ предметы (${allItems.length} шт.) за ${totalValue} ★?`)) return;
        
        els.btnSellAll.textContent = '...';
        
-       // Продаем по одному (через Promise.all для скорости)
        try {
+          // Продаем параллельно
           const promises = allItems.map(item => 
              fetch('/api/sell', {
                 method: 'POST',
@@ -283,11 +249,11 @@
           
           tg.showAlert(`Успешно продано на ${totalValue} звезд!`);
           
-          // Обновляем баланс и список
+          // Обновляем баланс
           fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
             .then(r=>r.json()).then(d=>{ if(d.stars) els.bal.textContent = d.stars });
           
-          loadInventory();
+          loadInventory(); // Перерисовываем список
           els.btnSellAll.textContent = 'ПРОДАТЬ ВСЕ';
           
        } catch(e) {
@@ -314,7 +280,7 @@
        currentItem = null;
     }
 
-    // --- ДЕЙСТВИЯ (Один предмет) ---
+    // --- ДЕЙСТВИЯ (Одиночные) ---
     document.getElementById('btnSellModal').onclick = async () => {
        if(!currentItem) return;
        const btn = document.getElementById('btnSellModal');
