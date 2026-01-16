@@ -8,27 +8,28 @@
   <link rel="stylesheet" href="/styles.css?v=13">
   
   <style>
-    /* === ИСПРАВЛЕННАЯ НАВИГАЦИЯ === */
-    /* Важно: эти стили сработают, даже если в styles.css что-то другое */
-    
+    /* === СТИЛИ НОВОЙ НАВИГАЦИИ (FIX) === */
+    /* Используем !important, чтобы перебить старый файл styles.css */
+
     .nav {
       position: fixed !important; 
       bottom: 0 !important; 
       left: 0 !important; 
       right: 0 !important;
+      width: 100% !important; /* Растягиваем на всю ширину */
       
-      background: #000000 !important; /* Черный фон как на фото */
+      background: #000000 !important; /* Глухой черный фон */
       border-top: 1px solid #1f232e !important;
       
-      /* Умный отступ для iPhone (учитывает полоску снизу) */
-      padding-top: 10px !important;
-      padding-bottom: calc(15px + env(safe-area-inset-bottom)) !important;
+      /* Отступы: сверху 10px, снизу под iPhone */
+      padding: 10px 0 calc(15px + env(safe-area-inset-bottom)) 0 !important;
       
       display: flex !important; 
       justify-content: space-around !important; 
       align-items: center !important;
-      z-index: 99999 !important; /* Поверх всего */
-      box-shadow: 0 -10px 30px rgba(0,0,0,0.5) !important;
+      z-index: 99999 !important; /* Поверх всего контента */
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.8) !important;
+      box-sizing: border-box !important;
     }
 
     .nav-btn {
@@ -40,42 +41,49 @@
       
       color: #5d6470 !important; /* Серый цвет неактивных */
       font-size: 10px !important; 
-      font-weight: 700 !important; 
+      font-weight: 800 !important; 
       font-family: system-ui, -apple-system, sans-serif !important;
       
       gap: 6px !important; 
-      width: 33% !important;
+      flex: 1 !important; /* Кнопки делят место поровну */
       background: transparent !important; 
       border: none !important;
-      transition: color 0.2s, transform 0.1s !important;
+      transition: color 0.2s !important;
+      opacity: 1 !important; /* Убираем прозрачность если была */
     }
     
     .nav-btn:active { transform: scale(0.95) !important; }
 
     /* Активный пункт (горит желтым) */
     .nav-btn.active { color: #ffd400 !important; } 
-    .nav-btn.active .nav-icon { transform: scale(1.1); }
 
     /* Иконки */
     .nav-icon { 
       font-size: 24px !important; 
       line-height: 1 !important;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-      transition: transform 0.2s;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)) !important;
+      margin-bottom: 2px !important;
     }
 
-    /* Распорка, чтобы контент не заезжал под меню */
+    /* Распорка, чтобы контент не был под меню */
     .nav-spacer { 
-      height: 110px !important; 
-      width: 100%;
-      display: block;
+      height: 100px !important; 
+      width: 100% !important;
+      display: block !important;
+      clear: both !important;
+    }
+    
+    /* Фикс для body, чтобы не было белых полос */
+    body {
+      background-color: #0b0d12;
+      margin: 0;
     }
   </style>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-
+  
   <div class="container">
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
@@ -104,22 +112,22 @@
         <div class="title">Ламбо</div><div class="price"><span class="star">★</span> 3899</div>
       </a>
     </main>
-    
-    <div class="nav-spacer" aria-hidden="true"></div>
+
+    <div class="nav-spacer"></div>
   </div>
 
   <nav class="nav">
-    <a href="/" class="nav-btn active">
+    <a class="nav-btn active" href="/">
       <span class="nav-icon">🎒</span>
       <span>Кейсы</span>
     </a>
     
-    <a href="/crash.html" class="nav-btn">
+    <a class="nav-btn" href="/crash.html">
       <span class="nav-icon">🚀</span>
       <span>Crash</span>
     </a>
     
-    <a href="/profile/" class="nav-btn">
+    <a class="nav-btn" href="/profile/">
       <span class="nav-icon">👤</span>
       <span>Профиль</span>
     </a>
@@ -130,34 +138,39 @@
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
-    // Авторизация
     const auth = await fetch('/api/tg-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: tg.initData })
     }).then(r => r.json());
 
-    if (!auth.ok) console.warn('Auth failed');
+    console.log('AUTH RESULT:', auth);
 
-    // Профиль
-    await fetch('/api/me', { credentials:'include' }).catch(()=>{});
+    if (!auth.ok) {
+      console.warn('Auth failed:', auth);
+      return;
+    }
 
-    // Баланс
+    // Теперь можно грузить профиль
+    const me = await fetch('/api/me', { credentials:'include' })
+      .then(r=>r.json());
+    console.log('ME:', me);
+
+    // баланс
     const balEl = document.getElementById('balanceValue');
-    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
+    fetch('/api/profile')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
       .catch(()=>{});
 
-    // Сохранение выбора кейса
+    // сохранить выбранный кейс
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a.card'); if (!a) return;
       const caseId = a.dataset.caseid || '';
       if (caseId) {
-        try { sessionStorage.setItem('currentCaseId', caseId); } catch(_){}
+        try { sessionStorage.setItem('currentCaseId', caseId); localStorage.setItem('lastCaseId', caseId); } catch(_){}
         const url = new URL(a.href, location.origin);
-        url.searchParams.set('case', caseId); 
-        a.href = url.pathname + '?' + url.searchParams.toString();
+        url.searchParams.set('case', caseId); a.href = url.pathname + '?' + url.searchParams.toString();
       }
     });
   })();
