@@ -5,21 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Открытие кейса</title>
 <style>
-/* 2. ЗАПРЕТ ЗУМА ЧЕРЕЗ CSS (ОБЯЗАТЕЛЬНО) */
+/* Глобальные настройки */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 * {
   box-sizing: border-box;
-  touch-action: manipulation; /* <--- Самое важное: отключает зум по двойному тапу */
-  -webkit-tap-highlight-color: transparent; /* Убирает синюю подсветку при клике */
-  user-select: none; /* Запрещает выделять текст при быстром нажатии */
-  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
 }
 
 html,body{
   margin:0; min-height:100%; 
   background:#0b0d12; color:var(--text); 
   font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
-  overflow-x: hidden; /* Защита от скролла влево-вправо */
+  overflow-x: hidden;
 }
 .page{max-width:520px;margin:0 auto;padding:14px 16px 80px;}
 
@@ -55,8 +54,8 @@ html,body{
 .cell-door.l{left:0;transform-origin:left center}
 .cell-door.r{right:0;transform-origin:right center}
 
-.cell.open .cell-door.l{transform:perspective(800px) rotateY(-85deg); transition: transform 0.4s ease;}
-.cell.open .cell-door.r{transform:perspective(800px) rotateY(85deg); transition: transform 0.4s ease;}
+.cell.open .cell-door.l{transform:perspective(800px) rotateY(-95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);}
+.cell.open .cell-door.r{transform:perspective(800px) rotateY(95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);}
 
 /* Контент внутри открытого ящика */
 .prize-box {
@@ -65,12 +64,18 @@ html,body{
   align-items: center; justify-content: center;
   z-index: 1; 
   pointer-events: auto;
+  opacity: 0; transition: opacity 0.3s ease;
 }
+.cell.open .prize-box { opacity: 1; transition-delay: 0.2s; } /* Показываем содержимое чуть позже открытия дверей */
+
 .prize-box img {
-  width: 60%; height: 60%; object-fit: contain; 
+  width: 65%; height: 65%; object-fit: contain; 
   filter: drop-shadow(0 0 15px rgba(255, 212, 0, 0.4));
   margin-bottom: 4px;
+  transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+.cell.open .prize-box img { transform: scale(1); }
+
 .prize-title {
   font-size: 11px; font-weight: 900; color: #fff; text-align: center;
   line-height: 1.1; margin-bottom: 6px;
@@ -90,10 +95,10 @@ html,body{
 /* === FULL SCREEN OVERLAY === */
 .overlay {
   position: fixed; inset: 0; 
-  background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
   z-index: 9999;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
 }
 .overlay.show { opacity: 1; pointer-events: auto; }
 
@@ -105,65 +110,65 @@ html,body{
   cursor: pointer; z-index: 10001; transition: background 0.2s, transform 0.2s;
   padding-bottom: 4px; 
 }
-.close-overlay-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
-.close-overlay-btn:active { transform: scale(0.95); }
+.close-overlay-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
 
-/* === Лучи света (God Rays) - ИСПРАВЛЕНО === */
+
+/* === КАРТОЧКА С РЕЗУЛЬТАТОМ === */
+.overlay-card {
+  position: relative; 
+  overflow: visible; /* Чтобы лучи могли вылезать за пределы */
+  transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex; flex-direction: column; align-items: center;
+}
+.overlay.show .overlay-card { transform: scale(1) translateY(0); }
+
+/* === ЛУЧИ (Правильное центрирование) === */
 .rays {
   position: absolute;
-  /* Центрируем точку вращения точно посередине экрана */
-  top: 50%;
+  /* Центрируем по горизонтали относительно карточки */
   left: 50%;
-  /* Делаем их огромными, чтобы гарантированно покрыть любой экран */
-  width: 200vmax; 
-  height: 200vmax;
-  /* Твой градиент */
+  /* Центрируем по вертикали относительно центра КАРТИНКИ (она 240px, центр ~120px) */
+  top: 120px;
+  
+  /* Огромный размер, чтобы покрыть любой экран */
+  width: 250vmax; 
+  height: 250vmax;
+  
   background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.15) 20deg, transparent 40deg, rgba(255, 212, 0, 0.15) 60deg, transparent 80deg, rgba(255, 212, 0, 0.15) 100deg, transparent 120deg, rgba(255, 212, 0, 0.15) 140deg, transparent 160deg, rgba(255, 212, 0, 0.15) 180deg, transparent 200deg, rgba(255, 212, 0, 0.15) 220deg, transparent 240deg, rgba(255, 212, 0, 0.15) 260deg, transparent 280deg, rgba(255, 212, 0, 0.15) 300deg, transparent 320deg, rgba(255, 212, 0, 0.15) 340deg, transparent 360deg);
-  /* Используем новую анимацию */
+  
+  /* Анимация вокруг заданного центра */
   animation: spinCentered 15s linear infinite;
-  z-index: -1;
+  z-index: -1; 
   pointer-events: none;
-  border-radius: 50%; /* Скругляем края */
+  border-radius: 50%;
 }
 
-/* Новая анимация вращения, которая учитывает центрирование */
 @keyframes spinCentered {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* Старый @keyframes spin удали, если он больше нигде не нужен */
-
-.overlay-card {
-  transform: scale(0.5); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  display: flex; flex-direction: column; align-items: center;
-}
-.overlay.show .overlay-card { transform: scale(1); }
-
 .overlay-img {
-  width: 220px; height: 220px; object-fit: contain;
-  filter: drop-shadow(0 0 30px rgba(255, 212, 0, 0.6));
-  margin-bottom: 20px;
+  width: 240px; height: 240px; object-fit: contain;
+  filter: drop-shadow(0 0 40px rgba(255, 212, 0, 0.5));
+  margin-bottom: 24px;
 }
 .overlay-title {
   font-size: 32px; font-weight: 900; text-transform: uppercase;
-  text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 30px;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 32px; text-align: center;
 }
 
-.actions { display: flex; flex-direction: column; gap: 12px; width: 280px; }
+.actions { display: flex; flex-direction: column; gap: 14px; width: 280px; }
 .act-btn {
-  border: none; padding: 16px; border-radius: 16px;
+  border: none; padding: 18px; border-radius: 18px;
   font-size: 18px; font-weight: 900; cursor: pointer;
   text-transform: uppercase; width: 100%; transition: transform 0.1s;
 }
 .act-btn:active { transform: scale(0.97); }
-.btn-sell { background: var(--accent); color: #111; box-shadow: 0 0 20px rgba(255,212,0,0.4); }
+.btn-sell { background: var(--accent); color: #111; box-shadow: 0 0 25px rgba(255,212,0,0.3); }
 .btn-keep { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
 
-.loader { display:none; width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; margin-bottom: 20px;}
-.loader.show { display: inline-block; }
-@keyframes rotation { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
-
+/* Стили для списка призов снизу */
 .prize-item {
   background: #0b0d12; border-radius: 16px; padding: 10px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -197,7 +202,7 @@ html,body{
 <body>
 <div class="page">
   <div class="top">
-    <button class="back" onclick="history.back()" style="visibility:hidden">←</button>
+    <button class="back" onclick="location.href='/'">← Назад</button>
     <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
     <div class="balance">★ <span id="bal">...</span></div>
   </div>
@@ -223,10 +228,9 @@ html,body{
 <div id="overlay" class="overlay">
   <button id="btnCloseOverlay" class="close-overlay-btn">&times;</button>
   
-  <div class="rays"></div>
-  <div class="loader" id="loader"></div>
-
   <div class="overlay-card" id="cardResult" style="display:none">
+    <div class="rays"></div>
+    
     <img id="winImg" class="overlay-img" src="">
     <div id="winTitle" class="overlay-title">PRIZE NAME</div>
     
@@ -264,14 +268,12 @@ qs('#price').textContent=`★ ${conf.price}`;
 // --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
 const overlay = qs('#overlay');
 const btnCloseOverlay = qs('#btnCloseOverlay');
-const loader = qs('#loader');
 const cardResult = qs('#cardResult');
 const winImg = qs('#winImg');
 const winTitle = qs('#winTitle');
 const btnSell = qs('#btnSell');
 const btnKeep = qs('#btnKeep');
 
-// Текущее состояние для действий в оверлее
 let currentWin = null; 
 
 // --- СЕТКА ---
@@ -287,7 +289,6 @@ for(let i=0;i<4;i++){
 // --- КЛИК ПО ЯЩИКУ ---
 grid.addEventListener('click', async (e)=>{
   const cell=e.target.closest('.cell'); 
-  // Если ящик уже открыт (виден приз) или в процессе анимации — не реагируем на клик по нему
   if(!cell || cell.classList.contains('open') || cell.classList.contains('processing')) return;
   
   vib(12);
@@ -305,18 +306,18 @@ grid.addEventListener('click', async (e)=>{
   // Этап 2 -> 3: ОТКРЫТИЕ
   cell.classList.add('processing'); 
   cell.dataset.stage = '3';
-  img.style.opacity = '0'; // Скрываем ящик
+  img.style.opacity = '0'; // Скрываем картинку кейса
 
-  // Добавляем внутренности (двери + мини-версия приза)
+  // Подготовка внутренностей (пока пустые или со спиннером)
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
   doors.innerHTML = `
     <div class="cell-door l"></div>
     <div class="cell-door r"></div>
     <div class="prize-box">
-      <img id="pimg" src="/assets/prizes/sample.png">
-      <div class="prize-title" id="ptitle">...</div>
-      <div class="prize-actions">
+      <img id="pimg" src="/assets/prizes/sample.png" style="opacity:0.5; filter:blur(5px)">
+      <div class="prize-title" id="ptitle">Открытие...</div>
+      <div class="prize-actions" style="display:none" id="pactions">
          <button class="prize-btn btn-sell-mini" id="psell">Продать</button>
          <button class="prize-btn btn-take" id="ptake">Забрать</button>
       </div>
@@ -324,16 +325,10 @@ grid.addEventListener('click', async (e)=>{
   `;
   cell.appendChild(doors);
 
-  // 1. Анимация дверей (CSS)
+  // 1. Анимация дверей (Сразу, чтобы не ждать)
   cell.classList.add('open'); 
 
-  // 2. Показываем загрузку в оверлее
-  setTimeout(() => {
-    overlay.classList.add('show');
-    loader.classList.add('show');
-    cardResult.style.display = 'none';
-    btnCloseOverlay.style.display = 'none'; // Пока грузим, крестик не показываем
-  }, 300);
+  // 2. ВАЖНО: Мы НЕ показываем оверлей здесь. Ждем данных.
 
   // 3. Запрос к серверу
   try {
@@ -343,37 +338,40 @@ grid.addEventListener('click', async (e)=>{
       body: JSON.stringify({ caseId })
     }).then(r => r.json());
 
-    loader.classList.remove('show');
-
     if (res.error) {
       tg.showAlert(res.error);
-      resetOverlay();
-      resetCell(cell, img, doors); // При ошибке сбрасываем всё
+      resetCell(cell, img, doors);
       return;
     }
 
     // Успех!
     if (res.stars != null) qs('#bal').textContent = res.stars;
-    
-    // Данные приза
     const p = res.prize;
-    const sellPrice = Math.floor(p.value); // 100% цена
+    const sellPrice = Math.floor(p.value);
 
-    // -- Заполняем ОВЕРЛЕЙ --
+    // 4. Обновляем МИНИ-ЯЩИК (Подарок появился внутри)
+    const pImg = doors.querySelector('#pimg');
+    pImg.src = p.image;
+    pImg.style.opacity = '1';
+    pImg.style.filter = 'none'; // Убираем блюр
+    
+    doors.querySelector('#ptitle').textContent = p.title;
+    doors.querySelector('#psell').textContent = `+${sellPrice}`;
+    doors.querySelector('#pactions').style.display = 'flex'; // Показываем кнопки внутри ящика
+
+    // 5. ЖДЕМ (Даем игроку 800мс порадоваться призу в ящике)
+    await new Promise(r => setTimeout(r, 800));
+
+    // 6. ПОКАЗЫВАЕМ БОЛЬШОЙ ОВЕРЛЕЙ
     winImg.src = p.image;
     winTitle.textContent = p.title;
     btnSell.textContent = `ПРОДАТЬ (+${sellPrice} ★)`;
     
     cardResult.style.display = 'flex';
-    btnCloseOverlay.style.display = 'flex'; // Можно закрыть
+    overlay.classList.add('show');
     tg.HapticFeedback.notificationOccurred('success');
 
-    // -- Заполняем МИНИ-ЯЧЕЙКУ (на фоне) --
-    doors.querySelector('#pimg').src = p.image;
-    doors.querySelector('#ptitle').textContent = p.title;
-    doors.querySelector('#psell').textContent = `+${sellPrice}`;
-
-    // Сохраняем контекст для кнопок оверлея
+    // Сохраняем контекст для кнопок
     currentWin = {
       inventoryId: res.inventoryId,
       sellPrice: sellPrice,
@@ -382,18 +380,14 @@ grid.addEventListener('click', async (e)=>{
       doors: doors
     };
 
-    // --- ОБРАБОТЧИКИ МИНИ-КНОПОК (В ЯЧЕЙКЕ) ---
-    // 1. Мини-Забрать (Очистить ячейку)
+    // --- ЛОГИКА МИНИ-КНОПОК (внутри ящика) ---
     doors.querySelector('#ptake').onclick = (ev) => {
       ev.stopPropagation(); 
       resetCell(cell, img, doors);
     };
-
-    // 2. Мини-Продать
     doors.querySelector('#psell').onclick = async (ev) => {
       ev.stopPropagation();
-      const btn = ev.target;
-      btn.textContent = '...';
+      ev.target.textContent = '...';
       await sellItem(currentWin.inventoryId, sellPrice);
       resetCell(cell, img, doors);
     };
@@ -401,32 +395,27 @@ grid.addEventListener('click', async (e)=>{
   } catch (err) {
     console.error(err);
     tg.showAlert("Ошибка сети");
-    resetOverlay();
     resetCell(cell, img, doors);
   }
 });
 
 // --- ЛОГИКА ОВЕРЛЕЯ ---
 
-// 1. ПРОДАТЬ (В оверлее) -> Закрыть оверлей + Сбросить ячейку
 btnSell.onclick = async () => {
   if(!currentWin) return;
   btnSell.textContent = '...';
-  
   await sellItem(currentWin.inventoryId, currentWin.sellPrice);
-  
+  // При продаже ящик закрывается
   resetCell(currentWin.cell, currentWin.img, currentWin.doors);
   resetOverlay();
   currentWin = null;
 };
 
-// 2. ОСТАВИТЬ (В оверлее) -> Только закрыть оверлей
 btnKeep.onclick = () => {
+  // При "Оставить" просто убираем оверлей, ящик остается открытым
   resetOverlay();
-  // Ячейка остается открытой!
 };
 
-// 3. ЗАКРЫТЬ КРЕСТИКОМ -> Только закрыть оверлей
 btnCloseOverlay.onclick = () => {
    vib(10);
    resetOverlay();
@@ -453,16 +442,13 @@ async function sellItem(invId, price) {
 
 function resetOverlay() {
   overlay.classList.remove('show');
-  loader.classList.remove('show');
   cardResult.style.display = 'none';
-  btnCloseOverlay.style.display = 'none';
   btnSell.textContent = 'ПРОДАТЬ'; 
 }
 
 function resetCell(cell, img, doors) {
   cell.classList.remove('open', 'processing');
   if(doors) doors.remove();
-  
   cell.dataset.stage = '0';
   img.src = conf.stages[0];
   img.style.opacity = '1';
@@ -488,7 +474,6 @@ fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
   });
 });
 
-// Баланс
 fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
   .then(r=>r.ok?r.json():null).then(d=>{if(d?.stars!=null)qs('#bal').textContent=d.stars}).catch(()=>{});
 
