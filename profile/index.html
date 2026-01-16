@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Профиль — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
@@ -34,8 +34,28 @@
       font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px;
       display: flex; justify-content: space-between; align-items: center;
     }
+    
+    /* Контейнер для правой части (Кнопка + Счетчик) */
+    .section-right {
+      display: flex; align-items: center; gap: 10px;
+    }
+
     .inv-count { background: #232838; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #aaa; }
     
+    /* СТИЛЬ КНОПКИ "ПРОДАТЬ ВСЕ" */
+    .btn-sell-all {
+      display: none; /* Скрыта пока нет предметов */
+      background: rgba(255, 77, 77, 0.15);
+      color: #ff4d4d;
+      border: 1px solid #ff4d4d;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 10px; font-weight: 800;
+      cursor: pointer; text-transform: uppercase;
+      transition: transform 0.1s;
+    }
+    .btn-sell-all:active { transform: scale(0.95); background: rgba(255, 77, 77, 0.3); }
+
     .inv-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px;
     }
@@ -80,6 +100,37 @@
     .btn-withdraw { background: var(--accent); color: #111; }
     .btn-close { background: transparent; color: #777; margin-top: 8px; font-size: 14px; }
 
+    /* === НАВИГАЦИЯ (Из твоего кода) === */
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(11,13,18,0.95); 
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #1f232e;
+      padding: 12px 16px 34px; /* Чуть больше снизу для iPhone */
+      display: flex; justify-content: space-around;
+      z-index: 100;
+    }
+    
+    .nav .btn {
+      color: #5d6470; 
+      text-decoration: none; 
+      font-weight: 800; 
+      font-size: 14px;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      gap: 4px;
+      transition: transform 0.1s;
+    }
+    
+    .nav .btn:active { transform: scale(0.95); }
+
+    /* Активная кнопка (желтая) */
+    .nav .btn.active { color: #ffd400; }
+
+    /* Распорка, чтобы контент не перекрывался меню */
+    .nav-spacer { height: 90px; }
+
   </style>
 </head>
 <body>
@@ -101,21 +152,25 @@
     <section class="inventory-section">
       <div class="section-title">
         <span>ТВОИ ПРЕДМЕТЫ</span>
-        <span class="inv-count" id="invCount">0</span>
+        <div class="section-right">
+           <button id="btnSellAll" class="btn-sell-all">ПРОДАТЬ ВСЕ</button>
+           <span class="inv-count" id="invCount">0</span>
+        </div>
       </div>
       <div class="inv-grid" id="invGrid">
         <div class="empty-state">Загрузка...</div>
       </div>
     </section>
-
-   <nav class="nav">
-  <a class="btn" href="/">Кейсы</a>
-  
-  <a class="btn" href="/crash.html">Crash 🚀</a>
-  
-  <a class="btn active" href="/profile/">Профиль</a>
-</nav>
+    
+    <div class="nav-spacer"></div>
   </div>
+
+
+    <nav class="nav">
+      <a class="btn" href="/">Кейсы</a>
+      <a class="btn active" href="/crash.html">Crash 🚀</a>
+      <a class="btn" href="/profile/">Профиль</a>
+    </nav>
 
   <div class="modal-overlay" id="itemModal">
     <div class="modal-card">
@@ -144,10 +199,12 @@
        ava: document.getElementById('avatar'),
        grid: document.getElementById('invGrid'),
        count: document.getElementById('invCount'),
-       modal: document.getElementById('itemModal')
+       modal: document.getElementById('itemModal'),
+       btnSellAll: document.getElementById('btnSellAll') // Кнопка продать все
     };
 
-    let currentItem = null; // Выбранный предмет
+    let currentItem = null; 
+    let allItems = []; // Список для хранения всех предметов
 
     // 1. Загрузка профиля
     const u = tg.initDataUnsafe?.user;
@@ -155,7 +212,7 @@
        els.user.textContent = u.username ? `@${u.username}` : u.first_name;
        els.uid.textContent = `ID: ${u.id}`;
        if(u.photo_url) els.ava.style.backgroundImage = `url(${u.photo_url})`;
-       else els.ava.textContent = u.first_name[0]; // Буква если нет фото
+       else els.ava.textContent = u.first_name[0];
     }
 
     // Баланс
@@ -170,10 +227,16 @@
          .then(r=>r.json())
          .then(res => {
             const items = res.items || [];
+            allItems = items; // Сохраняем в переменную
+            
             els.count.textContent = items.length;
             els.grid.innerHTML = '';
 
-            if(items.length === 0) {
+            // Показываем кнопку "Продать все" только если есть предметы
+            if(items.length > 0) {
+               els.btnSellAll.style.display = 'block';
+            } else {
+               els.btnSellAll.style.display = 'none';
                els.grid.innerHTML = '<div class="empty-state">Пусто 🕸️<br>Открой кейс!</div>';
                return;
             }
@@ -186,7 +249,6 @@
                  <div class="inv-name">${item.name}</div>
                  <div class="inv-price">${item.stars_cost} ★</div>
                `;
-               // Клик -> Открыть модалку
                el.onclick = () => openModal(item);
                els.grid.appendChild(el);
             });
@@ -195,6 +257,44 @@
             els.grid.innerHTML = '<div class="empty-state">Ошибка сети</div>';
          });
     }
+
+    // --- ЛОГИКА "ПРОДАТЬ ВСЕ" ---
+    els.btnSellAll.onclick = async () => {
+       if(allItems.length === 0) return;
+       
+       // Считаем общую стоимость
+       const totalValue = allItems.reduce((sum, item) => sum + parseInt(item.stars_cost), 0);
+       
+       if(!confirm(`Вы точно хотите продать ВСЕ предметы (${allItems.length} шт.) за ${totalValue} ★?`)) return;
+       
+       els.btnSellAll.textContent = '...';
+       
+       // Продаем по одному (через Promise.all для скорости)
+       try {
+          const promises = allItems.map(item => 
+             fetch('/api/sell', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
+                body: JSON.stringify({ itemId: item.id })
+             }).then(r => r.json())
+          );
+
+          await Promise.all(promises);
+          
+          tg.showAlert(`Успешно продано на ${totalValue} звезд!`);
+          
+          // Обновляем баланс и список
+          fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
+            .then(r=>r.json()).then(d=>{ if(d.stars) els.bal.textContent = d.stars });
+          
+          loadInventory();
+          els.btnSellAll.textContent = 'ПРОДАТЬ ВСЕ';
+          
+       } catch(e) {
+          tg.showAlert('Ошибка при продаже');
+          loadInventory();
+       }
+    };
 
     // --- МОДАЛКА ---
     function openModal(item) {
@@ -214,9 +314,7 @@
        currentItem = null;
     }
 
-    // --- ДЕЙСТВИЯ ---
-    
-    // 1. ПРОДАТЬ
+    // --- ДЕЙСТВИЯ (Один предмет) ---
     document.getElementById('btnSellModal').onclick = async () => {
        if(!currentItem) return;
        const btn = document.getElementById('btnSellModal');
@@ -233,22 +331,16 @@
             tg.showAlert(`Продано! +${res.added} звезд`);
             els.bal.textContent = res.balance;
             closeModal();
-            loadInventory(); // Перезагружаем список
+            loadInventory(); 
          } else {
             tg.showAlert(res.error || 'Ошибка');
          }
        } catch(e) { tg.showAlert('Ошибка сети'); }
     };
 
-    // 2. ЗАБРАТЬ (Создать заявку на вывод)
     document.getElementById('btnWithdraw').onclick = async () => {
        if(!currentItem) return;
-       
        if(!confirm('Отправить заявку админу на получение подарка в Telegram?')) return;
-       
-       // Тут можно вызвать /api/withdraw (который мы делали ранее)
-       // Но нужно слегка доработать его для приема ID предмета, а не суммы.
-       // Пока сделаем заглушку:
        tg.showAlert('Функция вывода в разработке! Пока можешь продать предмет.');
     };
 
