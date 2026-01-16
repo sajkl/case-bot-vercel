@@ -6,11 +6,11 @@
 <title>Открытие кейса</title>
 <link rel="stylesheet" href="/styles.css"> 
 <style>
-/* Локальные стили для кейсов */
+/* Локальные стили для страницы кейсов */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Отступ снизу под навигацию */
+.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Отступ снизу 90px под меню */
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -162,7 +162,7 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
 
-/* Навигация берется из styles.css */
+/* Распорка для навигации из styles.css */
 .nav-spacer { height: 90px; }
 
 </style>
@@ -294,7 +294,7 @@ grid.addEventListener('click', async (e)=>{
   `;
   cell.appendChild(doors);
 
-  // 1. Анимация дверей (Сразу, чтобы не ждать)
+  // 1. Анимация дверей
   cell.classList.add('open'); 
 
   // 3. Запрос к серверу
@@ -316,6 +316,9 @@ grid.addEventListener('click', async (e)=>{
     const p = res.prize;
     const sellPrice = Math.floor(p.value);
 
+    // === ЗАДЕРЖКА ПОКАЗА ВНУТРИ ЯЩИКА (0.5 сек) ===
+    await new Promise(r => setTimeout(r, 500));
+
     // 4. Обновляем МИНИ-ЯЩИК (Подарок появился внутри)
     const pImg = doors.querySelector('#pimg');
     pImg.src = p.image;
@@ -326,7 +329,7 @@ grid.addEventListener('click', async (e)=>{
     doors.querySelector('#psell').textContent = `+${sellPrice}`;
     doors.querySelector('#pactions').style.display = 'flex'; // Показываем кнопки внутри ящика
 
-    // 5. ЖДЕМ (Даем игроку 800мс порадоваться призу в ящике)
+    // 5. ЖДЕМ ЕЩЕ (Даем игроку порадоваться призу в ящике)
     await new Promise(r => setTimeout(r, 800));
 
     // 6. ПОКАЗЫВАЕМ БОЛЬШОЙ ОВЕРЛЕЙ
