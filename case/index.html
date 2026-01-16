@@ -8,7 +8,7 @@
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 40px}
+.page{max-width:520px;margin:0 auto;padding:14px 16px 80px;} /* Отступ снизу под навбар */
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -33,18 +33,46 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .price-wrap{display:flex;justify-content:center;margin:24px 0 32px}
 .price{background:var(--accent);color:#171a1f;padding:12px 24px;border-radius:16px;font-weight:900;font-size:18px;box-shadow:0 0 22px rgba(255,212,0,.35)}
 
-/* Анимация дверей в ячейке */
+/* === ВНУТРЕННОСТИ ЯЩИКА (ПРИЗ) === */
 .cell-doors{
   position:absolute;inset:14px;
   background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden; pointer-events: none;
 }
-.cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00)}
+.cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00); z-index: 2;}
 .cell-door.l{left:0;transform-origin:left center}
 .cell-door.r{right:0;transform-origin:right center}
-@keyframes doorL{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(-80deg) translateX(-10%)}}
-@keyframes doorR{from{transform:perspective(800px) rotateY(0)}to{transform:perspective(800px) rotateY(80deg) translateX(10%)}}
-.cell.open .cell-door.l{animation:doorL .4s ease forwards}
-.cell.open .cell-door.r{animation:doorR .4s ease forwards}
+
+.cell.open .cell-door.l{transform:perspective(800px) rotateY(-85deg); transition: transform 0.4s ease;}
+.cell.open .cell-door.r{transform:perspective(800px) rotateY(85deg); transition: transform 0.4s ease;}
+
+/* Контент внутри открытого ящика */
+.prize-box {
+  position: absolute; inset: 0; 
+  display: flex; flex-direction: column; 
+  align-items: center; justify-content: center;
+  z-index: 1; /* Под дверями, но над дном */
+  pointer-events: auto; /* Чтобы кликать кнопки */
+}
+.prize-box img {
+  width: 60%; height: 60%; object-fit: contain; 
+  filter: drop-shadow(0 0 15px rgba(255, 212, 0, 0.4));
+  margin-bottom: 4px;
+}
+.prize-title {
+  font-size: 11px; font-weight: 900; color: #fff; text-align: center;
+  line-height: 1.1; margin-bottom: 6px;
+}
+.prize-actions {
+  display: flex; gap: 4px; width: 100%; padding: 0 4px;
+}
+.prize-btn {
+  flex: 1; border: none; border-radius: 6px;
+  padding: 6px 0; font-size: 10px; font-weight: 800;
+  cursor: pointer; text-transform: uppercase;
+}
+.btn-take { background: var(--accent); color: #171a1f; }
+.btn-sell-mini { background: #2c313f; color: #a5abb8; border: 1px solid #3e4554; }
+
 
 /* === FULL SCREEN OVERLAY === */
 .overlay {
@@ -56,20 +84,17 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 }
 .overlay.show { opacity: 1; pointer-events: auto; }
 
-/* КНОПКА ЗАКРЫТИЯ ОВЕРЛЕЯ (НОВОЕ) */
 .close-overlay-btn {
   position: absolute; top: 24px; right: 24px;
   background: rgba(255, 255, 255, 0.1); border: none; color: #fff;
   font-size: 32px; line-height: 1; width: 44px; height: 44px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   cursor: pointer; z-index: 10001; transition: background 0.2s, transform 0.2s;
-  padding-bottom: 4px; /* Центровка крестика */
+  padding-bottom: 4px; 
 }
 .close-overlay-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
 .close-overlay-btn:active { transform: scale(0.95); }
 
-
-/* Лучи света (God Rays) */
 .rays {
   position: absolute; width: 600px; height: 600px;
   background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.2) 20deg, transparent 40deg, rgba(255, 212, 0, 0.2) 60deg, transparent 80deg, rgba(255, 212, 0, 0.2) 100deg, transparent 120deg, rgba(255, 212, 0, 0.2) 140deg, transparent 160deg, rgba(255, 212, 0, 0.2) 180deg, transparent 200deg, rgba(255, 212, 0, 0.2) 220deg, transparent 240deg, rgba(255, 212, 0, 0.2) 260deg, transparent 280deg, rgba(255, 212, 0, 0.2) 300deg, transparent 320deg, rgba(255, 212, 0, 0.2) 340deg, transparent 360deg);
@@ -78,7 +103,6 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* Карточка приза в оверлее */
 .overlay-card {
   transform: scale(0.5); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex; flex-direction: column; align-items: center;
@@ -95,31 +119,20 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 30px;
 }
 
-/* Кнопки действий */
-.actions {
-  display: flex; flex-direction: column; gap: 12px; width: 280px;
-}
+.actions { display: flex; flex-direction: column; gap: 12px; width: 280px; }
 .act-btn {
   border: none; padding: 16px; border-radius: 16px;
   font-size: 18px; font-weight: 900; cursor: pointer;
   text-transform: uppercase; width: 100%; transition: transform 0.1s;
 }
 .act-btn:active { transform: scale(0.97); }
+.btn-sell { background: var(--accent); color: #111; box-shadow: 0 0 20px rgba(255,212,0,0.4); }
+.btn-keep { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
 
-.btn-sell {
-  background: var(--accent); color: #111;
-  box-shadow: 0 0 20px rgba(255,212,0,0.4);
-}
-.btn-keep {
-  background: #2c313f; color: #fff; border: 1px solid #3e4554;
-}
-
-/* Спиннер загрузки */
 .loader { display:none; width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; margin-bottom: 20px;}
 .loader.show { display: inline-block; }
 @keyframes rotation { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
 
-/* Стили для списка призов снизу */
 .prize-item {
   background: #0b0d12; border-radius: 16px; padding: 10px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -132,6 +145,21 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000;
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
+
+/* Навигация (обновленная) */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(11,13,18,0.95); backdrop-filter: blur(10px);
+  border-top: 1px solid #1f232e;
+  padding: 12px 16px 24px;
+  display: flex; justify-content: space-around;
+  z-index: 100;
+}
+.nav .btn {
+  color: #5d6470; text-decoration: none; font-weight: 800; font-size: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.nav .btn.active { color: var(--accent); }
 
 </style>
 </head>
@@ -153,6 +181,12 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
        <div style="grid-column: 1/-1; text-align: center; color: #555; font-size: 13px;">Загрузка...</div>
     </div>
   </div>
+
+  <nav class="nav">
+    <a class="btn active" href="/">Кейсы</a>
+    <a class="btn" href="/crash.html">Crash 🚀</a>
+    <a class="btn" href="/profile/">Профиль</a>
+  </nav>
 </div>
 
 <div id="overlay" class="overlay">
@@ -198,7 +232,7 @@ qs('#price').textContent=`★ ${conf.price}`;
 
 // --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
 const overlay = qs('#overlay');
-const btnCloseOverlay = qs('#btnCloseOverlay'); // НОВОЕ
+const btnCloseOverlay = qs('#btnCloseOverlay');
 const loader = qs('#loader');
 const cardResult = qs('#cardResult');
 const winImg = qs('#winImg');
@@ -206,8 +240,8 @@ const winTitle = qs('#winTitle');
 const btnSell = qs('#btnSell');
 const btnKeep = qs('#btnKeep');
 
-// Текущее состояние для продажи
-let currentWin = null; // { inventoryId, price, cellElement }
+// Текущее состояние для действий в оверлее
+let currentWin = null; 
 
 // --- СЕТКА ---
 const grid=qs('#grid');
@@ -222,13 +256,14 @@ for(let i=0;i<4;i++){
 // --- КЛИК ПО ЯЩИКУ ---
 grid.addEventListener('click', async (e)=>{
   const cell=e.target.closest('.cell'); 
+  // Если ящик уже открыт (виден приз) или в процессе анимации — не реагируем на клик по нему
   if(!cell || cell.classList.contains('open') || cell.classList.contains('processing')) return;
   
   vib(12);
   let stage = +cell.dataset.stage;
   const img = cell.querySelector('.crate img');
 
-  // Этапы 0-1: просто кликаем
+  // Этапы 0-1: просто кликаем (разогрев)
   if(stage < 2){
     cell.classList.add('show-hint'); 
     setTimeout(()=>cell.classList.remove('show-hint'), 260);
@@ -241,22 +276,33 @@ grid.addEventListener('click', async (e)=>{
   cell.dataset.stage = '3';
   img.style.opacity = '0'; // Скрываем ящик
 
-  // Добавляем двери (для анимации)
+  // Добавляем внутренности (двери + мини-версия приза)
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
-  doors.innerHTML = `<div class="cell-door l"></div><div class="cell-door r"></div>`;
+  doors.innerHTML = `
+    <div class="cell-door l"></div>
+    <div class="cell-door r"></div>
+    <div class="prize-box">
+      <img id="pimg" src="/assets/prizes/sample.png">
+      <div class="prize-title" id="ptitle">...</div>
+      <div class="prize-actions">
+         <button class="prize-btn btn-sell-mini" id="psell">Продать</button>
+         <button class="prize-btn btn-take" id="ptake">Забрать</button>
+      </div>
+    </div>
+  `;
   cell.appendChild(doors);
 
-  // 1. Анимация дверей
-  cell.classList.add('open'); // CSS анимация дверей
+  // 1. Анимация дверей (CSS)
+  cell.classList.add('open'); 
 
-  // 2. Показываем загрузку в оверлее (пока ждем сервер)
+  // 2. Показываем загрузку в оверлее
   setTimeout(() => {
     overlay.classList.add('show');
     loader.classList.add('show');
     cardResult.style.display = 'none';
-    btnCloseOverlay.style.display = 'flex'; // Показываем крестик
-  }, 300); // Чуть ждем пока двери откроются
+    btnCloseOverlay.style.display = 'none'; // Пока грузим, крестик не показываем
+  }, 300);
 
   // 3. Запрос к серверу
   try {
@@ -266,34 +312,59 @@ grid.addEventListener('click', async (e)=>{
       body: JSON.stringify({ caseId })
     }).then(r => r.json());
 
-    loader.classList.remove('show'); // Скрываем лоадер
+    loader.classList.remove('show');
 
     if (res.error) {
       tg.showAlert(res.error);
       resetOverlay();
-      resetCell(cell, img, doors);
+      resetCell(cell, img, doors); // При ошибке сбрасываем всё
       return;
     }
 
     // Успех!
     if (res.stars != null) qs('#bal').textContent = res.stars;
     
-    // Показываем результат
+    // Данные приза
     const p = res.prize;
+    const sellPrice = Math.floor(p.value); // 100% цена
+
+    // -- Заполняем ОВЕРЛЕЙ --
     winImg.src = p.image;
     winTitle.textContent = p.title;
-    btnSell.textContent = `ПРОДАТЬ (+${p.value} ★)`;
+    btnSell.textContent = `ПРОДАТЬ (+${sellPrice} ★)`;
     
-    cardResult.style.display = 'flex'; // Показываем карточку
+    cardResult.style.display = 'flex';
+    btnCloseOverlay.style.display = 'flex'; // Можно закрыть
     tg.HapticFeedback.notificationOccurred('success');
 
-    // Сохраняем контекст для кнопок
+    // -- Заполняем МИНИ-ЯЧЕЙКУ (на фоне) --
+    doors.querySelector('#pimg').src = p.image;
+    doors.querySelector('#ptitle').textContent = p.title;
+    doors.querySelector('#psell').textContent = `+${sellPrice}`;
+
+    // Сохраняем контекст для кнопок оверлея
     currentWin = {
       inventoryId: res.inventoryId,
-      sellPrice: p.value,
+      sellPrice: sellPrice,
       cell: cell,
       img: img,
       doors: doors
+    };
+
+    // --- ОБРАБОТЧИКИ МИНИ-КНОПОК (В ЯЧЕЙКЕ) ---
+    // 1. Мини-Забрать (Очистить ячейку)
+    doors.querySelector('#ptake').onclick = (ev) => {
+      ev.stopPropagation(); 
+      resetCell(cell, img, doors);
+    };
+
+    // 2. Мини-Продать
+    doors.querySelector('#psell').onclick = async (ev) => {
+      ev.stopPropagation();
+      const btn = ev.target;
+      btn.textContent = '...';
+      await sellItem(currentWin.inventoryId, sellPrice);
+      resetCell(cell, img, doors);
     };
 
   } catch (err) {
@@ -304,18 +375,40 @@ grid.addEventListener('click', async (e)=>{
   }
 });
 
-// --- ЛОГИКА КНОПОК ОВЕРЛЕЯ ---
+// --- ЛОГИКА ОВЕРЛЕЯ ---
 
-// 1. ПРОДАТЬ
+// 1. ПРОДАТЬ (В оверлее) -> Закрыть оверлей + Сбросить ячейку
 btnSell.onclick = async () => {
   if(!currentWin) return;
   btnSell.textContent = '...';
   
+  await sellItem(currentWin.inventoryId, currentWin.sellPrice);
+  
+  resetCell(currentWin.cell, currentWin.img, currentWin.doors);
+  resetOverlay();
+  currentWin = null;
+};
+
+// 2. ОСТАВИТЬ (В оверлее) -> Только закрыть оверлей
+btnKeep.onclick = () => {
+  resetOverlay();
+  // Ячейка остается открытой!
+};
+
+// 3. ЗАКРЫТЬ КРЕСТИКОМ -> Только закрыть оверлей
+btnCloseOverlay.onclick = () => {
+   vib(10);
+   resetOverlay();
+};
+
+// --- ФУНКЦИИ ---
+
+async function sellItem(invId, price) {
   try {
     const res = await fetch('/api/sell', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Telegram-Data': tg.initData },
-      body: JSON.stringify({ itemId: currentWin.inventoryId })
+      body: JSON.stringify({ itemId: invId })
     }).then(r => r.json());
 
     if(res.success) {
@@ -325,49 +418,26 @@ btnSell.onclick = async () => {
       tg.showAlert(res.error || 'Ошибка');
     }
   } catch(e) { console.error(e); }
-
-  finishRound();
-};
-
-// 2. ОСТАВИТЬ
-btnKeep.onclick = () => {
-  tg.showAlert("Предмет добавлен в инвентарь");
-  finishRound();
-};
-
-// 3. ЗАКРЫТЬ КРЕСТИКОМ (НОВОЕ)
-btnCloseOverlay.onclick = () => {
-   vib(10);
-   // Просто закрываем, считаем что пользователь решил "Оставить" молча
-   finishRound();
-};
-
-
-function finishRound() {
-  resetOverlay();
-  // Сбрасываем ячейку
-  if(currentWin) resetCell(currentWin.cell, currentWin.img, currentWin.doors);
-  currentWin = null;
 }
 
 function resetOverlay() {
   overlay.classList.remove('show');
   loader.classList.remove('show');
   cardResult.style.display = 'none';
-  btnCloseOverlay.style.display = 'none'; // Скрываем крестик
+  btnCloseOverlay.style.display = 'none';
+  btnSell.textContent = 'ПРОДАТЬ'; 
 }
 
 function resetCell(cell, img, doors) {
   cell.classList.remove('open', 'processing');
   if(doors) doors.remove();
   
-  // Плавный сброс ящика обратно в закрытое состояние
   cell.dataset.stage = '0';
   img.src = conf.stages[0];
   img.style.opacity = '1';
 }
 
-// Загрузка призов в список снизу
+// Загрузка списка призов (снизу)
 fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
   const list = qs('#prizesList');
   list.innerHTML = '';
