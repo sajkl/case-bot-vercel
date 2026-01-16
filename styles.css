@@ -1,4 +1,11 @@
-/* Futura PT (OTF) — можно удалить, если уже подключал */
+/* Отключаем зум и стандартные жесты браузера */
+* {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; /* Убирает синюю подсветку при клике на Android */
+  user-select: none; /* Чтобы текст не выделялся при частом нажатии */
+  -webkit-user-select: none;
+}
+
 @font-face{font-family:"Futura PT";src:url("/assets/fonts/futura-pt-book.otf") format("opentype");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Futura PT";src:url("/assets/fonts/futura-pt-demi.otf") format("opentype");font-weight:700;font-style:normal;font-display:swap}
 @font-face{font-family:"Futura PT";src:url("/assets/fonts/futura-pt-heavy.otf") format("opentype");font-weight:900;font-style:normal;font-display:swap}
