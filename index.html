@@ -2,26 +2,62 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
   <link rel="stylesheet" href="/styles.css?v=13">
+  
+  <style>
+    /* === СТИЛИ НОВОЙ НАВИГАЦИИ === */
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #000000; /* Черный фон как на фото */
+      border-top: 1px solid #1f232e;
+      padding: 10px 0 34px; /* Отступ снизу под iPhone */
+      display: flex; 
+      justify-content: space-around; 
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+    }
+
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-decoration: none; 
+      color: #5d6470; /* Серый цвет неактивных */
+      font-size: 10px; font-weight: 800; font-family: system-ui, sans-serif;
+      gap: 5px; width: 33%;
+      transition: color 0.2s;
+      background: transparent; border: none;
+    }
+
+    /* Активный пункт (горит желтым) */
+    .nav-btn.active { color: #ffd400; } 
+
+    /* Иконки */
+    .nav-icon { 
+      font-size: 24px; 
+      line-height: 1;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+    }
+
+    /* Отступ для контента, чтобы меню не перекрывало */
+    .nav-spacer { height: 90px; }
+  </style>
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div class="container">
-    <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
       <a class="balance" id="balance" href="/topup/">
-        <span class="star">★</span><span class="value" id="balanceValue">25</span>
+        <span class="star">★</span><span class="value" id="balanceValue">...</span>
       </a>
     </header>
 
-    <!-- LIVE -->
     <section class="live-bar"><span>LIVE</span></section>
 
-    <!-- Сетка 2×2 -->
     <main class="grid">
       <a class="card gray"  data-caseid="jiga"  href="/case/?case=jiga"  aria-label="Жига"  style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
@@ -43,57 +79,67 @@
 
     <div class="nav-spacer" aria-hidden="true"></div>
 
-    <!-- Навигация (об    ъединённые вкладки) -->
-<nav class="nav">
-  <a class="btn" href="/">Кейсы</a>
-  
-  <a class="btn" href="/crash.html">Crash 🚀</a>
-  
-  <a class="btn active" href="/profile/">Профиль</a>
-</nav>
+    <nav class="nav">
+      <a href="/" class="nav-btn active">
+        <span class="nav-icon">🎒</span>
+        <span>Кейсы</span>
+      </a>
+      
+      <a href="/crash.html" class="nav-btn">
+        <span class="nav-icon">🚀</span>
+        <span>Crash</span>
+      </a>
+      
+      <a href="/profile/" class="nav-btn">
+        <span class="nav-icon">👤</span>
+        <span>Профиль</span>
+      </a>
+    </nav>
+  </div>
 
   <script>
- (async () => {
-  const tg = window.Telegram.WebApp;
-  tg.ready(); tg.expand();
+  (async () => {
+    const tg = window.Telegram.WebApp;
+    tg.ready(); tg.expand();
 
-  const auth = await fetch('/api/tg-auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ initData: tg.initData })
-  }).then(r => r.json());
+    // Авторизация
+    const auth = await fetch('/api/tg-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData })
+    }).then(r => r.json());
 
-  console.log('AUTH RESULT:', auth);
+    console.log('AUTH RESULT:', auth);
 
-  if (!auth.ok) {
-    console.warn('Auth failed:', auth);
-    return;
-  }
+    if (!auth.ok) {
+      console.warn('Auth failed:', auth);
+      // Можно показать ошибку или ретрай
+    }
 
-  // Теперь можно грузить профиль
-  const me = await fetch('/api/me', { credentials:'include' })
-    .then(r=>r.json());
-  console.log('ME:', me);
+    // Загрузка профиля
+    const me = await fetch('/api/me', { credentials:'include' }).then(r=>r.json());
+    console.log('ME:', me);
 
-    // баланс
+    // Баланс
     const balEl = document.getElementById('balanceValue');
-    fetch('/api/profile')
+    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
       .catch(()=>{});
 
-    // сохранить выбранный кейс
+    // Сохранить выбранный кейс (для переходов)
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a.card'); if (!a) return;
       const caseId = a.dataset.caseid || '';
       if (caseId) {
         try { sessionStorage.setItem('currentCaseId', caseId); localStorage.setItem('lastCaseId', caseId); } catch(_){}
+        // Формируем ссылку корректно
         const url = new URL(a.href, location.origin);
-        url.searchParams.set('case', caseId); a.href = url.pathname + '?' + url.searchParams.toString();
+        url.searchParams.set('case', caseId); 
+        a.href = url.pathname + '?' + url.searchParams.toString();
       }
     });
   })();
   </script>
 </body>
 </html>
-
