@@ -6,11 +6,11 @@
 <title>Открытие кейса</title>
 <link rel="stylesheet" href="/styles.css"> 
 <style>
-/* Локальные стили для страницы кейсов */
+/* Локальные стили */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;} /* Отступ снизу 90px под меню */
+.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;}
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -31,9 +31,6 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .crate img{width:92%;height:92%;object-fit:contain;transition:opacity .15s}
 .hint{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.18s}
 .cell.show-hint .hint{opacity:1}
-
-.price-wrap{display:flex;justify-content:center;margin:24px 0 32px}
-.price{background:var(--accent);color:#171a1f;padding:12px 24px;border-radius:16px;font-weight:900;font-size:18px;box-shadow:0 0 22px rgba(255,212,0,.35)}
 
 /* === ВНУТРЕННОСТИ ЯЩИКА (ПРИЗ) === */
 .cell-doors{
@@ -149,6 +146,27 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .btn-keep { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
 
 /* Стили для списка призов снизу */
+.prizes-section {
+  margin-top:20px; 
+  background:#151921; 
+  border-radius:24px; 
+  padding:20px; 
+  border:1px solid #232838;
+}
+
+/* ЗАГОЛОВОК СПИСКА + ЦЕНА (Теперь в одну линию) */
+.section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.section-title { font-weight: 800; color: #fff; font-size: 16px; }
+.price-tag {
+  background: var(--accent); color: #171a1f; 
+  padding: 6px 12px; border-radius: 8px; 
+  font-weight: 900; font-size: 14px;
+  box-shadow: 0 0 10px rgba(255, 212, 0, 0.2);
+}
+
 .prize-item {
   background: #0b0d12; border-radius: 16px; padding: 10px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -162,7 +180,6 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
 
-/* Распорка для навигации из styles.css */
 .nav-spacer { height: 90px; }
 
 </style>
@@ -177,10 +194,13 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 
   <div id="caseTitle" class="h1">Кейс</div>
   <div id="grid" class="grid"></div>
-  <div class="price-wrap"><div id="price" class="price">★ 0</div></div>
-
-  <div class="prizes-section" style="margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838;">
-    <div style="text-align:center; font-weight:800; margin-bottom:16px; color:#fff">СОДЕРЖИМОЕ КЕЙСА</div>
+  
+  <div class="prizes-section">
+    <div class="section-header">
+       <span class="section-title">СОДЕРЖИМОЕ КЕЙСА</span>
+       <div id="price" class="price-tag">★ 0</div>
+    </div>
+    
     <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:12px;">
        <div style="grid-column: 1/-1; text-align: center; color: #555; font-size: 13px;">Загрузка...</div>
     </div>
@@ -275,9 +295,9 @@ grid.addEventListener('click', async (e)=>{
   // Этап 2 -> 3: ОТКРЫТИЕ
   cell.classList.add('processing'); 
   cell.dataset.stage = '3';
-  img.style.opacity = '0'; // Скрываем картинку кейса
+  img.style.opacity = '0'; 
 
-  // Подготовка внутренностей (пока пустые или со спиннером)
+  // Подготовка внутренностей
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
   doors.innerHTML = `
@@ -294,10 +314,10 @@ grid.addEventListener('click', async (e)=>{
   `;
   cell.appendChild(doors);
 
-  // 1. Анимация дверей
+  // 1. Анимация дверей (Сразу)
   cell.classList.add('open'); 
 
-  // 3. Запрос к серверу
+  // 2. Запрос к серверу
   try {
     const res = await fetch('/api/open', {
       method: 'POST',
@@ -316,23 +336,11 @@ grid.addEventListener('click', async (e)=>{
     const p = res.prize;
     const sellPrice = Math.floor(p.value);
 
-    // === ЗАДЕРЖКА ПОКАЗА ВНУТРИ ЯЩИКА (0.5 сек) ===
+    // === НОВАЯ ЛОГИКА ТАЙМИНГОВ ===
+    // 3. Ждем 500мс (двери открыты, пусто)
     await new Promise(r => setTimeout(r, 500));
 
-    // 4. Обновляем МИНИ-ЯЩИК (Подарок появился внутри)
-    const pImg = doors.querySelector('#pimg');
-    pImg.src = p.image;
-    pImg.style.opacity = '1';
-    pImg.style.filter = 'none'; // Убираем блюр
-    
-    doors.querySelector('#ptitle').textContent = p.title;
-    doors.querySelector('#psell').textContent = `+${sellPrice}`;
-    doors.querySelector('#pactions').style.display = 'flex'; // Показываем кнопки внутри ящика
-
-    // 5. ЖДЕМ ЕЩЕ (Даем игроку порадоваться призу в ящике)
-    await new Promise(r => setTimeout(r, 800));
-
-    // 6. ПОКАЗЫВАЕМ БОЛЬШОЙ ОВЕРЛЕЙ
+    // 4. ПОКАЗЫВАЕМ ОВЕРЛЕЙ (СРАЗУ)
     winImg.src = p.image;
     winTitle.textContent = p.title;
     btnSell.textContent = `ПРОДАТЬ (+${sellPrice} ★)`;
@@ -340,6 +348,19 @@ grid.addEventListener('click', async (e)=>{
     cardResult.style.display = 'flex';
     overlay.classList.add('show');
     tg.HapticFeedback.notificationOccurred('success');
+
+    // 5. Ждем 300мс после оверлея
+    await new Promise(r => setTimeout(r, 300));
+
+    // 6. Обновляем МИНИ-ЯЩИК (на фоне)
+    const pImg = doors.querySelector('#pimg');
+    pImg.src = p.image;
+    pImg.style.opacity = '1';
+    pImg.style.filter = 'none'; 
+    
+    doors.querySelector('#ptitle').textContent = p.title;
+    doors.querySelector('#psell').textContent = `+${sellPrice}`;
+    doors.querySelector('#pactions').style.display = 'flex';
 
     // Сохраняем контекст для кнопок
     currentWin = {
