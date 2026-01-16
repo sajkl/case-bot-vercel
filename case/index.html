@@ -5,22 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Открытие кейса</title>
 <style>
-/* Глобальные настройки */
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
-* {
-  box-sizing: border-box;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none; -webkit-user-select: none;
-}
-
-html,body{
-  margin:0; min-height:100%; 
-  background:#0b0d12; color:var(--text); 
-  font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
-  overflow-x: hidden;
-}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 80px;}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
+.page{max-width:520px;margin:0 auto;padding:14px 16px 0;}
 
 /* Верхняя панель */
 .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
@@ -66,7 +54,7 @@ html,body{
   pointer-events: auto;
   opacity: 0; transition: opacity 0.3s ease;
 }
-.cell.open .prize-box { opacity: 1; transition-delay: 0.2s; } /* Показываем содержимое чуть позже открытия дверей */
+.cell.open .prize-box { opacity: 1; transition-delay: 0.2s; } 
 
 .prize-box img {
   width: 65%; height: 65%; object-fit: contain; 
@@ -112,31 +100,21 @@ html,body{
 }
 .close-overlay-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
 
-
-/* === КАРТОЧКА С РЕЗУЛЬТАТОМ === */
 .overlay-card {
   position: relative; 
-  overflow: visible; /* Чтобы лучи могли вылезать за пределы */
+  overflow: visible; 
   transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex; flex-direction: column; align-items: center;
 }
 .overlay.show .overlay-card { transform: scale(1) translateY(0); }
 
-/* === ЛУЧИ (Правильное центрирование) === */
 .rays {
   position: absolute;
-  /* Центрируем по горизонтали относительно карточки */
   left: 50%;
-  /* Центрируем по вертикали относительно центра КАРТИНКИ (она 240px, центр ~120px) */
   top: 120px;
-  
-  /* Огромный размер, чтобы покрыть любой экран */
   width: 250vmax; 
   height: 250vmax;
-  
   background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.15) 20deg, transparent 40deg, rgba(255, 212, 0, 0.15) 60deg, transparent 80deg, rgba(255, 212, 0, 0.15) 100deg, transparent 120deg, rgba(255, 212, 0, 0.15) 140deg, transparent 160deg, rgba(255, 212, 0, 0.15) 180deg, transparent 200deg, rgba(255, 212, 0, 0.15) 220deg, transparent 240deg, rgba(255, 212, 0, 0.15) 260deg, transparent 280deg, rgba(255, 212, 0, 0.15) 300deg, transparent 320deg, rgba(255, 212, 0, 0.15) 340deg, transparent 360deg);
-  
-  /* Анимация вокруг заданного центра */
   animation: spinCentered 15s linear infinite;
   z-index: -1; 
   pointer-events: none;
@@ -182,9 +160,39 @@ html,body{
   font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
 }
 
-/* Навигация */
+/* === НАВИГАЦИЯ (ЧЕРНАЯ, ФИКСИРОВАННАЯ) === */
+.nav {
+  position: fixed !important; 
+  bottom: 0 !important; 
+  left: 0 !important; 
+  right: 0 !important;
+  width: 100% !important;
+  
+  background: #000000 !important;
+  border-top: 1px solid #1f232e !important;
+  padding: 10px 0 calc(15px + env(safe-area-inset-bottom)) 0 !important;
+  
+  display: flex !important; 
+  justify-content: space-around !important; 
+  align-items: center !important;
+  z-index: 1000 !important;
+  box-shadow: 0 -5px 20px rgba(0,0,0,0.8) !important;
+}
 
-.nav .btn.active { color: var(--accent); }
+.nav-btn {
+  display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important;
+  text-decoration: none !important; 
+  color: #5d6470 !important; 
+  font-size: 10px !important; font-weight: 800 !important; 
+  gap: 6px !important; flex: 1 !important;
+  background: transparent !important; border: none !important;
+}
+.nav-btn:active { transform: scale(0.95) !important; }
+.nav-btn.active { color: #ffd400 !important; } 
+.nav-icon { font-size: 24px !important; line-height: 1 !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)) !important; margin-bottom: 2px !important; }
+
+/* Распорка для контента */
+.nav-spacer { height: 100px; display: block; }
 
 </style>
 </head>
@@ -207,22 +215,29 @@ html,body{
     </div>
   </div>
 
-  <div class="nav-spacer" aria-hidden="true"></div>
-
-    <!-- Навигация (объединённые вкладки) -->
-    <nav class="nav">
-    <a class="btn active" href="/">Кейсы</a>
-    <a class="btn" href="/crash.html">Crash 🚀</a>
-    <a class="btn" href="/profile/">Профиль</a>
-  </nav>
+  <div class="nav-spacer"></div>
 </div>
+
+<nav class="nav">
+  <a href="/" class="nav-btn active">
+    <span class="nav-icon">🎒</span>
+    <span>Кейсы</span>
+  </a>
+  <a href="/crash.html" class="nav-btn">
+    <span class="nav-icon">🚀</span>
+    <span>Crash</span>
+  </a>
+  <a href="/profile/" class="nav-btn">
+    <span class="nav-icon">👤</span>
+    <span>Профиль</span>
+  </a>
+</nav>
 
 <div id="overlay" class="overlay">
   <button id="btnCloseOverlay" class="close-overlay-btn">&times;</button>
   
   <div class="overlay-card" id="cardResult" style="display:none">
     <div class="rays"></div>
-    
     <img id="winImg" class="overlay-img" src="">
     <div id="winTitle" class="overlay-title">PRIZE NAME</div>
     
@@ -320,8 +335,6 @@ grid.addEventListener('click', async (e)=>{
   // 1. Анимация дверей (Сразу, чтобы не ждать)
   cell.classList.add('open'); 
 
-  // 2. ВАЖНО: Мы НЕ показываем оверлей здесь. Ждем данных.
-
   // 3. Запрос к серверу
   try {
     const res = await fetch('/api/open', {
@@ -397,14 +410,12 @@ btnSell.onclick = async () => {
   if(!currentWin) return;
   btnSell.textContent = '...';
   await sellItem(currentWin.inventoryId, currentWin.sellPrice);
-  // При продаже ящик закрывается
   resetCell(currentWin.cell, currentWin.img, currentWin.doors);
   resetOverlay();
   currentWin = null;
 };
 
 btnKeep.onclick = () => {
-  // При "Оставить" просто убираем оверлей, ящик остается открытым
   resetOverlay();
 };
 
