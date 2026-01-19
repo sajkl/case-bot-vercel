@@ -87,6 +87,7 @@ module.exports = async (req, res) => {
 
     let prize = null;
     let newLossCount = 0;
+    let isGuaranteed = false; // [ВАЖНО] Флаг для логов
 
     // Б) Если 3 проигрыша подряд -> 4-й раз ГАРАНТ
     if (currentStreak >= 3) {
@@ -101,16 +102,17 @@ module.exports = async (req, res) => {
             const randomPercent = Math.random() * 100;
             
             if (randomPercent < 95 || winningItems.length === 1) {
-                prize = winningItems[0]; // Самый маленький окуп
+                prize = winningItems[0]; 
             } else {
-                // 5% шанс на любой другой окупной предмет (крутим рулетку среди оставшихся)
+                // 5% шанс на любой другой окупной предмет
                 const superWins = winningItems.slice(1);
                 prize = spinRoulette(superWins);
             }
+            
             // При победе стрик сбрасываем
             newLossCount = 0;
+            isGuaranteed = true; // [ВАЖНО] Запоминаем, что сработал гарант
         }
-        // Если вдруг в кейсе нет окупа (технически невозможно, но на всякий случай), сработает обычная рулетка ниже
     }
 
     // В) Если гарант не сработал или еще не определен приз -> Обычная рулетка
@@ -125,13 +127,31 @@ module.exports = async (req, res) => {
         }
     }
 
-    // 5. ТРАНЗАКЦИЯ
+    // 5. ТРАНЗАКЦИЯ (ВСЕ ЗАПИСИ В БД)
     await query('BEGIN');
 
     // А) Списываем деньги
     await query('UPDATE balances SET stars = stars - $1 WHERE user_id = $2', [price, userId]);
 
-    // Б) Добавляем предмет в инвентарь
+    // [NEW] Получаем актуальный баланс сразу после списания (для лога транзакции)
+    const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
+    const balanceAfter = newBalRes.rows[0].stars;
+
+    // [NEW] Б) Записываем в TRANSACTIONS (Финансовый лог)
+    await query(
+        `INSERT INTO transactions (user_id, amount, type, balance_after) 
+         VALUES ($1, $2, 'CASE_OPEN', $3)`,
+        [userId, -price, balanceAfter]
+    );
+
+    // [NEW] В) Записываем в LOGS_CASES (Детальный лог открытия)
+    await query(
+        `INSERT INTO logs_cases (user_id, case_id, case_price, dropped_item, item_price, is_guaranteed) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, caseId, price, prize.name, prize.stars_cost, isGuaranteed]
+    );
+
+    // Г) Добавляем предмет в инвентарь (для игрока)
     const invRes = await query(
       `INSERT INTO inventory (user_id, item_id, status) 
        VALUES ($1, $2, 'active') 
@@ -140,7 +160,7 @@ module.exports = async (req, res) => {
     );
     const newInventoryId = invRes.rows[0].id;
 
-    // В) Обновляем счетчик проигрышей (UPSERT - вставка или обновление)
+    // Д) Обновляем счетчик проигрышей (UPSERT)
     await query(
         `INSERT INTO user_case_streaks (user_id, case_id, loss_count)
          VALUES ($1, $2, $3)
@@ -149,7 +169,7 @@ module.exports = async (req, res) => {
         [userId, caseId, newLossCount]
     );
 
-    // Г) Добавляем в LIVE ленту
+    // Е) Добавляем в LIVE ленту (для сайта)
     await query(
         `INSERT INTO live_drops (user_id, item_name, image_url, is_rare)
          VALUES ($1, $2, $3, $4)`,
@@ -158,14 +178,11 @@ module.exports = async (req, res) => {
 
     await query('COMMIT');
 
-    // Получаем новый баланс
-    const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
-
     // 6. ОТДАЕМ РЕЗУЛЬТАТ
     return res.json({
       success: true,
       inventoryId: newInventoryId,
-      stars: newBalRes.rows[0].stars,
+      stars: balanceAfter,
       prize: {
         id: prize.id,
         title: prize.name,
