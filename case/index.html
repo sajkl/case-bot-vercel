@@ -18,73 +18,124 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .logo{height:32px}
 .balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px}
 
-.h1{font-weight:900;font-size:42px;margin:16px 2px 8px;text-align:center}
+/* ЗАГОЛОВОК + ГАРАНТ */
+.title-area {
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  margin: 16px 2px 8px; position: relative;
+}
+.h1 { font-weight:900; font-size:42px; margin:0; text-align:center; line-height: 1; }
+
+.guarant-badge {
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-size: 11px; font-weight: 800;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: transform 0.1s, background 0.1s;
+}
+.guarant-badge:active { transform: scale(0.95); background: rgba(255, 212, 0, 0.1); }
 
 /* Сетка кейсов */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
-.cell{
-  position:relative;background:rgba(255,255,255,.03);border:none;border-radius:24px;
-  padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;
-  aspect-ratio: 1/1; cursor:pointer; z-index: 1;
+.grid-wrapper { position: relative; margin-top: 8px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+
+/* КНОПКА СБРОСА (ОТКРЫТЬ ЗАНОВО) */
+.reset-overlay {
+  position: absolute; inset: -10px; /* Чуть шире сетки */
+  background: rgba(11, 13, 18, 0.85);
+  backdrop-filter: blur(4px);
+  display: none; /* Скрыта по умолчанию */
+  align-items: center; justify-content: center;
+  z-index: 10; border-radius: 24px;
+  opacity: 0; transition: opacity 0.3s;
 }
-.crate{width:100%;height:100%;display:grid;place-items:center}
-.crate img{width:92%;height:92%;object-fit:contain;transition:opacity .15s}
-.hint{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.18s}
-.cell.show-hint .hint{opacity:1}
+.reset-overlay.show { display: flex; opacity: 1; }
+
+.btn-reset {
+  background: var(--accent); color: #171a1f;
+  border: none; padding: 16px 32px;
+  border-radius: 99px; font-size: 16px; font-weight: 900;
+  text-transform: uppercase; cursor: pointer;
+  box-shadow: 0 0 30px rgba(255, 212, 0, 0.4);
+  transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.reset-overlay.show .btn-reset { transform: scale(1); }
+.btn-reset:active { transform: scale(0.95); }
+
+
+/* ЯЧЕЙКА (Центрирование исправлено) */
+.cell {
+  position:relative; background:rgba(255,255,255,.03); border:none; border-radius:24px;
+  padding:0; /* Убираем паддинг, чтобы центрировать флексом */
+  box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden;
+  aspect-ratio: 1/1; cursor:pointer; z-index: 1;
+  display: flex; align-items: center; justify-content: center; /* Центрируем содержимое */
+}
+
+.crate {
+  width:100%; height:100%; 
+  display:flex; align-items:center; justify-content:center;
+}
+.crate img {
+  width:85%; height:85%; object-fit:contain; 
+  transition:opacity .15s;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+.hint { position:absolute; inset:0; display:grid; place-items:center; font-weight:900; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:.18s }
+.cell.show-hint .hint { opacity:1 }
 
 /* === ВНУТРЕННОСТИ ЯЩИКА (ПРИЗ) === */
-.cell-doors{
-  position:absolute;inset:14px;
-  background:#0a0c12;border:1px solid #1b2130;border-radius:18px;overflow:hidden; pointer-events: none;
+.cell-doors {
+  position:absolute; inset:14px; /* Отступ ворот от края ячейки */
+  background:#0a0c12; border:1px solid #1b2130; border-radius:18px; overflow:hidden; pointer-events: none;
 }
-.cell-door{position:absolute;top:8%;bottom:8%;width:50%;background:linear-gradient(180deg,#ffc400,#e2ae00); z-index: 2;}
-.cell-door.l{left:0;transform-origin:left center}
-.cell-door.r{right:0;transform-origin:right center}
+.cell-door { position:absolute; top:8%; bottom:8%; width:50%; background:linear-gradient(180deg,#ffc400,#e2ae00); z-index: 2; }
+.cell-door.l { left:0; transform-origin:left center }
+.cell-door.r { right:0; transform-origin:right center }
 
-.cell.open .cell-door.l{transform:perspective(800px) rotateY(-95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);}
-.cell.open .cell-door.r{transform:perspective(800px) rotateY(95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);}
+.cell.open .cell-door.l { transform:perspective(800px) rotateY(-95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.cell.open .cell-door.r { transform:perspective(800px) rotateY(95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
-/* Контент внутри открытого ящика */
+/* Контент внутри открытого ящика (Приз) */
 .prize-box {
   position: absolute; inset: 0; 
   display: flex; flex-direction: column; 
-  align-items: center; justify-content: center;
-  z-index: 1; 
-  pointer-events: auto;
+  align-items: center; justify-content: center; /* Идеальный центр */
+  z-index: 1; pointer-events: auto;
   opacity: 0; transition: opacity 0.3s ease;
 }
 .cell.open .prize-box { opacity: 1; transition-delay: 0.2s; } 
 
 .prize-box img {
-  width: 65%; height: 65%; object-fit: contain; 
+  width: 70%; height: 70%; object-fit: contain; 
   filter: drop-shadow(0 0 15px rgba(255, 212, 0, 0.4));
-  margin-bottom: 4px;
+  margin-bottom: 2px; /* Чуть отступ до текста */
   transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .cell.open .prize-box img { transform: scale(1); }
 
 .prize-title {
-  font-size: 11px; font-weight: 900; color: #fff; text-align: center;
-  line-height: 1.1; margin-bottom: 6px;
+  font-size: 10px; font-weight: 900; color: #fff; text-align: center;
+  line-height: 1.1; margin-bottom: 4px;
+  width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.prize-actions {
-  display: flex; gap: 4px; width: 100%; padding: 0 4px;
-}
+.prize-actions { display: flex; gap: 4px; width: 90%; }
 .prize-btn {
   flex: 1; border: none; border-radius: 6px;
-  padding: 6px 0; font-size: 10px; font-weight: 800;
+  padding: 5px 0; font-size: 9px; font-weight: 800;
   cursor: pointer; text-transform: uppercase;
 }
 .btn-take { background: var(--accent); color: #171a1f; }
 .btn-sell-mini { background: #2c313f; color: #a5abb8; border: 1px solid #3e4554; }
 
 
-/* === FULL SCREEN OVERLAY === */
+/* === ОВЕРЛЕЙ === */
 .overlay {
-  position: fixed; inset: 0; 
-  background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
-  z-index: 9999;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
+  z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
 }
 .overlay.show { opacity: 1; pointer-events: auto; }
@@ -100,35 +151,22 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .close-overlay-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
 
 .overlay-card {
-  position: relative; 
-  overflow: visible; 
+  position: relative; overflow: visible; 
   transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex; flex-direction: column; align-items: center;
 }
 .overlay.show .overlay-card { transform: scale(1) translateY(0); }
 
 .rays {
-  position: absolute;
-  left: 50%;
-  top: 120px;
-  width: 250vmax; 
-  height: 250vmax;
+  position: absolute; left: 50%; top: 120px; width: 250vmax; height: 250vmax;
   background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 212, 0, 0.15) 20deg, transparent 40deg, rgba(255, 212, 0, 0.15) 60deg, transparent 80deg, rgba(255, 212, 0, 0.15) 100deg, transparent 120deg, rgba(255, 212, 0, 0.15) 140deg, transparent 160deg, rgba(255, 212, 0, 0.15) 180deg, transparent 200deg, rgba(255, 212, 0, 0.15) 220deg, transparent 240deg, rgba(255, 212, 0, 0.15) 260deg, transparent 280deg, rgba(255, 212, 0, 0.15) 300deg, transparent 320deg, rgba(255, 212, 0, 0.15) 340deg, transparent 360deg);
-  animation: spinCentered 15s linear infinite;
-  z-index: -1; 
-  pointer-events: none;
-  border-radius: 50%;
+  animation: spinCentered 15s linear infinite; z-index: -1; pointer-events: none; border-radius: 50%;
 }
-
-@keyframes spinCentered {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
+@keyframes spinCentered { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 .overlay-img {
   width: 240px; height: 240px; object-fit: contain;
-  filter: drop-shadow(0 0 40px rgba(255, 212, 0, 0.5));
-  margin-bottom: 24px;
+  filter: drop-shadow(0 0 40px rgba(255, 212, 0, 0.5)); margin-bottom: 24px;
 }
 .overlay-title {
   font-size: 32px; font-weight: 900; text-transform: uppercase;
@@ -145,43 +183,22 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .btn-sell { background: var(--accent); color: #111; box-shadow: 0 0 25px rgba(255,212,0,0.3); }
 .btn-keep { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
 
-/* Стили для списка призов снизу */
-.prizes-section {
-  margin-top:20px; 
-  background:#151921; 
-  border-radius:24px; 
-  padding:20px; 
-  border:1px solid #232838;
-}
+/* Нижняя панель */
+.price-wrap { display:flex; justify-content:center; margin:24px 0 32px }
+.price { background:var(--accent); color:#171a1f; padding:12px 24px; border-radius:16px; font-weight:900; font-size:18px; box-shadow:0 0 22px rgba(255,212,0,.35) }
 
-/* ЗАГОЛОВОК СПИСКА + ЦЕНА (Теперь в одну линию) */
-.section-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px;
-}
+.prizes-section { margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-title { font-weight: 800; color: #fff; font-size: 16px; }
-.price-tag {
-  background: var(--accent); color: #171a1f; 
-  padding: 6px 12px; border-radius: 8px; 
-  font-weight: 900; font-size: 14px;
-  box-shadow: 0 0 10px rgba(255, 212, 0, 0.2);
-}
+.price-tag { background: var(--accent); color: #171a1f; padding: 6px 12px; border-radius: 8px; font-weight: 900; font-size: 14px; box-shadow: 0 0 10px rgba(255, 212, 0, 0.2); }
 
-.prize-item {
-  background: #0b0d12; border-radius: 16px; padding: 10px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  border: 1px solid #232838; position: relative;
-}
+.prize-item { background: #0b0d12; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; align-items: center; text-align: center; border: 1px solid #232838; position: relative; }
 .prize-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 212, 0, 0.15); }
 .prize-img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 8px; }
 .prize-name { font-size: 11px; font-weight: 700; color: #a5abb8; line-height: 1.2; }
-.rare-badge {
-  position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000;
-  font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px;
-}
+.rare-badge { position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px; }
 
 .nav-spacer { height: 90px; }
-
 </style>
 </head>
 <body>
@@ -192,13 +209,25 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
     <div class="balance">★ <span id="bal">...</span></div>
   </div>
 
-  <div id="caseTitle" class="h1">Кейс</div>
-  <div id="grid" class="grid"></div>
+  <div class="title-area">
+    <div id="caseTitle" class="h1">Кейс</div>
+    <div class="guarant-badge" onclick="showGuarantInfo()">ГАРАНТ</div>
+  </div>
+
+  <div class="grid-wrapper">
+    <div id="grid" class="grid"></div>
+    
+    <div class="reset-overlay" id="resetOverlay">
+      <button class="btn-reset" id="btnReset">ОТКРЫТЬ ЗАНОВО</button>
+    </div>
+  </div>
   
+  <div class="price-wrap"><div id="casePrice" class="price">★ 0</div></div>
+
   <div class="prizes-section">
     <div class="section-header">
        <span class="section-title">СОДЕРЖИМОЕ КЕЙСА</span>
-       <div id="price" class="price-tag">★ 0</div>
+       <div id="priceSmall" class="price-tag">★ 0</div>
     </div>
     
     <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:12px;">
@@ -217,12 +246,10 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 
 <div id="overlay" class="overlay">
   <button id="btnCloseOverlay" class="close-overlay-btn">&times;</button>
-  
   <div class="overlay-card" id="cardResult" style="display:none">
     <div class="rays"></div>
     <img id="winImg" class="overlay-img" src="">
     <div id="winTitle" class="overlay-title">PRIZE NAME</div>
-    
     <div class="actions">
       <button id="btnSell" class="act-btn btn-sell">Продать (+100)</button>
       <button id="btnKeep" class="act-btn btn-keep">Оставить в инвентаре</button>
@@ -252,7 +279,13 @@ const ASSETS={
 };
 const conf=ASSETS[caseId]||ASSETS.jiga;
 qs('#caseTitle').textContent=conf.title;
-qs('#price').textContent=`★ ${conf.price}`;
+qs('#casePrice').textContent=`★ ${conf.price}`;
+qs('#priceSmall').textContent=`★ ${conf.price}`;
+
+// --- СОСТОЯНИЕ (ДЛЯ КНОПКИ СБРОСА) ---
+let openedCount = 0; // Сколько открыто
+const resetOverlay = qs('#resetOverlay');
+const btnReset = qs('#btnReset');
 
 // --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
 const overlay = qs('#overlay');
@@ -265,15 +298,33 @@ const btnKeep = qs('#btnKeep');
 
 let currentWin = null; 
 
-// --- СЕТКА ---
+// --- ГЕНЕРАЦИЯ СЕТКИ ---
 const grid=qs('#grid');
-for(let i=0;i<4;i++){
-  const cell=document.createElement('button');
-  cell.className='cell';
-  cell.dataset.stage='0';
-  cell.innerHTML=`<div class="crate"><img src="${conf.stages[0]}"></div><div class="hint">ЖМИ</div>`;
-  grid.appendChild(cell);
+function initGrid() {
+  grid.innerHTML = '';
+  openedCount = 0;
+  resetOverlay.classList.remove('show');
+  
+  for(let i=0;i<4;i++){
+    const cell=document.createElement('button');
+    cell.className='cell';
+    cell.dataset.stage='0'; // 0=закрыт
+    cell.innerHTML=`<div class="crate"><img src="${conf.stages[0]}"></div><div class="hint">ЖМИ</div>`;
+    grid.appendChild(cell);
+  }
 }
+initGrid(); // Запуск при старте
+
+// --- ЛОГИКА ГАРАНТА (Инфо) ---
+function showGuarantInfo() {
+  tg.showAlert('ГАРАНТИРОВАННЫЙ ОКУП!\n\nЕсли вы откроете 3 кейса подряд в минус, то в 4-м кейсе вам ГАРАНТИРОВАННО выпадет приз дороже стоимости кейса!');
+}
+
+// --- ЛОГИКА СБРОСА ---
+btnReset.onclick = () => {
+  vib(10);
+  initGrid(); // Пересоздаем сетку
+};
 
 // --- КЛИК ПО ЯЩИКУ ---
 grid.addEventListener('click', async (e)=>{
@@ -284,7 +335,7 @@ grid.addEventListener('click', async (e)=>{
   let stage = +cell.dataset.stage;
   const img = cell.querySelector('.crate img');
 
-  // Этапы 0-1: просто кликаем (разогрев)
+  // Разогрев (Этапы 0-1)
   if(stage < 2){
     cell.classList.add('show-hint'); 
     setTimeout(()=>cell.classList.remove('show-hint'), 260);
@@ -292,12 +343,12 @@ grid.addEventListener('click', async (e)=>{
     return;
   }
 
-  // Этап 2 -> 3: ОТКРЫТИЕ
+  // ОТКРЫТИЕ (Этап 3)
   cell.classList.add('processing'); 
   cell.dataset.stage = '3';
   img.style.opacity = '0'; 
 
-  // Подготовка внутренностей
+  // Добавляем внутренности
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
   doors.innerHTML = `
@@ -314,10 +365,13 @@ grid.addEventListener('click', async (e)=>{
   `;
   cell.appendChild(doors);
 
-  // 1. Анимация дверей (Сразу)
+  // Анимация дверей
   cell.classList.add('open'); 
+  
+  // Увеличиваем счетчик открытых
+  openedCount++;
 
-  // 2. Запрос к серверу
+  // Запрос к серверу
   try {
     const res = await fetch('/api/open', {
       method: 'POST',
@@ -327,91 +381,92 @@ grid.addEventListener('click', async (e)=>{
 
     if (res.error) {
       tg.showAlert(res.error);
-      resetCell(cell, img, doors);
+      // Если ошибка - откатываем
+      cell.classList.remove('open', 'processing');
+      doors.remove();
+      cell.dataset.stage = '0';
+      img.src = conf.stages[0];
+      img.style.opacity = '1';
+      openedCount--;
       return;
     }
 
-    // Успех!
+    // Успех
     if (res.stars != null) qs('#bal').textContent = res.stars;
     const p = res.prize;
     const sellPrice = Math.floor(p.value);
 
-    // === НОВАЯ ЛОГИКА ТАЙМИНГОВ ===
-    // 3. Ждем 500мс (двери открыты, пусто)
+    // Тайминг: ждем 500мс
     await new Promise(r => setTimeout(r, 500));
 
-    // 4. ПОКАЗЫВАЕМ ОВЕРЛЕЙ (СРАЗУ)
+    // Показываем Оверлей
     winImg.src = p.image;
     winTitle.textContent = p.title;
     btnSell.textContent = `ПРОДАТЬ (+${sellPrice} ★)`;
-    
     cardResult.style.display = 'flex';
     overlay.classList.add('show');
     tg.HapticFeedback.notificationOccurred('success');
 
-    // 5. Ждем 300мс после оверлея
+    // Ждем 300мс
     await new Promise(r => setTimeout(r, 300));
 
-    // 6. Обновляем МИНИ-ЯЩИК (на фоне)
+    // Обновляем мини-ящик
     const pImg = doors.querySelector('#pimg');
-    pImg.src = p.image;
-    pImg.style.opacity = '1';
-    pImg.style.filter = 'none'; 
-    
+    pImg.src = p.image; pImg.style.opacity = '1'; pImg.style.filter = 'none'; 
     doors.querySelector('#ptitle').textContent = p.title;
     doors.querySelector('#psell').textContent = `+${sellPrice}`;
     doors.querySelector('#pactions').style.display = 'flex';
 
-    // Сохраняем контекст для кнопок
-    currentWin = {
-      inventoryId: res.inventoryId,
-      sellPrice: sellPrice,
-      cell: cell,
-      img: img,
-      doors: doors
-    };
+    currentWin = { inventoryId: res.inventoryId, sellPrice: sellPrice, cell: cell, img: img, doors: doors };
 
-    // --- ЛОГИКА МИНИ-КНОПОК (внутри ящика) ---
-    doors.querySelector('#ptake').onclick = (ev) => {
-      ev.stopPropagation(); 
-      resetCell(cell, img, doors);
-    };
+    // Обработчики кнопок в мини-ящике
+    doors.querySelector('#ptake').onclick = (ev) => { ev.stopPropagation(); /* Просто оставляем открытым */ };
     doors.querySelector('#psell').onclick = async (ev) => {
       ev.stopPropagation();
       ev.target.textContent = '...';
       await sellItem(currentWin.inventoryId, sellPrice);
-      resetCell(cell, img, doors);
+      // При продаже внутри ящика мы убираем приз и закрываем двери? 
+      // Или оставляем пустым? Обычно оставляют пустым или закрывают.
+      // Сделаем просто визуально "Продано"
+      ev.target.parentElement.innerHTML = '<div style="color:#aaa; font-size:10px">ПРОДАНО</div>';
     };
+
+    // ПРОВЕРКА: Если открыты все 4 -> Показываем кнопку сброса
+    if(openedCount >= 4) {
+       setTimeout(() => {
+          resetOverlay.classList.add('show');
+       }, 500);
+    }
 
   } catch (err) {
     console.error(err);
     tg.showAlert("Ошибка сети");
-    resetCell(cell, img, doors);
   }
 });
 
 // --- ЛОГИКА ОВЕРЛЕЯ ---
-
 btnSell.onclick = async () => {
   if(!currentWin) return;
   btnSell.textContent = '...';
   await sellItem(currentWin.inventoryId, currentWin.sellPrice);
-  resetCell(currentWin.cell, currentWin.img, currentWin.doors);
-  resetOverlay();
-  currentWin = null;
+  
+  // В мини ящике тоже пишем продано
+  const miniActions = currentWin.doors.querySelector('#pactions');
+  if(miniActions) miniActions.innerHTML = '<div style="color:#aaa; font-size:10px">ПРОДАНО</div>';
+  
+  resetOverlayFunc();
 };
 
-btnKeep.onclick = () => {
-  resetOverlay();
-};
+btnKeep.onclick = () => { resetOverlayFunc(); };
+btnCloseOverlay.onclick = () => { vib(10); resetOverlayFunc(); };
 
-btnCloseOverlay.onclick = () => {
-   vib(10);
-   resetOverlay();
-};
+function resetOverlayFunc() {
+  overlay.classList.remove('show');
+  cardResult.style.display = 'none';
+  btnSell.textContent = 'ПРОДАТЬ'; 
+}
 
 // --- ФУНКЦИИ ---
-
 async function sellItem(invId, price) {
   try {
     const res = await fetch('/api/sell', {
@@ -429,43 +484,19 @@ async function sellItem(invId, price) {
   } catch(e) { console.error(e); }
 }
 
-function resetOverlay() {
-  overlay.classList.remove('show');
-  cardResult.style.display = 'none';
-  btnSell.textContent = 'ПРОДАТЬ'; 
-}
-
-function resetCell(cell, img, doors) {
-  cell.classList.remove('open', 'processing');
-  if(doors) doors.remove();
-  cell.dataset.stage = '0';
-  img.src = conf.stages[0];
-  img.style.opacity = '1';
-}
-
-// Загрузка списка призов (снизу)
 fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
   const list = qs('#prizesList');
   list.innerHTML = '';
-  if(items.length === 0) {
-      list.innerHTML = '<div style="color:#777; grid-column:1/-1; text-align:center">Нет данных</div>';
-      return;
-  }
+  if(items.length === 0) return;
   items.forEach(item => {
       const el = document.createElement('div');
       el.className = `prize-item ${item.is_rare ? 'rare' : ''}`;
-      el.innerHTML = `
-        ${item.is_rare ? '<div class="rare-badge">RARE</div>' : ''}
-        <img class="prize-img" src="${item.image_url}" onerror="this.src='/assets/prizes/sample.png'">
-        <div class="prize-name">${item.name}</div>
-      `;
+      el.innerHTML = `<img class="prize-img" src="${item.image_url}"><div class="prize-name">${item.name}</div>`;
       list.appendChild(el);
   });
 });
 
-fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-  .then(r=>r.ok?r.json():null).then(d=>{if(d?.stars!=null)qs('#bal').textContent=d.stars}).catch(()=>{});
-
+fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}}).then(r=>r.json()).then(d=>{if(d.stars) qs('#bal').textContent=d.stars});
 </script>
 </body>
 </html>
