@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
-  <link rel="stylesheet" href="/styles.css?v=13">
+  <link rel="stylesheet" href="/styles.css">
   
   <style>
-    /* === LIVE ЛЕНТА === */
+    /* === СТИЛИ LIVE ЛЕНТЫ (ОБНОВЛЕННЫЕ) === */
     .live-bar {
       height: 64px;
       background: #111319;
@@ -19,7 +19,7 @@
       margin-bottom: 10px;
     }
 
-    /* Желтый лейбл */
+    /* Лейбл LIVE */
     .live-label {
       background: var(--accent); color: #000;
       font-weight: 900; font-size: 12px;
@@ -30,28 +30,53 @@
     }
     .live-label span { writing-mode: vertical-rl; transform: rotate(180deg); }
 
-    /* Бегущая дорожка */
+    /* Дорожка с предметами */
     .live-track {
       display: flex; gap: 8px; padding-left: 40px;
       will-change: transform;
     }
     .live-track.animate { animation: scrollLive 25s linear infinite; }
 
-    /* Карточки в ленте */
+    /* === КАРТОЧКА ПРЕДМЕТА В ЛЕНТЕ === */
     .live-item {
-      width: 50px; height: 50px; background: #1a1d26;
-      border-radius: 8px; border: 1px solid #2a2f3d;
+      width: 50px; height: 50px; 
+      background: #1a1d26;
+      border-radius: 10px; 
+      border: 1px solid #2f3542; /* Обычная рамка */
       flex-shrink: 0; display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
+      transition: transform 0.2s;
     }
-    .live-item::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #777; }
-    .live-item.rare::after { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-    .live-item img { width: 80%; height: 80%; object-fit: contain; }
+
+    /* ПОДСВЕТКА РЕДКИХ (RARE) */
+    .live-item.rare {
+      border: 1px solid #ffd400; /* Золотая рамка */
+      box-shadow: 0 0 10px rgba(255, 212, 0, 0.4), inset 0 0 10px rgba(255, 212, 0, 0.1); /* Свечение */
+    }
+
+    /* Эффект "пролетающего блика" для редких */
+    .live-item.rare::after {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shine 3s infinite;
+      pointer-events: none;
+    }
+
+    .live-item img { width: 80%; height: 80%; object-fit: contain; z-index: 1; }
+
+    @keyframes shine {
+      0% { transform: translateX(-100%) translateY(-100%); }
+      20% { transform: translateX(100%) translateY(100%); }
+      100% { transform: translateX(100%) translateY(100%); }
+    }
 
     @keyframes scrollLive {
       0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
+      100% { transform: translateX(-50%); } 
     }
+
+    /* Отступ под навигацию */
+    .nav-spacer { height: 90px; }
   </style>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -105,7 +130,7 @@
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
-    // 1. АВТОРИЗАЦИЯ (через api/user)
+    // 1. АВТОРИЗАЦИЯ (Используем api/user как договорились)
     const auth = await fetch('/api/user?action=auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -114,17 +139,14 @@
 
     if (!auth.ok) console.warn('Auth failed:', auth);
 
-    // 2. Профиль
-    await fetch('/api/me', { credentials:'include' }).catch(()=>{});
-    
-    // 3. Баланс
+    // 2. БАЛАНС
     const balEl = document.getElementById('balanceValue');
     fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
       .catch(()=>{});
 
-    // 4. Клик по кейсу
+    // 3. СОХРАНЕНИЕ ВЫБРАННОГО КЕЙСА
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a.card'); if (!a) return;
       const caseId = a.dataset.caseid || '';
@@ -135,11 +157,11 @@
       }
     });
 
-    // 5. LIVE ЛЕНТА (через api/live)
+    // 4. LIVE ЛЕНТА (Используем старый api/live)
     async function loadLiveFeed() {
       const track = document.getElementById('liveTrack');
       try {
-        // Запрос к старому доброму api/live
+        // Запрос к отдельному файлу api/live.js
         const drops = await fetch('/api/live').then(r => r.json());
         
         if(!drops || drops.length === 0) {
@@ -147,14 +169,14 @@
            return;
         }
 
-        // Рендер
+        // Генерируем HTML (класс .rare добавит подсветку)
         const itemsHtml = drops.map(d => `
           <div class="live-item ${d.is_rare ? 'rare' : ''}">
              <img src="${d.image_url}" onerror="this.src='/assets/logo.png'">
           </div>
         `).join('');
 
-        // Дублируем для плавности
+        // Дублируем для бесконечной прокрутки
         track.innerHTML = itemsHtml + itemsHtml; 
         track.classList.add('animate');
 
