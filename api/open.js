@@ -24,6 +24,17 @@ function verifyTelegramWebAppData(telegramInitData) {
   return JSON.parse(arr.find(s => s.startsWith('user=')).split('user=')[1]);
 }
 
+// === ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ РУЛЕТКИ ===
+function spinRoulette(items) {
+  const totalChance = items.reduce((acc, item) => acc + parseFloat(item.chance), 0);
+  let random = Math.random() * totalChance;
+  for (const item of items) {
+    random -= parseFloat(item.chance);
+    if (random <= 0) return item;
+  }
+  return items[items.length - 1];
+}
+
 // === ГЛАВНЫЙ ХЕНДЛЕР ===
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -65,45 +76,95 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Кейс пуст' });
     }
 
-    // 5. РУЛЕТКА
-    const totalChance = items.reduce((acc, item) => acc + parseFloat(item.chance), 0);
-    let random = Math.random() * totalChance;
+    // --- ЛОГИКА ГАРАНТА ---
+    
+    // А) Узнаем текущий стрик проигрышей для ЭТОГО кейса
+    const streakRes = await query(
+        'SELECT loss_count FROM user_case_streaks WHERE user_id = $1 AND case_id = $2',
+        [userId, caseId]
+    );
+    const currentStreak = streakRes.rows[0]?.loss_count || 0;
+
     let prize = null;
+    let newLossCount = 0;
 
-    for (const item of items) {
-      random -= parseFloat(item.chance);
-      if (random <= 0) {
-        prize = item;
-        break;
-      }
+    // Б) Если 3 проигрыша подряд -> 4-й раз ГАРАНТ
+    if (currentStreak >= 3) {
+        // Фильтруем предметы, которые дороже кейса (окуп)
+        const winningItems = items.filter(i => parseInt(i.stars_cost) > price);
+        
+        // Сортируем от дешевых к дорогим
+        winningItems.sort((a, b) => parseInt(a.stars_cost) - parseInt(b.stars_cost));
+
+        if (winningItems.length > 0) {
+            // 95% шанс на самый дешевый окуп (первый в списке)
+            const randomPercent = Math.random() * 100;
+            
+            if (randomPercent < 95 || winningItems.length === 1) {
+                prize = winningItems[0]; // Самый маленький окуп
+            } else {
+                // 5% шанс на любой другой окупной предмет (крутим рулетку среди оставшихся)
+                const superWins = winningItems.slice(1);
+                prize = spinRoulette(superWins);
+            }
+            // При победе стрик сбрасываем
+            newLossCount = 0;
+        }
+        // Если вдруг в кейсе нет окупа (технически невозможно, но на всякий случай), сработает обычная рулетка ниже
     }
-    if (!prize) prize = items[items.length - 1];
 
-    // 6. ТРАНЗАКЦИЯ (Исправлено!)
+    // В) Если гарант не сработал или еще не определен приз -> Обычная рулетка
+    if (!prize) {
+        prize = spinRoulette(items);
+        
+        // Считаем стрик: если цена приза <= цены кейса, то это проигрыш
+        if (parseInt(prize.stars_cost) <= price) {
+            newLossCount = currentStreak + 1;
+        } else {
+            newLossCount = 0; // Выиграл сам - сбросили стрик
+        }
+    }
+
+    // 5. ТРАНЗАКЦИЯ
     await query('BEGIN');
 
     // А) Списываем деньги
     await query('UPDATE balances SET stars = stars - $1 WHERE user_id = $2', [price, userId]);
 
-    // Б) Добавляем предмет и ПОЛУЧАЕМ ЕГО ID (RETURNING id)
-    // !!! ВОТ ТУТ БЫЛО ИЗМЕНЕНИЕ !!!
+    // Б) Добавляем предмет в инвентарь
     const invRes = await query(
       `INSERT INTO inventory (user_id, item_id, status) 
        VALUES ($1, $2, 'active') 
        RETURNING id`, 
       [userId, prize.id]
     );
-    const newInventoryId = invRes.rows[0].id; // Сохраняем ID новой записи
+    const newInventoryId = invRes.rows[0].id;
+
+    // В) Обновляем счетчик проигрышей (UPSERT - вставка или обновление)
+    await query(
+        `INSERT INTO user_case_streaks (user_id, case_id, loss_count)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, case_id) 
+         DO UPDATE SET loss_count = $3`,
+        [userId, caseId, newLossCount]
+    );
+
+    // Г) Добавляем в LIVE ленту
+    await query(
+        `INSERT INTO live_drops (user_id, item_name, image_url, is_rare)
+         VALUES ($1, $2, $3, $4)`,
+        [userId, prize.name, prize.image_url, prize.is_rare]
+    );
 
     await query('COMMIT');
 
     // Получаем новый баланс
     const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
 
-    // 7. ОТДАЕМ РЕЗУЛЬТАТ С INVENTORY ID
+    // 6. ОТДАЕМ РЕЗУЛЬТАТ
     return res.json({
       success: true,
-      inventoryId: newInventoryId, // <--- ЭТО ВАЖНО ДЛЯ ПРОДАЖИ
+      inventoryId: newInventoryId,
       stars: newBalRes.rows[0].stars,
       prize: {
         id: prize.id,
