@@ -6,22 +6,72 @@
   <title>Lambo Drop — Gift Wins</title>
   <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
   <link rel="stylesheet" href="/styles.css?v=13">
+  
+  <style>
+    /* === LIVE ЛЕНТА === */
+    .live-bar {
+      height: 64px;
+      background: #111319;
+      border-top: 1px solid #1f232e;
+      border-bottom: 1px solid #1f232e;
+      display: flex; align-items: center;
+      overflow: hidden; position: relative;
+      margin-bottom: 10px;
+    }
+
+    /* Желтый лейбл */
+    .live-label {
+      background: var(--accent); color: #000;
+      font-weight: 900; font-size: 12px;
+      padding: 0 10px; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      position: absolute; left: 0; top: 0; bottom: 0; z-index: 10;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+    }
+    .live-label span { writing-mode: vertical-rl; transform: rotate(180deg); }
+
+    /* Бегущая дорожка */
+    .live-track {
+      display: flex; gap: 8px; padding-left: 40px;
+      will-change: transform;
+    }
+    .live-track.animate { animation: scrollLive 25s linear infinite; }
+
+    /* Карточки в ленте */
+    .live-item {
+      width: 50px; height: 50px; background: #1a1d26;
+      border-radius: 8px; border: 1px solid #2a2f3d;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .live-item::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #777; }
+    .live-item.rare::after { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .live-item img { width: 80%; height: 80%; object-fit: contain; }
+
+    @keyframes scrollLive {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+  </style>
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div class="container">
-    <!-- Шапка -->
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
       <a class="balance" id="balance" href="/topup/">
-        <span class="star">★</span><span class="value" id="balanceValue">25</span>
+        <span class="star">★</span><span class="value" id="balanceValue">...</span>
       </a>
     </header>
 
-    <!-- LIVE -->
-    <section class="live-bar"><span>LIVE</span></section>
+    <section class="live-bar">
+      <div class="live-label"><span>LIVE</span></div>
+      <div class="live-track" id="liveTrack">
+         <div style="padding:22px; color:#555; font-size:10px;">Загрузка...</div>
+      </div>
+    </section>
 
-    <!-- Сетка 2×2 -->
     <main class="grid">
       <a class="card gray"  data-caseid="jiga"  href="/case/?case=jiga"  aria-label="Жига"  style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
@@ -43,45 +93,38 @@
 
     <div class="nav-spacer" aria-hidden="true"></div>
 
-    <!-- Навигация (объединённые вкладки) -->
     <nav class="nav">
-    <a class="btn active" href="/">Кейсы</a>
-    <a class="btn" href="/crash.html">Crash 🚀</a>
-    <a class="btn" href="/profile/">Профиль</a>
-  </nav>
+      <a class="btn active" href="/">Кейсы</a>
+      <a class="btn" href="/crash.html">Crash 🚀</a>
+      <a class="btn" href="/profile/">Профиль</a>
+    </nav>
   </div>
 
   <script>
- (async () => {
-  const tg = window.Telegram.WebApp;
-  tg.ready(); tg.expand();
+  (async () => {
+    const tg = window.Telegram.WebApp;
+    tg.ready(); tg.expand();
 
-  const auth = await fetch('/api/tg-auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ initData: tg.initData })
-  }).then(r => r.json());
+    // 1. АВТОРИЗАЦИЯ (через api/user)
+    const auth = await fetch('/api/user?action=auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData })
+    }).then(r => r.json());
 
-  console.log('AUTH RESULT:', auth);
+    if (!auth.ok) console.warn('Auth failed:', auth);
 
-  if (!auth.ok) {
-    console.warn('Auth failed:', auth);
-    return;
-  }
-
-  // Теперь можно грузить профиль
-  const me = await fetch('/api/me', { credentials:'include' })
-    .then(r=>r.json());
-  console.log('ME:', me);
-
-    // баланс
+    // 2. Профиль
+    await fetch('/api/me', { credentials:'include' }).catch(()=>{});
+    
+    // 3. Баланс
     const balEl = document.getElementById('balanceValue');
-    fetch('/api/profile')
+    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
       .catch(()=>{});
 
-    // сохранить выбранный кейс
+    // 4. Клик по кейсу
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a.card'); if (!a) return;
       const caseId = a.dataset.caseid || '';
@@ -91,6 +134,38 @@
         url.searchParams.set('case', caseId); a.href = url.pathname + '?' + url.searchParams.toString();
       }
     });
+
+    // 5. LIVE ЛЕНТА (через api/live)
+    async function loadLiveFeed() {
+      const track = document.getElementById('liveTrack');
+      try {
+        // Запрос к старому доброму api/live
+        const drops = await fetch('/api/live').then(r => r.json());
+        
+        if(!drops || drops.length === 0) {
+           track.innerHTML = '<div style="padding:22px; color:#555; font-size:10px;">Лента пуста</div>';
+           return;
+        }
+
+        // Рендер
+        const itemsHtml = drops.map(d => `
+          <div class="live-item ${d.is_rare ? 'rare' : ''}">
+             <img src="${d.image_url}" onerror="this.src='/assets/logo.png'">
+          </div>
+        `).join('');
+
+        // Дублируем для плавности
+        track.innerHTML = itemsHtml + itemsHtml; 
+        track.classList.add('animate');
+
+      } catch(e) {
+        console.error(e);
+        track.innerHTML = '<div style="padding:22px; color:#555; font-size:10px;">Offline</div>';
+      }
+    }
+    
+    loadLiveFeed();
+
   })();
   </script>
 </body>
