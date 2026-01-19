@@ -126,34 +126,48 @@
   </div>
 
   <script>
- (async () => {
+  (async () => {
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
-    const balEl = document.getElementById('balanceValue'); // Находим элемент баланса сразу
+    const balEl = document.getElementById('balanceValue');
 
-    // 1. АВТОРИЗАЦИЯ
-    const auth = await fetch('/api/user?action=auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: tg.initData })
-    }).then(r => r.json());
+    try {
+        // 1. Пытаемся авторизоваться
+        const res = await fetch('/api/user?action=auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg.initData })
+        }).then(r => r.json());
 
-    if (auth.ok) {
-       // === ВОТ ЧТО НУЖНО ДОБАВИТЬ ===
-       // Если сервер прислал баланс сразу при входе — показываем его
-       if (auth.stars !== undefined) {
-          balEl.textContent = auth.stars;
-       }
-    } else {
-       console.warn('Auth failed:', auth);
+        // 2. Смотрим, что ответил сервер
+        if (res.ok) {
+            console.log('Auth success. Stars:', res.stars); // Для отладки в консоли
+            
+            // Если сервер прислал поле stars (даже если это 0)
+            if (res.stars !== undefined && res.stars !== null) {
+                balEl.textContent = res.stars;
+            } else {
+                // Если сервер забыл прислать звезды
+                balEl.textContent = '0';
+            }
+
+            // (Здесь твой код для загрузки аватарки и имени, если нужен)
+            // ...
+        } else {
+            console.error('Auth error:', res);
+        }
+
+    } catch (e) {
+        console.error('Network error:', e);
+        // Если ошибка сети - попробуем старый метод (api/profile) как запасной вариант
+        fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
+           .then(r => r.json())
+           .then(d => { if(d.stars !== undefined) balEl.textContent = d.stars; })
+           .catch(() => balEl.textContent = '?');
     }
-
-    // 2. БАЛАНС (Этот блок можно даже удалить, если работает верхний, но оставь как запасной)
-    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
-      .catch(()=>{});
+  })();
+</script>
 
     // ... остальной код (клики по кейсам) ...
 
