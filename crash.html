@@ -172,7 +172,7 @@
     let myBet = null;
     let myCashout = false;
     let lastSecond = -1;
-
+    let isActionLoading = false; // 
     // === ГРАФИКА ===
     function resize() {
       width = canvas.parentElement.clientWidth;
@@ -309,7 +309,7 @@
 
       } catch (e) { console.error(e); }
     }
-    setInterval(pollState, 1000);
+    setInterval(pollState, 250);
     pollState();
 
     function handleCrash(val) {
@@ -333,46 +333,110 @@
       if(historyBar.children.length > 20) historyBar.lastChild.remove();
     }
 
-    function updateBtn() {
+function updateBtn() {
+      // Если прямо сейчас идет отправка запроса — не трогаем кнопку, пусть висит "Ждем..."
+      if (isActionLoading) return; 
+
       if (serverPhase === 'BETTING') {
          if (myBet) {
-            mainBtn.className = 'main-btn btn-wait'; mainBtn.textContent = 'ЖДЕМ...'; mainBtn.onclick = null;
+            mainBtn.className = 'main-btn btn-wait'; 
+            mainBtn.textContent = 'СТАВКА ПРИНЯТА'; // Чуть понятнее текст
+            mainBtn.onclick = null;
          } else {
-            mainBtn.className = 'main-btn btn-bet'; mainBtn.textContent = 'СТАВКА'; mainBtn.onclick = doBet;
+            mainBtn.className = 'main-btn btn-bet'; 
+            mainBtn.textContent = 'ПОСТАВИТЬ'; 
+            mainBtn.onclick = doBet;
          }
       } else if (serverPhase === 'FLYING') {
          if (myBet && !myCashout) {
-            mainBtn.className = 'main-btn btn-cashout'; mainBtn.textContent = 'ЗАБРАТЬ'; mainBtn.onclick = doCashout;
+            mainBtn.className = 'main-btn btn-cashout'; 
+            mainBtn.textContent = 'ЗАБРАТЬ'; 
+            mainBtn.onclick = doCashout;
          } else if (myCashout) {
-            mainBtn.className = 'main-btn btn-wait'; mainBtn.textContent = 'УСПЕХ'; mainBtn.onclick = null;
-            mainBtn.style.background = '#2ad06c'; mainBtn.style.color = '#fff';
+            mainBtn.className = 'main-btn btn-wait'; 
+            mainBtn.textContent = 'УСПЕХ'; 
+            mainBtn.onclick = null;
+            mainBtn.style.background = '#2ad06c'; 
+            mainBtn.style.color = '#fff';
          } else {
-            mainBtn.className = 'main-btn btn-wait'; mainBtn.textContent = 'ИДЕТ РАУНД'; mainBtn.onclick = null;
+            mainBtn.className = 'main-btn btn-wait'; 
+            mainBtn.textContent = 'ИДЕТ РАУНД'; 
+            mainBtn.onclick = null;
             mainBtn.style.background = '';
          }
       } else {
-         mainBtn.className = 'main-btn btn-wait'; mainBtn.textContent = 'CRASHED'; mainBtn.onclick = null;
+         mainBtn.className = 'main-btn btn-wait'; 
+         mainBtn.textContent = 'CRASHED'; 
+         mainBtn.onclick = null;
          mainBtn.style.background = '';
       }
     }
 
-    async function doBet() {
+ async function doBet() {
+      // 1. Защита: если уже нажали, выходим
+      if (isActionLoading) return;
       const amount = +document.getElementById('betAmount').value;
-      if(!amount) return;
-      mainBtn.textContent = "...";
+      if (!amount) return;
+
+      // 2. МГНОВЕННАЯ визуальная реакция
+      isActionLoading = true;
+      tg.HapticFeedback.selectionChanged(); // Вибрация при нажатии
+      mainBtn.className = 'main-btn btn-wait';
+      mainBtn.textContent = "Обработка...";
+      
       try {
-        const res = await fetch('/api/crash', { method: 'POST', headers: {'Content-Type':'application/json','X-Telegram-Data':tg.initData}, body: JSON.stringify({action:'start', bet:amount}) }).then(r=>r.json());
-        if(res.ok) { myBet = {id:res.gameId}; if(res.balance) balEl.textContent = res.balance; }
-      } catch(e){}
-      pollState();
+        const res = await fetch('/api/crash', { 
+            method: 'POST', 
+            headers: {'Content-Type':'application/json','X-Telegram-Data':tg.initData}, 
+            body: JSON.stringify({action:'start', bet:amount}) 
+        }).then(r=>r.json());
+
+        if (res.ok) { 
+            myBet = {id:res.gameId}; 
+            if(res.balance) balEl.textContent = res.balance; 
+            tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            // Если ошибка (например, не хватает денег), возвращаем кнопку назад
+            tg.showAlert(res.error || 'Ошибка ставки');
+        }
+      } catch(e){
+          console.error(e);
+      } finally {
+          // Снимаем блокировку и обновляем состояние
+          isActionLoading = false;
+          pollState(); // Принудительно обновляем данные
+      }
     }
+
     async function doCashout() {
-      if(!myBet) return;
+      if (!myBet || isActionLoading) return;
+      
+      // 1. МГНОВЕННАЯ реакция
+      isActionLoading = true;
+      tg.HapticFeedback.impactOccurred('medium'); // Резкая вибрация для адреналина
+      mainBtn.className = 'main-btn btn-wait';
+      mainBtn.style.background = '#2ad06c'; // Сразу красим в зеленый
+      mainBtn.style.color = '#fff';
+      mainBtn.textContent = "ЗАБИРАЕМ...";
+
       try {
-        const res = await fetch('/api/crash', { method: 'POST', headers: {'Content-Type':'application/json','X-Telegram-Data':tg.initData}, body: JSON.stringify({action:'cashout', gameId:myBet.id}) }).then(r=>r.json());
-        if(res.ok) { myCashout = true; if(res.balance) balEl.textContent = res.balance; tg.HapticFeedback.notificationOccurred('success'); }
-      } catch(e){}
-      pollState();
+        const res = await fetch('/api/crash', { 
+            method: 'POST', 
+            headers: {'Content-Type':'application/json','X-Telegram-Data':tg.initData}, 
+            body: JSON.stringify({action:'cashout', gameId:myBet.id}) 
+        }).then(r=>r.json());
+
+        if (res.ok) { 
+            myCashout = true; 
+            if(res.balance) balEl.textContent = res.balance; 
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+      } catch(e){
+         // Если не успели (крашнулось пока шел запрос)
+      } finally {
+         isActionLoading = false;
+         pollState();
+      }
     }
 
     function renderBets(bets) {
