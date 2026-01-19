@@ -126,25 +126,36 @@
   </div>
 
   <script>
-  (async () => {
+ (async () => {
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
-    // 1. АВТОРИЗАЦИЯ (Используем api/user как договорились)
+    const balEl = document.getElementById('balanceValue'); // Находим элемент баланса сразу
+
+    // 1. АВТОРИЗАЦИЯ
     const auth = await fetch('/api/user?action=auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: tg.initData })
     }).then(r => r.json());
 
-    if (!auth.ok) console.warn('Auth failed:', auth);
+    if (auth.ok) {
+       // === ВОТ ЧТО НУЖНО ДОБАВИТЬ ===
+       // Если сервер прислал баланс сразу при входе — показываем его
+       if (auth.stars !== undefined) {
+          balEl.textContent = auth.stars;
+       }
+    } else {
+       console.warn('Auth failed:', auth);
+    }
 
-    // 2. БАЛАНС
-    const balEl = document.getElementById('balanceValue');
+    // 2. БАЛАНС (Этот блок можно даже удалить, если работает верхний, но оставь как запасной)
     fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.stars !== 'undefined') balEl.textContent = d.stars; })
       .catch(()=>{});
+
+    // ... остальной код (клики по кейсам) ...
 
     // 3. СОХРАНЕНИЕ ВЫБРАННОГО КЕЙСА
     document.addEventListener('click', (e) => {
