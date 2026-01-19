@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lambo Admin 🕵️‍♂️</title>
+    <style>
+        :root { --bg: #0b0d12; --card: #151921; --text: #fff; --accent: #ffd400; --green: #2ad06c; --red: #ff4d4d; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
+        
+        /* Inputs */
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        input { background: var(--card); border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; flex: 1; min-width: 200px; }
+        button { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-btn { background: transparent; color: #777; border: 1px solid #333; }
+        .tab-btn.active { background: #333; color: #fff; border-color: #555; }
+
+        /* Sections */
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Report Box */
+        .report-box { background: var(--card); padding: 20px; border-radius: 12px; white-space: pre-wrap; font-family: monospace; border: 1px solid #333; }
+
+        /* Stats Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #2a2f3d; }
+        .stat-label { color: #777; font-size: 12px; margin-bottom: 5px; }
+        .stat-val { font-size: 20px; font-weight: 800; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: #777; padding: 10px; border-bottom: 1px solid #333; }
+        td { padding: 10px; border-bottom: 1px solid #222; }
+        .plus { color: var(--green); }
+        .minus { color: var(--red); }
+        .type-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .type-CASE { background: rgba(255, 212, 0, 0.15); color: var(--accent); }
+        .type-CRASH { background: rgba(255, 77, 77, 0.15); color: var(--red); }
+    </style>
+</head>
+<body>
+
+    <h1>🕵️‍♂️ Lambo Admin</h1>
+
+    <div class="controls">
+        <input type="password" id="adminSecret" placeholder="Введи ADMIN_SECRET (из Vercel)">
+        <button onclick="saveSecret()">Сохранить пароль</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('general')">📊 Экономика (AI)</button>
+        <button class="tab-btn" onclick="switchTab('user')">👤 Досье Игрока</button>
+    </div>
+
+    <div id="general" class="section active">
+        <button onclick="loadGeneralReport()" style="margin-bottom:15px; width:100%">🔄 Сканировать Экономику</button>
+        <div id="aiReport" class="report-box">Нажми кнопку, чтобы получить отчет для ИИ...</div>
+        <button onclick="copyReport()" style="margin-top:10px; background:#333; color:#fff;">📋 Скопировать для ChatGPT</button>
+    </div>
+
+    <div id="user" class="section">
+        <div class="controls">
+            <input type="number" id="userIdInput" placeholder="Telegram ID игрока">
+            <button onclick="loadUserHistory()">Найти досье</button>
+        </div>
+
+        <div id="userStats" style="display:none">
+            <div class="grid">
+                <div class="stat-card">
+                    <div class="stat-label">КЕЙСЫ (Потратил / Выиграл)</div>
+                    <div class="stat-val">
+                        <span id="caseSpend">0</span> / <span id="caseWon" style="color:var(--green)">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">CRASH (Потратил / Выиграл)</div>
+                    <div class="stat-val">
+                        <span id="crashSpend">0</span> / <span id="crashWon" style="color:var(--green)">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3>История (Последние 50)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Время</th>
+                        <th>Тип</th>
+                        <th>Детали</th>
+                        <th>Сумма</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Сохраняем секрет в браузере, чтобы не вводить каждый раз
+        const secretInput = document.getElementById('adminSecret');
+        if(localStorage.getItem('admin_secret')) {
+            secretInput.value = localStorage.getItem('admin_secret');
+        }
+
+        function saveSecret() {
+            localStorage.setItem('admin_secret', secretInput.value);
+            alert('Пароль сохранен в браузере');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // === 1. ЗАГРУЗКА ОБЩЕГО ОТЧЕТА ===
+        async function loadGeneralReport() {
+            const secret = secretInput.value;
+            if(!secret) return alert('Введи секрет!');
+            
+            document.getElementById('aiReport').textContent = 'Загрузка...';
+
+            try {
+                // Запрос к api/live?action=admin
+                const res = await fetch(`/api/live?action=admin&secret=${secret}`).then(r => r.json());
+                
+                if(res.error) {
+                    document.getElementById('aiReport').textContent = 'Ошибка: ' + res.error;
+                } else {
+                    document.getElementById('aiReport').textContent = res.full_report;
+                }
+            } catch(e) {
+                alert('Ошибка сети');
+            }
+        }
+
+        function copyReport() {
+            const text = document.getElementById('aiReport').textContent;
+            navigator.clipboard.writeText(text);
+            alert('Скопировано! Вставь это в ChatGPT.');
+        }
+
+        // === 2. ЗАГРУЗКА ИСТОРИИ ИГРОКА ===
+        async function loadUserHistory() {
+            const secret = secretInput.value;
+            const uid = document.getElementById('userIdInput').value;
+            if(!secret || !uid) return alert('Введи секрет и ID');
+
+            try {
+                // Запрос к api/live?action=user_history
+                const res = await fetch(`/api/live?action=user_history&user_id=${uid}&secret=${secret}`).then(r => r.json());
+
+                if(res.error) return alert(res.error);
+
+                document.getElementById('userStats').style.display = 'block';
+
+                // Заполняем цифры
+                const s = res.stats;
+                document.getElementById('caseSpend').textContent = s.total_case_spend;
+                document.getElementById('caseWon').textContent = s.total_case_won;
+                document.getElementById('crashSpend').textContent = s.total_crash_spend;
+                document.getElementById('crashWon').textContent = s.total_crash_won;
+
+                // Заполняем таблицу
+                const tbody = document.getElementById('historyTable');
+                tbody.innerHTML = res.history.map(row => {
+                    const date = new Date(row.created_at).toLocaleString('ru-RU');
+                    const isPlus = row.change > 0;
+                    const colorClass = isPlus ? 'plus' : 'minus';
+                    const sign = isPlus ? '+' : '';
+                    
+                    return `
+                        <tr>
+                            <td style="color:#555">${date}</td>
+                            <td><span class="type-badge type-${row.type}">${row.type}</span></td>
+                            <td>${row.info}</td>
+                            <td class="${colorClass}"><b>${sign}${row.change} ★</b></td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch(e) {
+                alert('Ошибка. Проверь ID или Интернет.');
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>
