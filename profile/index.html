@@ -35,16 +35,11 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     
-    /* Контейнер справа для кнопки и счетчика */
-    .section-right {
-      display: flex; align-items: center; gap: 10px;
-    }
-
+    .section-right { display: flex; align-items: center; gap: 10px; }
     .inv-count { background: #232838; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #aaa; }
     
-    /* СТИЛЬ НОВОЙ КНОПКИ */
     .btn-sell-all {
-      display: none; /* Скрыта по умолчанию */
+      display: none;
       background: rgba(255, 77, 77, 0.15);
       color: #ff4d4d;
       border: 1px solid #ff4d4d;
@@ -75,7 +70,7 @@
       grid-column: 1 / -1; text-align: center; padding: 30px 0; color: #555; font-size: 14px;
     }
 
-    /* === MODAL (Item Details) === */
+    /* === MODAL === */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
       z-index: 1000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
@@ -99,7 +94,6 @@
     .btn-sell { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
     .btn-withdraw { background: var(--accent); color: #111; }
     .btn-close { background: transparent; color: #777; margin-top: 8px; font-size: 14px; }
-
   </style>
 </head>
 <body>
@@ -107,9 +101,9 @@
     <header class="header">
       <a class="back" href="/">← Назад</a>
       <div style="font-weight:900; font-size:20px;">ПРОФИЛЬ</div>
- <a class="balance" href="/topup/" style="text-decoration:none">
-  ★ <span id="bal">...</span>
-</a>
+      <a class="balance" href="/topup/" style="text-decoration:none; color:inherit;">
+         <span class="star">★</span> <span id="balanceValue">...</span>
+      </a>
     </header>
 
     <section class="profile-hero">
@@ -166,39 +160,54 @@
        grid: document.getElementById('invGrid'),
        count: document.getElementById('invCount'),
        modal: document.getElementById('itemModal'),
-       btnSellAll: document.getElementById('btnSellAll') // Новая кнопка
+       btnSellAll: document.getElementById('btnSellAll')
     };
 
     let currentItem = null; 
-    let allItems = []; // Список для хранения всех предметов
+    let allItems = []; 
 
-    // 1. Загрузка профиля
-    const u = tg.initDataUnsafe?.user;
-    if(u) {
-       els.user.textContent = u.username ? `@${u.username}` : u.first_name;
-       els.uid.textContent = `ID: ${u.id}`;
-       if(u.photo_url) els.ava.style.backgroundImage = `url(${u.photo_url})`;
-       else els.ava.textContent = u.first_name[0]; 
+    // === [NEW] ЗАГРУЗКА ПРОФИЛЯ + БАЛАНСА ===
+    async function loadProfile() {
+       try {
+          // Используем один запрос для всего
+          const res = await fetch('/api/user?action=auth', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ initData: tg.initData })
+          }).then(r => r.json());
+
+          if(res.ok) {
+             // 1. Ставим баланс
+             els.bal.textContent = (res.stars !== undefined) ? res.stars : '0';
+
+             // 2. Ставим инфо о юзере
+             const u = res.user;
+             els.user.textContent = u.username ? `@${u.username}` : u.first_name;
+             els.uid.textContent = `ID: ${u.id}`;
+             
+             // 3. Аватарка (используем прокси для надежности)
+             if(u.photo_url) {
+                els.ava.style.backgroundImage = `url(/api/user?action=avatar&user_id=${u.id})`;
+             } else {
+                els.ava.textContent = u.first_name[0];
+                els.ava.style.display = 'flex'; els.ava.style.alignItems='center'; els.ava.style.justifyContent='center'; els.ava.style.fontSize='32px';
+             }
+          }
+       } catch(e) { console.error('Profile load error:', e); }
     }
+    loadProfile();
 
-    // Баланс
-    fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-      .then(r=>r.json()).then(d=>{ if(d.stars) els.bal.textContent = d.stars });
-
-    // 2. Загрузка инвентаря
-    loadInventory();
-
+    // === ЗАГРУЗКА ИНВЕНТАРЯ ===
     function loadInventory() {
        fetch('/api/inventory', {headers:{'X-Telegram-Data':tg.initData}})
          .then(r=>r.json())
          .then(res => {
             const items = res.items || [];
-            allItems = items; // Сохраняем глобально для продажи всех
+            allItems = items; 
             
             els.count.textContent = items.length;
             els.grid.innerHTML = '';
 
-            // Управление видимостью кнопки "Продать все"
             if(items.length > 0) {
                els.btnSellAll.style.display = 'block';
             } else {
@@ -223,12 +232,11 @@
             els.grid.innerHTML = '<div class="empty-state">Ошибка сети</div>';
          });
     }
+    loadInventory();
 
     // --- ЛОГИКА "ПРОДАТЬ ВСЕ" ---
     els.btnSellAll.onclick = async () => {
        if(allItems.length === 0) return;
-       
-       // Считаем сумму
        const totalValue = allItems.reduce((sum, item) => sum + parseInt(item.stars_cost), 0);
        
        if(!confirm(`Вы точно хотите продать ВСЕ предметы (${allItems.length} шт.) за ${totalValue} ★?`)) return;
@@ -236,7 +244,6 @@
        els.btnSellAll.textContent = '...';
        
        try {
-          // Продаем параллельно
           const promises = allItems.map(item => 
              fetch('/api/sell', {
                 method: 'POST',
@@ -246,14 +253,11 @@
           );
 
           await Promise.all(promises);
-          
           tg.showAlert(`Успешно продано на ${totalValue} звезд!`);
           
-          // Обновляем баланс
-          fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-            .then(r=>r.json()).then(d=>{ if(d.stars) els.bal.textContent = d.stars });
-          
-          loadInventory(); // Перерисовываем список
+          // Обновляем баланс после продажи
+          loadProfile(); 
+          loadInventory();
           els.btnSellAll.textContent = 'ПРОДАТЬ ВСЕ';
           
        } catch(e) {
@@ -268,9 +272,7 @@
        document.getElementById('mImg').src = item.image_url;
        document.getElementById('mTitle').textContent = item.name;
        document.getElementById('mPrice').textContent = `Цена: ${item.stars_cost} ★`;
-       
        document.getElementById('btnSellModal').textContent = `ПРОДАТЬ (+${item.stars_cost} ★)`;
-       
        els.modal.classList.add('open');
        tg.HapticFeedback.selectionChanged();
     }
@@ -295,6 +297,7 @@
 
          if(res.success) {
             tg.showAlert(`Продано! +${res.added} звезд`);
+            // Обновляем баланс
             els.bal.textContent = res.balance;
             closeModal();
             loadInventory(); 
