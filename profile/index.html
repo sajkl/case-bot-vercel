@@ -6,10 +6,29 @@
   <title>Профиль — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
+    /* === ШАПКА И КНОПКА НАЗАД (НОВОЕ) === */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .back {
+      background: #000;          /* Черный фон */
+      color: var(--accent);      /* Желтый текст */
+      border: 1px solid #2a2f3d; /* Рамка */
+      text-decoration: none;
+      font-weight: 900;
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-size: 14px;
+      transition: transform 0.1s;
+    }
+    .back:active { transform: scale(0.95); }
+
     /* === ПРОФИЛЬ === */
     .profile-hero {
       display: flex; flex-direction: column; align-items: center;
-      margin-top: 20px; margin-bottom: 24px;
+      margin-top: 10px; margin-bottom: 24px;
     }
     .avatar {
       width: 88px; height: 88px; border-radius: 50%;
@@ -166,10 +185,9 @@
     let currentItem = null; 
     let allItems = []; 
 
-    // === [NEW] ЗАГРУЗКА ПРОФИЛЯ + БАЛАНСА ===
+    // === ЗАГРУЗКА ПРОФИЛЯ ===
     async function loadProfile() {
        try {
-          // Используем один запрос для всего
           const res = await fetch('/api/user?action=auth', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
@@ -177,15 +195,10 @@
           }).then(r => r.json());
 
           if(res.ok) {
-             // 1. Ставим баланс
              els.bal.textContent = (res.stars !== undefined) ? res.stars : '0';
-
-             // 2. Ставим инфо о юзере
              const u = res.user;
              els.user.textContent = u.username ? `@${u.username}` : u.first_name;
              els.uid.textContent = `ID: ${u.id}`;
-             
-             // 3. Аватарка (используем прокси для надежности)
              if(u.photo_url) {
                 els.ava.style.backgroundImage = `url(/api/user?action=avatar&user_id=${u.id})`;
              } else {
@@ -255,7 +268,6 @@
           await Promise.all(promises);
           tg.showAlert(`Успешно продано на ${totalValue} звезд!`);
           
-          // Обновляем баланс после продажи
           loadProfile(); 
           loadInventory();
           els.btnSellAll.textContent = 'ПРОДАТЬ ВСЕ';
@@ -282,7 +294,6 @@
        currentItem = null;
     }
 
-    // --- ДЕЙСТВИЯ (Одиночные) ---
     document.getElementById('btnSellModal').onclick = async () => {
        if(!currentItem) return;
        const btn = document.getElementById('btnSellModal');
@@ -297,7 +308,6 @@
 
          if(res.success) {
             tg.showAlert(`Продано! +${res.added} звезд`);
-            // Обновляем баланс
             els.bal.textContent = res.balance;
             closeModal();
             loadInventory(); 
