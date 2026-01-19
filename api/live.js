@@ -1,7 +1,7 @@
 // api/live.js
 const { query } = require('../db');
 
-// 🔒 Берем секрет из настроек Vercel
+// 🔒 Секрет из переменных Vercel
 const ADMIN_SECRET = process.env.ADMIN_SECRET; 
 
 module.exports = async (req, res) => {
@@ -14,56 +14,69 @@ module.exports = async (req, res) => {
   try {
     const { action, secret } = req.query;
 
-    // === 1. АДМИНСКАЯ АНАЛИТИКА (Для тебя и ИИ) ===
-    // Вызов: /api/live?action=admin&secret=ТВОЙ_ПАРОЛЬ_ИЗ_VERCEL
+    // === 🧠 АДМИНСКАЯ АНАЛИТИКА ===
+    // Вызов: /api/live?action=admin&secret=ТВОЙ_ПАРОЛЬ
     if (action === 'admin') {
-      // Если переменная не задана в Vercel или пароль не совпадает — ошибка
       if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
-        return res.status(403).json({ error: 'Доступ запрещен (Неверный секрет)' });
+        return res.status(403).json({ error: 'Доступ запрещен' });
       }
 
-      // Собираем статистику прямыми запросами к БД
-      const usersRes = await query('SELECT COUNT(*) FROM users');
-      const balanceRes = await query('SELECT COALESCE(SUM(stars), 0) FROM balances');
-      const opensRes = await query('SELECT COUNT(*) FROM live_drops');
-      const popItemRes = await query('SELECT item_name, COUNT(*) as c FROM live_drops GROUP BY item_name ORDER BY c DESC LIMIT 1');
-      const sadUsersRes = await query('SELECT COUNT(*) FROM user_case_streaks WHERE loss_count >= 3');
-      const richRes = await query('SELECT user_id, stars FROM balances ORDER BY stars DESC LIMIT 5');
+      // 1. Берем общую статистику из VIEW
+      const mainStats = await query('SELECT * FROM admin_analytics');
+      const s = mainStats.rows[0];
 
-      const s = {
-        total_users: parseInt(usersRes.rows[0].count),
-        debt_to_players: parseInt(balanceRes.rows[0].coalesce),
-        total_opens: parseInt(opensRes.rows[0].count),
-        top_item: popItemRes.rows[0] ? `${popItemRes.rows[0].item_name} (${popItemRes.rows[0].c} шт)` : 'Нет данных',
-        users_waiting_guarant: parseInt(sadUsersRes.rows[0].count)
-      };
+      // 2. Топ-5 богачей (проверить, нет ли читеров/абузеров)
+      const richRes = await query(`
+        SELECT u.username, u.first_name, b.stars 
+        FROM balances b 
+        JOIN users u ON b.user_id = u.telegram_id 
+        ORDER BY b.stars DESC LIMIT 5
+      `);
 
-      // Готовый текст для ChatGPT
+      // 3. Последние 5 крупных выигрышей (Редкие предметы)
+      const dropsRes = await query(`
+        SELECT item_name, created_at 
+        FROM live_drops 
+        WHERE is_rare = true 
+        ORDER BY id DESC LIMIT 5
+      `);
+
+      // === ФОРМИРУЕМ ОТЧЕТ ДЛЯ ИИ ===
       const report = `
-=== ОТЧЕТ ПО ЭКОНОМИКЕ ===
-Всего юзеров: ${s.total_users}
-Баланс игроков (долг системы): ${s.debt_to_players} звезд
-Открыто кейсов: ${s.total_opens}
-Популярный предмет: ${s.top_item}
-Игроков ждут Гарант (3 луза): ${s.users_waiting_guarant}
+📊 ОТЧЕТ ПО ЭКОНОМИКЕ ПРОЕКТА (Lambo Drop)
 
-Топ-5 богачей: ${JSON.stringify(richRes.rows)}
-      `;
+👥 АУДИТОРИЯ:
+- Всего игроков: ${s.total_users}
+- Новых за 24ч: ${s.new_users_24h || 'н/д'}
+
+💰 ДЕНЬГИ (Звезды):
+- Общий долг (сумма балансов): ${s.total_liability} ★
+- Средний баланс на игрока: ${s.avg_balance} ★
+- ТОП-5 Богачей: ${richRes.rows.map(r => `${r.first_name} (${r.stars}★)`).join(', ')}
+
+📦 КЕЙСЫ:
+- Всего открыто: ${s.total_cases_opened}
+- Открыто за 24ч: ${s.cases_24h}
+- Самый частый дроп: ${s.top_item}
+- Последние топ-выигрыши: ${dropsRes.rows.map(d => d.item_name).join(', ')}
+
+⚠️ РИСКИ:
+- Игроков на стрике лузов (ждут Гарант): ${s.users_waiting_guarant}
+`;
 
       return res.json({
         stats: s,
-        ai_prompt: "Проанализируй эти данные и скажи, не слишком ли много я раздаю денег?",
+        ai_prompt: "Я владелец игры с кейсами. Проанализируй этот отчет. Нормальная ли экономика? Не слишком ли большой долг перед игроками? Есть ли подозрительные богачи?",
         full_report: report
       });
     }
 
-    // === 2. ОБЫЧНАЯ ЛАЙВ ЛЕНТА (Для игроков) ===
-    // Вызов: /api/live (по умолчанию)
+    // === ОБЫЧНАЯ ЛЕНТА (ДЛЯ ИГРОКОВ) ===
     const result = await query('SELECT * FROM live_drops ORDER BY id DESC LIMIT 30');
     return res.json(result.rows);
 
   } catch (e) {
-    console.error('Live Feed Error:', e);
+    console.error('Live API Error:', e);
     return res.status(500).json([]);
   }
 };
