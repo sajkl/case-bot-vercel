@@ -85,15 +85,17 @@
   <div class="container">
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
-<a class="balance" href="/topup/" style="text-decoration: none; color: inherit;">
-  <span class="star">★</span>
-  <span class="value" id="balanceValue">0</span> </a>
+      
+      <a class="balance" href="/topup/" style="text-decoration: none; color: inherit;">
+        <span class="star">★</span>
+        <span class="value" id="balanceValue">...</span> 
+      </a>
     </header>
 
     <section class="live-bar">
       <div class="live-label"><span>LIVE</span></div>
       <div class="live-track" id="liveTrack">
-         <div style="padding:22px; color:#555; font-size:10px;">Загрузка...</div>
+          <div style="padding:22px; color:#555; font-size:10px;">Загрузка...</div>
       </div>
     </section>
 
@@ -132,46 +134,33 @@
 
     const balEl = document.getElementById('balanceValue');
 
+    // 1. АВТОРИЗАЦИЯ И БАЛАНС
     try {
-        // 1. Пытаемся авторизоваться
         const res = await fetch('/api/user?action=auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: tg.initData })
         }).then(r => r.json());
 
-        // 2. Смотрим, что ответил сервер
         if (res.ok) {
-            console.log('Auth success. Stars:', res.stars); // Для отладки в консоли
-            
-            // Если сервер прислал поле stars (даже если это 0)
+            console.log('Auth success. Stars:', res.stars);
             if (res.stars !== undefined && res.stars !== null) {
                 balEl.textContent = res.stars;
             } else {
-                // Если сервер забыл прислать звезды
                 balEl.textContent = '0';
             }
-
-            // (Здесь твой код для загрузки аватарки и имени, если нужен)
-            // ...
         } else {
             console.error('Auth error:', res);
         }
-
     } catch (e) {
         console.error('Network error:', e);
-        // Если ошибка сети - попробуем старый метод (api/profile) как запасной вариант
         fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
            .then(r => r.json())
            .then(d => { if(d.stars !== undefined) balEl.textContent = d.stars; })
            .catch(() => balEl.textContent = '?');
     }
-  })();
-</script>
 
-    // ... остальной код (клики по кейсам) ...
-
-    // 3. СОХРАНЕНИЕ ВЫБРАННОГО КЕЙСА
+    // 2. СОХРАНЕНИЕ ВЫБРАННОГО КЕЙСА
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a.card'); if (!a) return;
       const caseId = a.dataset.caseid || '';
@@ -182,11 +171,10 @@
       }
     });
 
-    // 4. LIVE ЛЕНТА (Используем старый api/live)
+    // 3. LIVE ЛЕНТА
     async function loadLiveFeed() {
       const track = document.getElementById('liveTrack');
       try {
-        // Запрос к отдельному файлу api/live.js
         const drops = await fetch('/api/live').then(r => r.json());
         
         if(!drops || drops.length === 0) {
@@ -194,7 +182,7 @@
            return;
         }
 
-        // Генерируем HTML (класс .rare добавит подсветку)
+        // Генерируем HTML (используем обратные кавычки ` `)
         const itemsHtml = drops.map(d => `
           <div class="live-item ${d.is_rare ? 'rare' : ''}">
              <img src="${d.image_url}" onerror="this.src='/assets/logo.png'">
