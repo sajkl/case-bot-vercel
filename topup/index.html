@@ -2,220 +2,280 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Пополнить аккаунт звёздами — Lambo Drop</title>
-  <link rel="stylesheet" href="/styles.css?v=13">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Пополнить баланс — Lambo Drop</title>
+  <link rel="stylesheet" href="/styles.css?v=14">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Локальные стили для этой страницы */
+    body {
+        background: #0b0d12;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    .container {
+        padding: 0 16px;
+        max-width: 480px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Герой-секция со звездой */
+    .topup-hero {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    .big-star {
+        width: 120px;
+        height: 120px;
+        filter: drop-shadow(0 0 30px rgba(255, 212, 0, 0.4));
+        animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Заголовок */
+    .topup-title {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .topup-title h1 {
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin: 0;
+        text-transform: uppercase;
+        background: linear-gradient(180deg, #fff, #bbb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Форма ввода */
+    .topup-form {
+        background: #151921;
+        border: 1px solid #232838;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .input-group {
+        position: relative;
+        margin-bottom: 10px;
+    }
+    
+    .input-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 20px;
+        color: var(--accent);
+        pointer-events: none;
+    }
+
+    .topup-input {
+        width: 100%;
+        background: #0b0d12;
+        border: 1px solid #2a2f3d;
+        color: #fff;
+        font-size: 24px;
+        font-weight: 800;
+        padding: 16px 16px 16px 50px; /* Отступ под иконку */
+        border-radius: 12px;
+        outline: none;
+        transition: border-color 0.2s;
+        box-sizing: border-box; /* Важно чтобы не вылезало */
+    }
+    .topup-input:focus {
+        border-color: var(--accent);
+    }
+
+    .helper-text {
+        text-align: center;
+        color: #777;
+        font-size: 13px;
+        margin-top: 12px;
+    }
+
+    /* Кнопка */
+    .btn-pay {
+        width: 100%;
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 18px;
+        border-radius: 16px;
+        font-size: 18px;
+        font-weight: 900;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: transform 0.1s;
+        box-shadow: 0 4px 20px rgba(255, 212, 0, 0.25);
+    }
+    .btn-pay:active {
+        transform: scale(0.96);
+    }
+    .btn-pay:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+  </style>
 </head>
 <body>
-  <div class="container">
 
-    <!-- Шапка -->
+  <div class="container">
     <header class="header">
-      <a class="back" href="/profile/"><span>Закрыть</span></a>
-      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:32px;">
-      <div class="balance" id="balance">
-        <span class="star">★</span><span class="value" id="balanceValue">0</span>
+      <a class="back" href="/profile/">← Назад</a>
+      <img class="logo" src="/assets/logo.png" alt="LAMBO" style="height:32px;">
+      <div class="balance">
+        <span class="star">★</span><span class="value" id="balanceValue">...</span>
       </div>
     </header>
 
-    <!-- Контент пополнения -->
-    <main class="topup-page">
+    <main style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        
+        <section class="topup-hero">
+            <img class="big-star" src="/assets/star-big.png" onerror="this.style.display='none'" alt="★">
+        </section>
 
-      <!-- Большая звезда -->
-      <section class="topup-hero">
-        <!-- Положи сюда свою картинку звезды -->
-        <img class="big-star" src="/assets/topup-star.png" alt="Звезда">
-      </section>
+        <section class="topup-title">
+            <h1>Пополнение<br>Баланса</h1>
+        </section>
 
-      <!-- Тёмная карточка с заголовком -->
-      <section class="topup-card">
-        <h1>Пополнить аккаунт<br>звёздами</h1>
-      </section>
-
-      <!-- Поля ввода -->
-      <section class="topup-form">
-
-        <!-- Юзернейм -->
-        <div class="topup-row">
-          <span class="topup-icon">@</span>
-          <input
-            id="topup-username"
-            type="text"
-            placeholder="Юзернейм">
-          <button id="topup-self" class="topup-chip">Себе</button>
-        </div>
-
-        <!-- Количество звёзд -->
-        <div class="topup-row">
-          <span class="topup-icon">★</span>
-          <input
-            id="topup-amount"
-            type="number"
-            min="1"
-            step="1"
-            placeholder="Количество звёзд"
-            value="10">
-        </div>
-
-      </section>
-
-      <!-- Основная кнопка -->
-      <button id="topup-submit" class="primary xl topup-submit">
-        Пополнить
-      </button>
+        <section class="topup-form">
+            <div class="input-group">
+                <span class="input-icon">★</span>
+                <input 
+                    id="topup-amount" 
+                    class="topup-input" 
+                    type="number" 
+                    inputmode="numeric" 
+                    min="1" 
+                    step="1" 
+                    placeholder="100" 
+                    value="50"
+                >
+            </div>
+            
+            <button id="topup-submit" class="btn-pay">
+                Купить Звезды
+            </button>
+            
+            <div class="helper-text">
+                Оплата через Telegram Stars.<br>Безопасно и мгновенно.
+            </div>
+        </section>
 
     </main>
 
-    <!-- Навигация снизу -->
-    <div class="nav-spacer" aria-hidden="true"></div>
-   <nav class="nav">
-  <a class="btn" href="/">Кейсы</a>
-  
-  <a class="btn" href="/crash.html">Crash 🚀</a>
-  
-  <a class="btn active" href="/profile/">Профиль</a>
-</nav>
+    <div class="nav-spacer" style="height: 80px;"></div>
+    <nav class="nav">
+      <a class="btn" href="/">Кейсы</a>
+      <a class="btn" href="/crash.html">Crash 🚀</a>
+      <a class="btn active" href="/profile/">Профиль</a>
+    </nav>
   </div>
 
-  <!-- ЛОГИКА ПОПОЛНЕНИЯ -->
-<script>
+  <script>
   (async () => {
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    tg.ready(); tg.expand();
 
-    const usernameInput = document.getElementById('topup-username');
-    const selfBtn       = document.getElementById('topup-self');
-    const amountInput   = document.getElementById('topup-amount');
-    const submitBtn     = document.getElementById('topup-submit');
-    const balEl         = document.getElementById('balanceValue');
+    // Элементы
+    const amountInput = document.getElementById('topup-amount');
+    const submitBtn   = document.getElementById('topup-submit');
+    const balEl       = document.getElementById('balanceValue');
 
-    // 1) Подтягиваем юзера и баланс
-    async function loadProfile() {
-      try {
-        const unsafeUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
-        if (unsafeUser && unsafeUser.username && usernameInput && !usernameInput.value) {
-          usernameInput.value = '@' + unsafeUser.username;
-        }
-
-        const prof = await fetch('/api/profile', { credentials:'include' })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null);
-
-        if (prof && typeof prof.stars !== 'undefined') {
-          balEl.textContent = prof.stars;
-        }
-      } catch (e) {
-        console.warn('init topup error', e);
-      }
-    }
-
-    await loadProfile();
-
-    // 2) Кнопка "Себе"
-    if (selfBtn) {
-      selfBtn.addEventListener('click', () => {
+    // 1. Загружаем баланс
+    async function loadBalance() {
         try {
-          const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-          if (u && u.username) {
-            usernameInput.value = '@' + u.username;
-          } else {
-            tg.showAlert('Не удалось получить username из Telegram');
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      });
-    }
-
-    // 3) Создание инвойса и открытие оплаты в мини-аппе
-    async function createAndOpenInvoice() {
-      const raw = (amountInput && amountInput.value || '').trim();
-      const amount = Number(raw);
-
-      if (!Number.isInteger(amount) || amount <= 0) {
-        tg.showAlert('Укажи количество звёзд (целое число > 0)');
-        return;
-      }
-
-      submitBtn.disabled = true;
-
-      try {
-        const payload = {
-          amount,
-          username: (usernameInput && usernameInput.value || '').trim()
-        };
-
-        const res = await fetch('/api/create-stars-invoice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload)
-        }).then(r => r.json());
-
-        console.log('create-stars-invoice:', res);
-
-        if (!res || !res.ok) {
-          const msg =
-            (res && res.tg && res.tg.description) ||
-            (res && res.reason) ||
-            'Неизвестная ошибка при создании счёта';
-          tg.showAlert('Ошибка при создании счёта:\n' + msg);
-          return;
-        }
-
-        if (!res.invoice_url) {
-          tg.showAlert('Сервер не вернул ссылку на счёт');
-          return;
-        }
-
-        if (!tg.openInvoice) {
-          // fallback, если вдруг клиент старый и не поддерживает openInvoice
-          tg.showAlert('Оплата в Mini App недоступна в этом клиенте Telegram.\n' +
-                       'Счёт: ' + res.invoice_url);
-          return;
-        }
-
-        // Открываем платёж Stars внутри мини-аппа
-        tg.openInvoice(res.invoice_url, async (status) => {
-          console.log('invoice status:', status);
-
-          if (status === 'paid') {
-            tg.showAlert('Оплата прошла успешно! Звёзды скоро появятся на аккаунте 👌');
-
-            // пробуем обновить баланс после оплаты
-            try {
-              await loadProfile();
-            } catch (e) {
-              console.warn('profile reload error', e);
+            const prof = await fetch('/api/profile', { 
+                headers: {'X-Telegram-Data': tg.initData} 
+            }).then(r => r.json());
+            
+            if (prof && typeof prof.stars !== 'undefined') {
+                balEl.textContent = prof.stars;
             }
-          } else if (status === 'cancelled') {
-            tg.showAlert('Оплата отменена');
-          } else if (status === 'failed') {
-            tg.showAlert('Оплата не удалась, попробуй ещё раз');
-          } else {
-            tg.showAlert('Счёт закрыт со статусом: ' + status);
-          }
-        });
+        } catch (e) { console.error(e); }
+    }
+    loadBalance();
 
-      } catch (e) {
-        console.error('buyStars error', e);
-        tg.showAlert('Ошибка сети при создании счёта');
-      } finally {
+    // 2. Логика оплаты
+    submitBtn.addEventListener('click', async () => {
+        const amount = parseInt(amountInput.value);
+        if (!amount || amount < 1) return tg.showAlert('Введите корректную сумму!');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Создание счета...';
+
+        try {
+            // Отправляем запрос на создание инвойса
+            // Важно: мы не передаем username, сервер сам возьмет его из initData (авторизация)
+            const res = await fetch('/api/create-stars-invoice', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Data': tg.initData // Авторизация
+                },
+                body: JSON.stringify({ amount })
+            }).then(r => r.json());
+
+            if (!res.ok) {
+                tg.showAlert('Ошибка: ' + (res.reason || 'Не удалось создать счет'));
+                resetBtn();
+                return;
+            }
+
+            // Открываем нативную оплату
+            if (tg.openInvoice) {
+                tg.openInvoice(res.invoice_url, async (status) => {
+                    if (status === 'paid') {
+                        tg.showAlert(`Успешно! +${amount} звезд зачислено.`);
+                        submitBtn.textContent = 'Успешно!';
+                        setTimeout(() => {
+                            resetBtn();
+                            loadBalance(); // Обновляем баланс
+                            amountInput.value = '';
+                        }, 2000);
+                    } else if (status === 'cancelled') {
+                        resetBtn();
+                    } else {
+                        tg.showAlert('Статус оплаты: ' + status);
+                        resetBtn();
+                    }
+                });
+            } else {
+                // Фоллбек для старых клиентов (открываем ссылку)
+                tg.openLink(res.invoice_url);
+                resetBtn();
+            }
+
+        } catch (e) {
+            console.error(e);
+            tg.showAlert('Ошибка сети');
+            resetBtn();
+        }
+    });
+
+    function resetBtn() {
         submitBtn.disabled = false;
-      }
+        submitBtn.textContent = 'Купить Звезды';
     }
 
-    if (submitBtn) {
-      submitBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        createAndOpenInvoice();
-      });
-    }
   })();
-</script>
-
-
+  </script>
 </body>
 </html>
