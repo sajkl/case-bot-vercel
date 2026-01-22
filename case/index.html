@@ -16,7 +16,7 @@ body {
   background: #0b0d12;
   color: #f7f8fb;
   font-family: system-ui, -apple-system, "Futura PT", sans-serif;
-  
+  padding-top: calc(env(safe-area-inset-top) + 10px); 
 }
 
 .page {
@@ -31,17 +31,36 @@ body {
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
 
-/* === ШАПКА КАК НА ГЛАВНОЙ (БЕЗ КНОПКИ НАЗАД) === */
+/* === ШАПКА СО СТРЕЛКОЙ === */
 .header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
 }
-.logo { height: clamp(34px, 6vw, 38px); }
+
+.header-left {
+  display: flex; align-items: center; gap: 8px; /* Расстояние между стрелкой и лого */
+}
+
+/* Кнопка назад (стрелка) */
+.back-arrow {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  color: #fff; cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+  transition: background 0.2s;
+  text-decoration: none; /* Если это ссылка */
+}
+.back-arrow:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
+.back-arrow svg { width: 20px; height: 20px; fill: currentColor; }
+
+.logo { height: clamp(30px, 6vw, 36px); }
+
 .balance { 
   background: var(--accent); color: #171a1f; 
   font-weight: 900; border-radius: 999px; 
   padding: 8px 14px; display: flex; gap: 8px; align-items: center; 
-  text-decoration: none; 
+  text-decoration: none; font-size: 14px;
 }
 .balance .star { font-size: 16px; }
 
@@ -101,13 +120,11 @@ body {
 .crate { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
 .crate img { width:85%; height:85%; object-fit:contain; transition:opacity .15s; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
 
-/* === "ЖМИ" УВЕЛИЧЕНО === */
 .hint { 
   position:absolute; inset:0; display:grid; place-items:center; 
   font-weight:900; background:rgba(0,0,0,.28); 
   opacity:0; pointer-events:none; transition:.18s;
-  font-size: 28px; /* Было маленьким, стало большим */
-  letter-spacing: 1px;
+  font-size: 28px; letter-spacing: 1px;
 }
 .cell.show-hint .hint { opacity:1 }
 
@@ -147,7 +164,6 @@ body {
 .roulette-container {
   width: 100%; height: 280px; position: relative;
   overflow: hidden; margin-bottom: 30px;
-  /* Градиентные края для красоты */
   mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
 }
@@ -155,8 +171,8 @@ body {
 .roulette-track {
   display: flex; align-items: center;
   height: 100%;
-  position: absolute; left: 50%; /* Начинаем от центра */
-  transform: translateX(0); /* Будем двигать это */
+  position: absolute; left: 50%;
+  transform: translateX(0);
   will-change: transform;
 }
 
@@ -172,7 +188,7 @@ body {
 .roulette-item img { width: 90%; height: 80px; object-fit: contain; margin-bottom: 10px; }
 .roulette-item .name { font-size: 12px; font-weight: 700; text-align: center; color: #a5abb8; }
 
-/* УКАЗАТЕЛЬ (Стрелка) */
+/* УКАЗАТЕЛЬ */
 .roulette-pointer {
   position: absolute; top: 20px; bottom: 20px; left: 50%; width: 4px;
   background: var(--accent); transform: translateX(-50%);
@@ -188,9 +204,8 @@ body {
   border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 15px solid var(--accent);
 }
 
-/* КАРТОЧКА РЕЗУЛЬТАТА (появляется после прокрутки) */
 .result-card {
-  display: none; /* Скрыта пока крутится */
+  display: none;
   flex-direction: column; align-items: center;
   width: 100%; max-width: 320px;
   animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -198,7 +213,6 @@ body {
 @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
 
 .win-title { font-size: 28px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; text-align: center; color: #fff; }
-
 .actions { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .act-btn { border: none; padding: 18px; border-radius: 18px; font-size: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; width: 100%; }
 .act-btn:active { transform: scale(0.97); }
@@ -256,7 +270,13 @@ body {
 
 <div class="page">
   <header class="header">
-    <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+    <div class="header-left">
+      <a href="/" class="back-arrow">
+         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </a>
+      <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+    </div>
+    
     <a class="balance" href="/topup/">
       <span class="star">★</span> <span id="bal">...</span>
     </a>
@@ -346,7 +366,7 @@ const conf=ASSETS[caseId]||ASSETS.jiga;
 qs('#caseTitle').textContent=conf.title;
 qs('#priceSmall').textContent=`★ ${conf.price}`;
 
-// --- [1] ГАРАНТ: БЭХА, КАМРИ, ЛАМБО ---
+// --- ГАРАНТ ---
 if (['camry', 'lambo', 'bmw'].includes(caseId)) {
     qs('#guarantBadge').style.display = 'block'; 
 }
@@ -361,7 +381,7 @@ qs('#infoModal').addEventListener('click', (e) => { if(e.target === qs('#infoMod
 
 
 // --- ГЛОБАЛЬНЫЕ ДАННЫЕ ---
-let allCaseItems = []; // Сюда загрузим предметы для рулетки
+let allCaseItems = []; 
 let openedCount = 0;
 let currentWin = null; 
 
@@ -382,10 +402,9 @@ function initGrid() {
 }
 initGrid();
 
-// --- СБРОС ---
 qs('#btnReset').onclick = () => { vib(10); initGrid(); };
 
-// --- ГЛАВНАЯ ЛОГИКА КЛИКА ---
+// --- ГЛАВНАЯ ЛОГИКА ---
 grid.addEventListener('click', async (e)=>{
   const cell=e.target.closest('.cell'); 
   if(!cell || cell.classList.contains('open') || cell.classList.contains('processing')) return;
@@ -394,7 +413,7 @@ grid.addEventListener('click', async (e)=>{
   let stage = +cell.dataset.stage;
   const img = cell.querySelector('.crate img');
 
-  // Разогрев (клики 1, 2)
+  // Разогрев
   if(stage < 2){
     cell.classList.add('show-hint'); 
     setTimeout(()=>cell.classList.remove('show-hint'), 260);
@@ -402,12 +421,11 @@ grid.addEventListener('click', async (e)=>{
     return;
   }
 
-  // ОТКРЫТИЕ (клик 3)
+  // ОТКРЫТИЕ
   cell.classList.add('processing'); 
   cell.dataset.stage = '3';
   img.style.opacity = '0'; 
 
-  // Визуально открываем ящик
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
   doors.innerHTML = `
@@ -435,7 +453,6 @@ grid.addEventListener('click', async (e)=>{
     const winItem = res.prize;
     const sellPrice = Math.floor(winItem.value);
 
-    // СОХРАНЯЕМ ТЕКУЩИЙ ВЫИГРЫШ
     currentWin = { 
        inventoryId: res.inventoryId, 
        sellPrice: sellPrice, 
@@ -443,13 +460,11 @@ grid.addEventListener('click', async (e)=>{
        doors: doors 
     };
 
-    // ЗАПУСКАЕМ РУЛЕТКУ (CS:GO STYLE)
     startRoulette(winItem);
 
   } catch (err) {
     console.error(err);
     tg.showAlert(err.message || "Ошибка");
-    // Откат состояния при ошибке
     cell.classList.remove('open', 'processing');
     doors.remove();
     cell.dataset.stage = '0';
@@ -459,32 +474,28 @@ grid.addEventListener('click', async (e)=>{
 });
 
 
-// === [4] ЛОГИКА РУЛЕТКИ ===
+// === [4] ЛОГИКА РУЛЕТКИ (UPDATED) ===
 const overlay = qs('#overlay');
 const track = qs('#rouletteTrack');
 const cardResult = qs('#cardResult');
-const ROULETTE_ITEM_WIDTH = 152; // 140 width + 12 margin
+const ROULETTE_ITEM_WIDTH = 152; // 140px card + 12px margins
 
 function startRoulette(winner) {
-   // 1. Показываем оверлей
    overlay.classList.add('show');
-   cardResult.style.display = 'none'; // Прячем кнопки
+   cardResult.style.display = 'none';
    track.style.transition = 'none';
    track.style.transform = 'translateX(0px)';
    track.innerHTML = '';
 
-   // 2. Генерируем ленту (100 предметов, победитель на 85 месте)
    const winIndex = 85; 
    const totalItems = 100;
-   
-   // Если предметы не загрузились, используем заглушку
    const pool = allCaseItems.length > 0 ? allCaseItems : [{image_url:'/assets/logo.png', name:'Loading...'}];
 
    let html = '';
    for (let i = 0; i < totalItems; i++) {
        let item;
        if (i === winIndex) {
-           item = winner; // СТАВИМ ПОБЕДИТЕЛЯ
+           item = winner; // ГАРАНТИРУЕМ, ЧТО ЗДЕСЬ ПОБЕДИТЕЛЬ
        } else {
            item = pool[Math.floor(Math.random() * pool.length)];
        }
@@ -497,32 +508,30 @@ function startRoulette(winner) {
    }
    track.innerHTML = html;
 
-   // 3. Запускаем вращение через небольшой таймаут
    setTimeout(() => {
-       // Вычисляем смещение: 
-       // (winIndex * width) + (половина item width) - (половина screen width)
-       // Добавляем случайный оффсет внутри предмета для реалистичности (+/- 40px)
-       const randomOffset = Math.floor(Math.random() * 80) - 40;
+       // [FIX] Уменьшаем разброс рандома, чтобы не заезжать на соседние предметы
+       // Было +/- 40, стало +/- 25. Это гарантирует, что стрелка будет внутри карточки.
+       const randomOffset = Math.floor(Math.random() * 50) - 25; 
        
        const containerWidth = qs('.roulette-container').offsetWidth;
        const centerOffset = containerWidth / 2;
        const itemCenter = (ROULETTE_ITEM_WIDTH / 2);
        
+       // Математика центра
        const scrollX = (winIndex * ROULETTE_ITEM_WIDTH) + itemCenter - centerOffset + randomOffset;
 
-       // Анимация 4.5 секунды, cubic-bezier для "торможения"
-       track.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.9, 0.3, 1)';
+       // [FIX] Увеличили время до 5.2s (было 4.5s) + более плавная кривая
+       track.style.transition = 'transform 5.2s cubic-bezier(0.12, 0.8, 0.25, 1)';
        track.style.transform = `translateX(-${scrollX}px)`;
        
-       // Звук старта
        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
    }, 100);
 
-   // 4. Финиш
+   // Показываем результат после конца анимации (5.2s + буфер)
    setTimeout(() => {
        showResultCard(winner);
-   }, 4600); // Чуть больше чем время анимации
+   }, 5300);
 }
 
 function showResultCard(p) {
@@ -531,29 +540,25 @@ function showResultCard(p) {
     qs('#winTitle').textContent = p.title || p.name;
     qs('#btnSell').textContent = `ПРОДАТЬ (+${currentWin.sellPrice} ★)`;
     
-    cardResult.style.display = 'flex'; // Показываем кнопки
+    cardResult.style.display = 'flex';
 
-    // Обновляем мини-ящик на фоне (в гриде)
+    // Обновляем мини-ящик
     const img = currentWin.doors.querySelector('#miniPImg');
     img.src = p.image || p.image_url;
     img.style.opacity = '1';
     currentWin.doors.querySelector('#miniPTitle').textContent = p.title || p.name;
 
-    // Проверка на сброс (если открыты 4)
     if(openedCount >= 4) {
        setTimeout(() => { qs('#resetOverlay').classList.add('show'); }, 500);
     }
 }
 
 // === КНОПКИ ДЕЙСТВИЙ ===
-qs('#btnKeep').onclick = () => {
-   closeOverlay();
-};
+qs('#btnKeep').onclick = () => { closeOverlay(); };
 
 qs('#btnSell').onclick = async () => {
    const btn = qs('#btnSell');
    btn.textContent = '...';
-   
    try {
      const res = await fetch('/api/sell', {
         method: 'POST',
@@ -574,14 +579,11 @@ qs('#btnSell').onclick = async () => {
 };
 
 qs('#btnCloseOverlay').onclick = closeOverlay;
+function closeOverlay() { overlay.classList.remove('show'); }
 
-function closeOverlay() {
-  overlay.classList.remove('show');
-}
-
-// === ЗАГРУЗКА ПРЕДМЕТОВ (ДЛЯ РУЛЕТКИ) ===
+// === ЗАГРУЗКА ПРЕДМЕТОВ ===
 fetch(`/api/case-items?caseId=${caseId}`).then(r=>r.json()).then(items=>{
-  allCaseItems = items; // Сохраняем для генерации рулетки
+  allCaseItems = items;
   const list = qs('#prizesList');
   list.innerHTML = '';
   if(items.length === 0) return;
