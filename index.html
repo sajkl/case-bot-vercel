@@ -4,84 +4,125 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Lambo Drop — Gift Wins</title>
-  <link rel="preload" href="/assets/logo.png" as="image" type="image/png">
   <link rel="stylesheet" href="/styles.css">
   
   <style>
-    /* === СТИЛИ LIVE ЛЕНТЫ (ОБНОВЛЕННЫЕ) === */
-    .live-bar {
-      height: 64px;
-      background: #111319;
-      border-top: 1px solid #1f232e;
-      border-bottom: 1px solid #1f232e;
-      display: flex; align-items: center;
-      overflow: hidden; position: relative;
-      margin-bottom: 10px;
+    /* === 1. FULLSCREEN FIX (ЧТОБЫ НЕ БЫЛО ПРУЖИНЫ НА IOS) === */
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden; /* Блокируем скролл страницы */
+      position: fixed; /* Фиксируем фон */
+      background: #0b0d12;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Лейбл LIVE */
+    .container {
+      width: 100%; height: 100%;
+      overflow-y: auto; /* Скролл внутри контейнера */
+      -webkit-overflow-scrolling: touch;
+      display: flex; flex-direction: column;
+      padding-bottom: 90px; /* Место под меню */
+    }
+
+    /* === СТИЛИ LIVE ЛЕНТЫ === */
+    .live-bar {
+      height: 64px; background: #111319;
+      border-top: 1px solid #1f232e; border-bottom: 1px solid #1f232e;
+      display: flex; align-items: center; overflow: hidden; position: relative;
+      margin-bottom: 10px; flex-shrink: 0;
+    }
     .live-label {
-      background: var(--accent); color: #000;
-      font-weight: 900; font-size: 12px;
-      padding: 0 10px; height: 100%;
-      display: flex; align-items: center; justify-content: center;
+      background: #ffd400; color: #000; font-weight: 900; font-size: 12px;
+      padding: 0 10px; height: 100%; display: flex; align-items: center; justify-content: center;
       position: absolute; left: 0; top: 0; bottom: 0; z-index: 10;
       box-shadow: 4px 0 15px rgba(0,0,0,0.5);
     }
     .live-label span { writing-mode: vertical-rl; transform: rotate(180deg); }
-
-    /* Дорожка с предметами */
-    .live-track {
-      display: flex; gap: 8px; padding-left: 40px;
-      will-change: transform;
-    }
+    .live-track { display: flex; gap: 8px; padding-left: 40px; will-change: transform; }
     .live-track.animate { animation: scrollLive 25s linear infinite; }
-
-    /* === КАРТОЧКА ПРЕДМЕТА В ЛЕНТЕ === */
     .live-item {
-      width: 50px; height: 50px; 
-      background: #1a1d26;
-      border-radius: 10px; 
-      border: 1px solid #2f3542; /* Обычная рамка */
-      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden;
-      transition: transform 0.2s;
+      width: 50px; height: 50px; background: #1a1d26; border-radius: 10px; border: 1px solid #2f3542;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
     }
-
-    /* ПОДСВЕТКА РЕДКИХ (RARE) */
-    .live-item.rare {
-      border: 1px solid #ffd400; /* Золотая рамка */
-      box-shadow: 0 0 10px rgba(255, 212, 0, 0.4), inset 0 0 10px rgba(255, 212, 0, 0.1); /* Свечение */
-    }
-
-    /* Эффект "пролетающего блика" для редких */
-    .live-item.rare::after {
-      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
-      animation: shine 3s infinite;
-      pointer-events: none;
-    }
-
+    .live-item.rare { border: 1px solid #ffd400; box-shadow: 0 0 10px rgba(255, 212, 0, 0.4); }
     .live-item img { width: 80%; height: 80%; object-fit: contain; z-index: 1; }
+    @keyframes scrollLive { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    @keyframes shine {
-      0% { transform: translateX(-100%) translateY(-100%); }
-      20% { transform: translateX(100%) translateY(100%); }
-      100% { transform: translateX(100%) translateY(100%); }
+    /* === 2. СТИЛИ ДЛЯ ИНФО-КНОПКИ И МОДАЛКИ === */
+    
+    /* Кнопка (i) на карточке */
+    .info-btn {
+      position: absolute;
+      left: 10px; top: 10px; /* В левом верхнем углу */
+      width: 28px; height: 28px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 20;
+      backdrop-filter: blur(4px);
+      cursor: pointer;
     }
+    .info-btn:active { transform: scale(0.9); background: #ffd400; color: #000; }
 
-    @keyframes scrollLive {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); } 
+    /* Модальное окно (фон) */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: 0.3s;
     }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
 
-    /* Отступ под навигацию */
-    .nav-spacer { height: 90px; }
+    /* Контент модального окна */
+    .modal-card {
+      background: #181b22;
+      width: 90%; max-width: 340px;
+      padding: 24px 20px;
+      border-radius: 24px;
+      border: 1px solid #2f3542;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      transform: scale(0.9); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .modal-overlay.open .modal-card { transform: scale(1); }
+
+    .modal-badge {
+      display: inline-block; background: #ffd400; color: #000;
+      font-weight: 900; font-size: 11px; padding: 4px 10px;
+      border-radius: 8px; margin-bottom: 12px;
+    }
+    .modal-title { margin: 0 0 12px; font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
+    .modal-text { color: #a5abb8; font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
+    .modal-text b { color: #fff; font-weight: 900; }
+    
+    .modal-close-btn {
+      width: 100%; background: #2f3542; color: #fff; border: none;
+      padding: 14px; border-radius: 16px; font-weight: 700; font-size: 16px;
+    }
+    .modal-close-btn:active { opacity: 0.8; transform: scale(0.98); }
   </style>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+
+  <div class="modal-overlay" id="infoModal">
+    <div class="modal-card">
+      <div class="modal-badge">ГАРАНТ</div>
+      <h3 class="modal-title">ГАРАНТИРОВАННЫЙ ОКУП</h3>
+      <p class="modal-text">
+        В <b>минимум</b> одном из 4 кейсов гарантированно лежит предмет превышающий стоимость кейса!
+      </p>
+      <button class="modal-close-btn" onclick="closeInfo()">Закрыть</button>
+    </div>
+  </div>
+
   <div class="container">
     <header class="header">
       <img class="logo" src="/assets/logo.png" alt="LAMBO DROP" style="height:38px;">
@@ -100,25 +141,32 @@
     </section>
 
     <main class="grid">
-      <a class="card gray"  data-caseid="jiga"  href="/case/?case=jiga"  aria-label="Жига"  style="--w:150%; --top:-48px; --left:49%;">
+      <a class="card gray" data-caseid="jiga" href="/case/?case=jiga" aria-label="Жига" style="--w:150%; --top:-48px; --left:49%;">
         <div class="art"><img src="/assets/case-1.png" alt="Жига"></div>
         <div class="title">Жига</div><div class="price"><span class="star">★</span> 209</div>
       </a>
+
       <a class="card green" data-caseid="camry" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div><div class="price"><span class="star">★</span> 629</div>
       </a>
-      <a class="card red"   data-caseid="bmw"   href="/case/?case=bmw"   aria-label="Бэха"  style="--w:158%; --top:-52px; --left:51%;">
+
+      <a class="card red" data-caseid="bmw" href="/case/?case=bmw" aria-label="Бэха" style="--w:158%; --top:-52px; --left:51%;">
+        <div class="info-btn" onclick="openInfo(event)">i</div>
+        
         <div class="art"><img src="/assets/case-3.png" alt="Бэха"></div>
         <div class="title">Бэха</div><div class="price"><span class="star">★</span> 1499</div>
       </a>
-      <a class="card yellow"data-caseid="lambo" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
+
+      <a class="card yellow" data-caseid="lambo" href="/case/?case=lambo" aria-label="Ламбо" style="--w:160%; --top:-64px; --left:53%;">
+        <div class="info-btn" onclick="openInfo(event)">i</div>
+
         <div class="art"><img src="/assets/case-4.png" alt="Ламбо"></div>
         <div class="title">Ламбо</div><div class="price"><span class="star">★</span> 3899</div>
       </a>
     </main>
 
-    <div class="nav-spacer" aria-hidden="true"></div>
+    <div class="nav-spacer" aria-hidden="true" style="height: 20px;"></div>
 
     <nav class="nav">
       <a class="btn active" href="/">Кейсы</a>
@@ -128,13 +176,37 @@
   </div>
 
   <script>
+  // === ЛОГИКА МОДАЛЬНОГО ОКНА ===
+  function openInfo(e) {
+    e.preventDefault(); // Запрещаем открытие ссылки
+    e.stopPropagation(); // Останавливаем событие
+    const modal = document.getElementById('infoModal');
+    modal.classList.add('open');
+    
+    // Вибрация
+    if(window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
+  }
+
+  function closeInfo() {
+    document.getElementById('infoModal').classList.remove('open');
+  }
+
+  // Закрытие по клику на фон
+  document.getElementById('infoModal').addEventListener('click', function(e) {
+    if(e.target === this) closeInfo();
+  });
+
+
+  // === ОСНОВНОЙ СКРИПТ ===
   (async () => {
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
     const balEl = document.getElementById('balanceValue');
 
-    // 1. АВТОРИЗАЦИЯ И БАЛАНС
+    // 1. АВТОРИЗАЦИЯ
     try {
         const res = await fetch('/api/user?action=auth', {
             method: 'POST',
@@ -142,63 +214,36 @@
             body: JSON.stringify({ initData: tg.initData })
         }).then(r => r.json());
 
-        if (res.ok) {
-            console.log('Auth success. Stars:', res.stars);
-            if (res.stars !== undefined && res.stars !== null) {
-                balEl.textContent = res.stars;
-            } else {
-                balEl.textContent = '0';
-            }
+        if (res.ok && res.stars != null) {
+            balEl.textContent = res.stars;
         } else {
-            console.error('Auth error:', res);
+            balEl.textContent = '0';
         }
     } catch (e) {
-        console.error('Network error:', e);
-        fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}})
-           .then(r => r.json())
-           .then(d => { if(d.stars !== undefined) balEl.textContent = d.stars; })
-           .catch(() => balEl.textContent = '?');
+        console.error(e);
+        balEl.textContent = '?';
     }
 
-    // 2. СОХРАНЕНИЕ ВЫБРАННОГО КЕЙСА
-    document.addEventListener('click', (e) => {
-      const a = e.target.closest('a.card'); if (!a) return;
-      const caseId = a.dataset.caseid || '';
-      if (caseId) {
-        try { sessionStorage.setItem('currentCaseId', caseId); localStorage.setItem('lastCaseId', caseId); } catch(_){}
-        const url = new URL(a.href, location.origin);
-        url.searchParams.set('case', caseId); a.href = url.pathname + '?' + url.searchParams.toString();
-      }
-    });
-
-    // 3. LIVE ЛЕНТА
+    // 2. LIVE ЛЕНТА
     async function loadLiveFeed() {
       const track = document.getElementById('liveTrack');
       try {
         const drops = await fetch('/api/live').then(r => r.json());
-        
         if(!drops || drops.length === 0) {
            track.innerHTML = '<div style="padding:22px; color:#555; font-size:10px;">Лента пуста</div>';
            return;
         }
-
-        // Генерируем HTML (используем обратные кавычки ` `)
         const itemsHtml = drops.map(d => `
           <div class="live-item ${d.is_rare ? 'rare' : ''}">
              <img src="${d.image_url}" onerror="this.src='/assets/logo.png'">
           </div>
         `).join('');
-
-        // Дублируем для бесконечной прокрутки
         track.innerHTML = itemsHtml + itemsHtml; 
         track.classList.add('animate');
-
       } catch(e) {
-        console.error(e);
         track.innerHTML = '<div style="padding:22px; color:#555; font-size:10px;">Offline</div>';
       }
     }
-    
     loadLiveFeed();
 
   })();
