@@ -10,6 +10,10 @@ const CASE_PRICES = {
   'lambo': 3899
 };
 
+// [FIX] СПИСОК КЕЙСОВ С ГАРАНТОМ
+// Жиги (jiga) тут нет, значит для нее стрик считаться не будет
+const GUARANTEED_CASES = ['camry', 'bmw', 'lambo'];
+
 // === ВАЛИДАЦИЯ TELEGRAM ===
 function verifyTelegramWebAppData(telegramInitData) {
   if (!telegramInitData) return null;
@@ -78,19 +82,26 @@ module.exports = async (req, res) => {
 
     // --- ЛОГИКА ГАРАНТА ---
     
-    // А) Узнаем текущий стрик проигрышей для ЭТОГО кейса
-    const streakRes = await query(
-        'SELECT loss_count FROM user_case_streaks WHERE user_id = $1 AND case_id = $2',
-        [userId, caseId]
-    );
-    const currentStreak = streakRes.rows[0]?.loss_count || 0;
+    // [FIX] Проверяем, включен ли гарант для этого кейса
+    const useGuarantee = GUARANTEED_CASES.includes(caseId);
+
+    let currentStreak = 0;
+
+    // А) Узнаем текущий стрик проигрышей (ТОЛЬКО ЕСЛИ КЕЙС В СПИСКЕ)
+    if (useGuarantee) {
+        const streakRes = await query(
+            'SELECT loss_count FROM user_case_streaks WHERE user_id = $1 AND case_id = $2',
+            [userId, caseId]
+        );
+        currentStreak = streakRes.rows[0]?.loss_count || 0;
+    }
 
     let prize = null;
     let newLossCount = 0;
-    let isGuaranteed = false; // [ВАЖНО] Флаг для логов
+    let isGuaranteed = false;
 
-    // Б) Если 3 проигрыша подряд -> 4-й раз ГАРАНТ
-    if (currentStreak >= 3) {
+    // Б) Если 3 проигрыша подряд -> 4-й раз ГАРАНТ (ТОЛЬКО ЕСЛИ КЕЙС В СПИСКЕ)
+    if (useGuarantee && currentStreak >= 3) {
         // Фильтруем предметы, которые дороже кейса (окуп)
         const winningItems = items.filter(i => parseInt(i.stars_cost) > price);
         
@@ -111,19 +122,22 @@ module.exports = async (req, res) => {
             
             // При победе стрик сбрасываем
             newLossCount = 0;
-            isGuaranteed = true; // [ВАЖНО] Запоминаем, что сработал гарант
+            isGuaranteed = true;
         }
     }
 
-    // В) Если гарант не сработал или еще не определен приз -> Обычная рулетка
+    // В) Если гарант не сработал или кейс не в списке -> Обычная рулетка
     if (!prize) {
         prize = spinRoulette(items);
         
-        // Считаем стрик: если цена приза <= цены кейса, то это проигрыш
-        if (parseInt(prize.stars_cost) <= price) {
-            newLossCount = currentStreak + 1;
-        } else {
-            newLossCount = 0; // Выиграл сам - сбросили стрик
+        // Считаем стрик ТОЛЬКО если кейс в списке гарантов
+        if (useGuarantee) {
+            // если цена приза <= цены кейса, то это проигрыш
+            if (parseInt(prize.stars_cost) <= price) {
+                newLossCount = currentStreak + 1;
+            } else {
+                newLossCount = 0; // Выиграл сам - сбросили стрик
+            }
         }
     }
 
@@ -133,25 +147,25 @@ module.exports = async (req, res) => {
     // А) Списываем деньги
     await query('UPDATE balances SET stars = stars - $1 WHERE user_id = $2', [price, userId]);
 
-    // [NEW] Получаем актуальный баланс сразу после списания (для лога транзакции)
+    // Получаем актуальный баланс
     const newBalRes = await query('SELECT stars FROM balances WHERE user_id = $1', [userId]);
     const balanceAfter = newBalRes.rows[0].stars;
 
-    // [NEW] Б) Записываем в TRANSACTIONS (Финансовый лог)
+    // Б) Записываем в TRANSACTIONS
     await query(
         `INSERT INTO transactions (user_id, amount, type, balance_after) 
          VALUES ($1, $2, 'CASE_OPEN', $3)`,
         [userId, -price, balanceAfter]
     );
 
-    // [NEW] В) Записываем в LOGS_CASES (Детальный лог открытия)
+    // В) Записываем в LOGS_CASES
     await query(
         `INSERT INTO logs_cases (user_id, case_id, case_price, dropped_item, item_price, is_guaranteed) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [userId, caseId, price, prize.name, prize.stars_cost, isGuaranteed]
     );
 
-    // Г) Добавляем предмет в инвентарь (для игрока)
+    // Г) Добавляем предмет в инвентарь
     const invRes = await query(
       `INSERT INTO inventory (user_id, item_id, status) 
        VALUES ($1, $2, 'active') 
@@ -160,16 +174,19 @@ module.exports = async (req, res) => {
     );
     const newInventoryId = invRes.rows[0].id;
 
-    // Д) Обновляем счетчик проигрышей (UPSERT)
-    await query(
-        `INSERT INTO user_case_streaks (user_id, case_id, loss_count)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id, case_id) 
-         DO UPDATE SET loss_count = $3`,
-        [userId, caseId, newLossCount]
-    );
+    // [FIX] Д) Обновляем счетчик проигрышей (ТОЛЬКО ЕСЛИ КЕЙС В СПИСКЕ)
+    // Для Жиги этот код просто не выполнится, база данных не будет засоряться лишними записями
+    if (useGuarantee) {
+        await query(
+            `INSERT INTO user_case_streaks (user_id, case_id, loss_count)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (user_id, case_id) 
+             DO UPDATE SET loss_count = $3`,
+            [userId, caseId, newLossCount]
+        );
+    }
 
-    // Е) Добавляем в LIVE ленту (для сайта)
+    // Е) Добавляем в LIVE ленту
     await query(
         `INSERT INTO live_drops (user_id, item_name, image_url, is_rare)
          VALUES ($1, $2, $3, $4)`,
