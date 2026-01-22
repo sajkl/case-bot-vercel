@@ -5,18 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Открытие кейса</title>
 <link rel="stylesheet" href="/styles.css"> 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-/* Локальные стили */
+/* === 1. FULLSCREEN SCROLL FIX === */
+html { background: #0b0d12; }
+body {
+  margin: 0; padding: 0;
+  width: 100vw; height: 100vh;
+  overflow: hidden; /* Блокируем скролл всей страницы */
+  background: #0b0d12;
+  color: #f7f8fb;
+  font-family: system-ui, -apple-system, "Futura PT", sans-serif;
+  /* Учитываем верхний отступ (Safe Area + шапка) */
+  padding-top: calc(env(safe-area-inset-top) + 20px); 
+}
+
+/* Контейнер, который скроллится */
+.page {
+  width: 100%; height: 100%;
+  overflow-y: auto; /* Скролл здесь */
+  -webkit-overflow-scrolling: touch;
+  max-width: 520px; margin: 0 auto;
+  padding: 0 16px 90px; /* Отступы по бокам и снизу */
+  display: flex; flex-direction: column;
+}
+
 :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-family:system-ui,-apple-system,"Futura PT",Inter,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
-.page{max-width:520px;margin:0 auto;padding:14px 16px 90px;}
 
 /* Верхняя панель */
-.top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative;}
-.back{background:var(--accent);color:#171a1f;font-weight:900;border:none;border-radius:16px;padding:12px 16px;cursor:pointer}
+.top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center; z-index: 2; position: relative; margin-top: 10px;}
+.back{background:var(--accent);color:#171a1f;font-weight:900;border:none;border-radius:16px;padding:12px 16px;cursor:pointer; text-decoration: none; font-size: 14px;}
 .logo{height:32px}
-.balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px}
+.balance{background:var(--accent);color:#171a1f;font-weight:900;border-radius:999px;padding:8px 14px;display:flex;gap:8px; text-decoration: none;}
 
 /* ЗАГОЛОВОК + ГАРАНТ */
 .title-area {
@@ -26,6 +47,7 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .h1 { font-weight:900; font-size:42px; margin:0; text-align:center; line-height: 1; }
 
 .guarant-badge {
+  display: none; /* СКРЫТО ПО УМОЛЧАНИЮ */
   border: 2px solid var(--accent);
   color: var(--accent);
   border-radius: 12px;
@@ -38,16 +60,14 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .guarant-badge:active { transform: scale(0.95); background: rgba(255, 212, 0, 0.1); }
 
 /* Сетка кейсов */
-.grid-wrapper { position: relative; margin-top: 8px; }
+.grid-wrapper { position: relative; margin-top: 8px; flex-shrink: 0; }
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
 
-/* КНОПКА СБРОСА (ОТКРЫТЬ ЗАНОВО) */
+/* КНОПКА СБРОСА */
 .reset-overlay {
-  position: absolute; inset: -10px; /* Чуть шире сетки */
-  background: rgba(11, 13, 18, 0.85);
-  backdrop-filter: blur(4px);
-  display: none; /* Скрыта по умолчанию */
-  align-items: center; justify-content: center;
+  position: absolute; inset: -10px;
+  background: rgba(11, 13, 18, 0.85); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
   z-index: 10; border-radius: 24px;
   opacity: 0; transition: opacity 0.3s;
 }
@@ -59,39 +79,27 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   border-radius: 99px; font-size: 16px; font-weight: 900;
   text-transform: uppercase; cursor: pointer;
   box-shadow: 0 0 30px rgba(255, 212, 0, 0.4);
-  transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: scale(0.8); transition: transform 0.3s;
 }
 .reset-overlay.show .btn-reset { transform: scale(1); }
 .btn-reset:active { transform: scale(0.95); }
 
-
-/* ЯЧЕЙКА (Центрирование исправлено) */
+/* ЯЧЕЙКА */
 .cell {
   position:relative; background:rgba(255,255,255,.03); border:none; border-radius:24px;
-  padding:0; /* Убираем паддинг, чтобы центрировать флексом */
-  box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden;
+  padding:0; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden;
   aspect-ratio: 1/1; cursor:pointer; z-index: 1;
-  display: flex; align-items: center; justify-content: center; /* Центрируем содержимое */
+  display: flex; align-items: center; justify-content: center;
 }
 
-.crate {
-  width:100%; height:100%; 
-  display:flex; align-items:center; justify-content:center;
-}
-.crate img {
-  width:85%; height:85%; object-fit:contain; 
-  transition:opacity .15s;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-}
+.crate { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.crate img { width:85%; height:85%; object-fit:contain; transition:opacity .15s; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
 
 .hint { position:absolute; inset:0; display:grid; place-items:center; font-weight:900; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:.18s }
 .cell.show-hint .hint { opacity:1 }
 
-/* === ВНУТРЕННОСТИ ЯЩИКА (ПРИЗ) === */
-.cell-doors {
-  position:absolute; inset:14px; /* Отступ ворот от края ячейки */
-  background:#0a0c12; border:1px solid #1b2130; border-radius:18px; overflow:hidden; pointer-events: none;
-}
+/* ВНУТРЕННОСТИ ЯЩИКА */
+.cell-doors { position:absolute; inset:14px; background:#0a0c12; border:1px solid #1b2130; border-radius:18px; overflow:hidden; pointer-events: none; }
 .cell-door { position:absolute; top:8%; bottom:8%; width:50%; background:linear-gradient(180deg,#ffc400,#e2ae00); z-index: 2; }
 .cell-door.l { left:0; transform-origin:left center }
 .cell-door.r { right:0; transform-origin:right center }
@@ -99,40 +107,22 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .cell.open .cell-door.l { transform:perspective(800px) rotateY(-95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 .cell.open .cell-door.r { transform:perspective(800px) rotateY(95deg); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
-/* Контент внутри открытого ящика (Приз) */
 .prize-box {
-  position: absolute; inset: 0; 
-  display: flex; flex-direction: column; 
-  align-items: center; justify-content: center; /* Идеальный центр */
-  z-index: 1; pointer-events: auto;
-  opacity: 0; transition: opacity 0.3s ease;
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1; pointer-events: auto; opacity: 0; transition: opacity 0.3s ease;
 }
 .cell.open .prize-box { opacity: 1; transition-delay: 0.2s; } 
 
-.prize-box img {
-  width: 70%; height: 70%; object-fit: contain; 
-  filter: drop-shadow(0 0 15px rgba(255, 212, 0, 0.4));
-  margin-bottom: 2px; /* Чуть отступ до текста */
-  transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+.prize-box img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 0 15px rgba(255, 212, 0, 0.4)); margin-bottom: 2px; transform: scale(0.8); transition: transform 0.4s; }
 .cell.open .prize-box img { transform: scale(1); }
 
-.prize-title {
-  font-size: 10px; font-weight: 900; color: #fff; text-align: center;
-  line-height: 1.1; margin-bottom: 4px;
-  width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.prize-title { font-size: 10px; font-weight: 900; color: #fff; text-align: center; line-height: 1.1; margin-bottom: 4px; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prize-actions { display: flex; gap: 4px; width: 90%; }
-.prize-btn {
-  flex: 1; border: none; border-radius: 6px;
-  padding: 5px 0; font-size: 9px; font-weight: 800;
-  cursor: pointer; text-transform: uppercase;
-}
+.prize-btn { flex: 1; border: none; border-radius: 6px; padding: 5px 0; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
 .btn-take { background: var(--accent); color: #171a1f; }
 .btn-sell-mini { background: #2c313f; color: #a5abb8; border: 1px solid #3e4554; }
 
-
-/* === ОВЕРЛЕЙ === */
+/* === ОВЕРЛЕЙ ВЫИГРЫША === */
 .overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
   z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -141,18 +131,15 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .overlay.show { opacity: 1; pointer-events: auto; }
 
 .close-overlay-btn {
-  position: absolute; top: 24px; right: 24px;
+  position: absolute; top: calc(env(safe-area-inset-top) + 20px); right: 20px;
   background: rgba(255, 255, 255, 0.1); border: none; color: #fff;
-  font-size: 32px; line-height: 1; width: 44px; height: 44px;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 10001; transition: background 0.2s, transform 0.2s;
-  padding-bottom: 4px; 
+  font-size: 32px; line-height: 1; width: 44px; height: 44px; border-radius: 50%;
+  cursor: pointer; z-index: 10001; transition: 0.2s; display: flex; align-items: center; justify-content: center; padding-bottom: 4px;
 }
 .close-overlay-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
 
 .overlay-card {
-  position: relative; overflow: visible; 
-  transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative; transform: scale(0.8) translateY(20px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex; flex-direction: column; align-items: center;
 }
 .overlay.show .overlay-card { transform: scale(1) translateY(0); }
@@ -164,30 +151,17 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 }
 @keyframes spinCentered { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-.overlay-img {
-  width: 240px; height: 240px; object-fit: contain;
-  filter: drop-shadow(0 0 40px rgba(255, 212, 0, 0.5)); margin-bottom: 24px;
-}
-.overlay-title {
-  font-size: 32px; font-weight: 900; text-transform: uppercase;
-  text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 32px; text-align: center;
-}
+.overlay-img { width: 240px; height: 240px; object-fit: contain; filter: drop-shadow(0 0 40px rgba(255, 212, 0, 0.5)); margin-bottom: 24px; }
+.overlay-title { font-size: 32px; font-weight: 900; text-transform: uppercase; text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 32px; text-align: center; }
 
 .actions { display: flex; flex-direction: column; gap: 14px; width: 280px; }
-.act-btn {
-  border: none; padding: 18px; border-radius: 18px;
-  font-size: 18px; font-weight: 900; cursor: pointer;
-  text-transform: uppercase; width: 100%; transition: transform 0.1s;
-}
+.act-btn { border: none; padding: 18px; border-radius: 18px; font-size: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; width: 100%; transition: transform 0.1s; }
 .act-btn:active { transform: scale(0.97); }
 .btn-sell { background: var(--accent); color: #111; box-shadow: 0 0 25px rgba(255,212,0,0.3); }
 .btn-keep { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
 
-/* Нижняя панель */
-.price-wrap { display:flex; justify-content:center; margin:24px 0 32px }
-.price { background:var(--accent); color:#171a1f; padding:12px 24px; border-radius:16px; font-weight:900; font-size:18px; box-shadow:0 0 22px rgba(255,212,0,.35) }
-
-.prizes-section { margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838; }
+/* === СОДЕРЖИМОЕ КЕЙСА === */
+.prizes-section { margin-top:20px; background:#151921; border-radius:24px; padding:20px; border:1px solid #232838; flex-shrink: 0; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-title { font-weight: 800; color: #fff; font-size: 16px; }
 .price-tag { background: var(--accent); color: #171a1f; padding: 6px 12px; border-radius: 8px; font-weight: 900; font-size: 14px; box-shadow: 0 0 10px rgba(255, 212, 0, 0.2); }
@@ -196,42 +170,71 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
 .prize-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 212, 0, 0.15); }
 .prize-img { width: 48px; height: 48px; object-fit: contain; margin-bottom: 8px; }
 .prize-name { font-size: 11px; font-weight: 700; color: #a5abb8; line-height: 1.2; }
-.rare-badge { position: absolute; top: -6px; right: -6px; background: var(--accent); color: #000; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px; }
+.nav-spacer { height: 90px; flex-shrink: 0; }
 
-.nav-spacer { height: 90px; }
+/* === МОДАЛКА ГАРАНТА (Стили из индекса) === */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: 0.2s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-card {
+  background: #181b22; width: 85%; max-width: 320px;
+  padding: 24px 20px; border-radius: 24px; border: 1px solid #2f3542;
+  text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  transform: scale(0.95); transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay.open .modal-card { transform: scale(1); }
+.modal-badge { display: inline-block; background: #ffd400; color: #000; font-weight: 900; font-size: 10px; padding: 4px 8px; text-transform: uppercase; border-radius: 6px; margin-bottom: 12px; }
+.modal-title { margin: 0 0 10px; font-size: 18px; font-weight: 800; color: #fff; line-height: 1.2; }
+.modal-text { color: #a5abb8; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+.modal-text b { color: #fff; font-weight: 700; }
+.modal-close-btn { width: 100%; background: #2f3542; color: #fff; border: none; padding: 12px; border-radius: 14px; font-weight: 700; font-size: 15px; }
+.modal-close-btn:active { background: #3a4150; transform: scale(0.98); }
+
 </style>
 </head>
 <body>
+
+<div class="modal-overlay" id="infoModal">
+  <div class="modal-card">
+    <div class="modal-badge">Гарант</div>
+    <h3 class="modal-title">ГАРАНТИРОВАННЫЙ ОКУП</h3>
+    <p class="modal-text">
+      В <b>минимум</b> одном из 4 кейсов гарантированно лежит предмет, превышающий стоимость кейса!
+    </p>
+    <button class="modal-close-btn" onclick="closeInfo()">Закрыть</button>
+  </div>
+</div>
+
 <div class="page">
   <div class="top">
-    <button class="back" onclick="location.href='/'">← Назад</button>
+    <a href="/" class="back">← Назад</a>
     <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
-    <a class="balance" href="/topup/" style="text-decoration:none">
-  ★ <span id="bal">...</span>
-</a>
+    <a class="balance" href="/topup/">
+      ★ <span id="bal">...</span>
+    </a>
   </div>
 
   <div class="title-area">
     <div id="caseTitle" class="h1">Кейс</div>
-    <div class="guarant-badge" onclick="showGuarantInfo()">ГАРАНТ</div>
+    <div class="guarant-badge" id="guarantBadge" onclick="openInfo()">ГАРАНТ</div>
   </div>
 
   <div class="grid-wrapper">
     <div id="grid" class="grid"></div>
-    
     <div class="reset-overlay" id="resetOverlay">
       <button class="btn-reset" id="btnReset">ОТКРЫТЬ ЗАНОВО</button>
     </div>
   </div>
-  
-  
 
   <div class="prizes-section">
     <div class="section-header">
        <span class="section-title">СОДЕРЖИМОЕ КЕЙСА</span>
        <div id="priceSmall" class="price-tag">★ 0</div>
     </div>
-    
     <div id="prizesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:12px;">
        <div style="grid-column: 1/-1; text-align: center; color: #555; font-size: 13px;">Загрузка...</div>
     </div>
@@ -259,11 +262,22 @@ html,body{margin:0;min-height:100%;background:#0b0d12;color:var(--text);font-fam
   </div>
 </div>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 const qs=s=>document.querySelector(s);
 const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
+
+// === FULLSCREEN INIT ===
+function initApp() {
+    tg.ready();
+    try {
+        if (tg.requestFullscreen) tg.requestFullscreen();
+        else tg.expand();
+    } catch (e) { tg.expand(); }
+    try { tg.setHeaderColor('#0b0d12'); tg.setBackgroundColor('#0b0d12'); } catch (e) {}
+}
+initApp();
+setTimeout(initApp, 100);
+
 const vib=(t=15)=>('vibrate'in navigator)&&navigator.vibrate(t);
 
 // --- КОНФИГ ---
@@ -281,15 +295,34 @@ const ASSETS={
 };
 const conf=ASSETS[caseId]||ASSETS.jiga;
 qs('#caseTitle').textContent=conf.title;
-
 qs('#priceSmall').textContent=`★ ${conf.price}`;
 
-// --- СОСТОЯНИЕ (ДЛЯ КНОПКИ СБРОСА) ---
-let openedCount = 0; // Сколько открыто
+// --- ЛОГИКА ГАРАНТА (Показываем только для Camry и Lambo) ---
+if (['camry', 'lambo', 'bmw'].includes(caseId)) { // Добавил BMW на всякий случай, как на скринах, если не надо - убери
+    const badge = qs('#guarantBadge');
+    // Показываем только если это BMW или LAMBO (исходя из твоего запроса "на камри и ламбо")
+    if (caseId === 'camry' || caseId === 'lambo') {
+        badge.style.display = 'block'; 
+    }
+}
+
+// Модальное окно
+function openInfo() {
+  qs('#infoModal').classList.add('open');
+  if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+}
+function closeInfo() {
+  qs('#infoModal').classList.remove('open');
+}
+qs('#infoModal').addEventListener('click', (e) => { if(e.target === qs('#infoModal')) closeInfo(); });
+
+
+// --- СОСТОЯНИЕ ---
+let openedCount = 0;
 const resetOverlay = qs('#resetOverlay');
 const btnReset = qs('#btnReset');
 
-// --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ---
+// --- ЭЛЕМЕНТЫ ОВЕРЛЕЯ ВЫИГРЫША ---
 const overlay = qs('#overlay');
 const btnCloseOverlay = qs('#btnCloseOverlay');
 const cardResult = qs('#cardResult');
@@ -310,22 +343,17 @@ function initGrid() {
   for(let i=0;i<4;i++){
     const cell=document.createElement('button');
     cell.className='cell';
-    cell.dataset.stage='0'; // 0=закрыт
+    cell.dataset.stage='0';
     cell.innerHTML=`<div class="crate"><img src="${conf.stages[0]}"></div><div class="hint">ЖМИ</div>`;
     grid.appendChild(cell);
   }
 }
-initGrid(); // Запуск при старте
-
-// --- ЛОГИКА ГАРАНТА (Инфо) ---
-function showGuarantInfo() {
-  tg.showAlert('ГАРАНТИРОВАННЫЙ ОКУП)\n\nВ одном из 4 кейсов гарантированно лежит предмет превышающий стоимость кейса!');
-}
+initGrid();
 
 // --- ЛОГИКА СБРОСА ---
 btnReset.onclick = () => {
   vib(10);
-  initGrid(); // Пересоздаем сетку
+  initGrid();
 };
 
 // --- КЛИК ПО ЯЩИКУ ---
@@ -337,7 +365,7 @@ grid.addEventListener('click', async (e)=>{
   let stage = +cell.dataset.stage;
   const img = cell.querySelector('.crate img');
 
-  // Разогрев (Этапы 0-1)
+  // Разогрев
   if(stage < 2){
     cell.classList.add('show-hint'); 
     setTimeout(()=>cell.classList.remove('show-hint'), 260);
@@ -345,12 +373,11 @@ grid.addEventListener('click', async (e)=>{
     return;
   }
 
-  // ОТКРЫТИЕ (Этап 3)
+  // ОТКРЫТИЕ
   cell.classList.add('processing'); 
   cell.dataset.stage = '3';
   img.style.opacity = '0'; 
 
-  // Добавляем внутренности
   const doors = document.createElement('div');
   doors.className = 'cell-doors';
   doors.innerHTML = `
@@ -366,14 +393,9 @@ grid.addEventListener('click', async (e)=>{
     </div>
   `;
   cell.appendChild(doors);
-
-  // Анимация дверей
   cell.classList.add('open'); 
-  
-  // Увеличиваем счетчик открытых
   openedCount++;
 
-  // Запрос к серверу
   try {
     const res = await fetch('/api/open', {
       method: 'POST',
@@ -383,7 +405,6 @@ grid.addEventListener('click', async (e)=>{
 
     if (res.error) {
       tg.showAlert(res.error);
-      // Если ошибка - откатываем
       cell.classList.remove('open', 'processing');
       doors.remove();
       cell.dataset.stage = '0';
@@ -393,12 +414,10 @@ grid.addEventListener('click', async (e)=>{
       return;
     }
 
-    // Успех
     if (res.stars != null) qs('#bal').textContent = res.stars;
     const p = res.prize;
     const sellPrice = Math.floor(p.value);
 
-    // Тайминг: ждем 500мс
     await new Promise(r => setTimeout(r, 500));
 
     // Показываем Оверлей
@@ -407,12 +426,10 @@ grid.addEventListener('click', async (e)=>{
     btnSell.textContent = `ПРОДАТЬ (+${sellPrice} ★)`;
     cardResult.style.display = 'flex';
     overlay.classList.add('show');
-    tg.HapticFeedback.notificationOccurred('success');
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
-    // Ждем 300мс
     await new Promise(r => setTimeout(r, 300));
 
-    // Обновляем мини-ящик
     const pImg = doors.querySelector('#pimg');
     pImg.src = p.image; pImg.style.opacity = '1'; pImg.style.filter = 'none'; 
     doors.querySelector('#ptitle').textContent = p.title;
@@ -421,28 +438,21 @@ grid.addEventListener('click', async (e)=>{
 
     currentWin = { inventoryId: res.inventoryId, sellPrice: sellPrice, cell: cell, img: img, doors: doors };
 
-    // Обработчики кнопок в мини-ящике
-    doors.querySelector('#ptake').onclick = (ev) => { ev.stopPropagation(); /* Просто оставляем открытым */ };
+    doors.querySelector('#ptake').onclick = (ev) => { ev.stopPropagation(); };
     doors.querySelector('#psell').onclick = async (ev) => {
       ev.stopPropagation();
       ev.target.textContent = '...';
       await sellItem(currentWin.inventoryId, sellPrice);
-      // При продаже внутри ящика мы убираем приз и закрываем двери? 
-      // Или оставляем пустым? Обычно оставляют пустым или закрывают.
-      // Сделаем просто визуально "Продано"
       ev.target.parentElement.innerHTML = '<div style="color:#aaa; font-size:10px">ПРОДАНО</div>';
     };
 
-    // ПРОВЕРКА: Если открыты все 4 -> Показываем кнопку сброса
     if(openedCount >= 4) {
-       setTimeout(() => {
-          resetOverlay.classList.add('show');
-       }, 500);
+       setTimeout(() => { resetOverlay.classList.add('show'); }, 500);
     }
 
   } catch (err) {
     console.error(err);
-    tg.showAlert("Ошибка сети");
+    // tg.showAlert("Ошибка сети"); // Можно раскомментировать для дебага
   }
 });
 
@@ -451,11 +461,8 @@ btnSell.onclick = async () => {
   if(!currentWin) return;
   btnSell.textContent = '...';
   await sellItem(currentWin.inventoryId, currentWin.sellPrice);
-  
-  // В мини ящике тоже пишем продано
   const miniActions = currentWin.doors.querySelector('#pactions');
   if(miniActions) miniActions.innerHTML = '<div style="color:#aaa; font-size:10px">ПРОДАНО</div>';
-  
   resetOverlayFunc();
 };
 
@@ -468,7 +475,7 @@ function resetOverlayFunc() {
   btnSell.textContent = 'ПРОДАТЬ'; 
 }
 
-// --- ФУНКЦИИ ---
+// --- ФУНКЦИИ API ---
 async function sellItem(invId, price) {
   try {
     const res = await fetch('/api/sell', {
@@ -479,7 +486,7 @@ async function sellItem(invId, price) {
 
     if(res.success) {
       qs('#bal').textContent = res.balance;
-      tg.showAlert(`Продано за ${res.added} звезд!`);
+      if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     } else {
       tg.showAlert(res.error || 'Ошибка');
     }
