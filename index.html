@@ -19,7 +19,7 @@
       background: #0b0d12;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       /* Учитываем Safe Area для iPhone с челкой/островом */
-       
+     
     }
 
     .container {
@@ -119,8 +119,7 @@
   <div class="modal-overlay" id="infoModal">
     <div class="modal-card">
       <div class="modal-badge">Гарант</div>
-      <h3 class="modal-title">ГАРАНТИРОВАННЫЙ ОКУП</h3>
-      <p class="modal-text">
+      <p class="modal-text" style="margin-top: 8px;">
         В <b>минимум</b> одном из 4 кейсов гарантированно лежит предмет, превышающий стоимость кейса!
       </p>
       <button class="modal-close-btn" onclick="closeInfo()">Закрыть</button>
@@ -151,6 +150,7 @@
       </a>
 
       <a class="card green" data-caseid="camry" href="/case/?case=camry" aria-label="Камри" style="--w:152%; --top:-54px; --left:52%;">
+        <div class="info-btn" onclick="openInfo(event)">i</div>
         <div class="art"><img src="/assets/case-2.png" alt="Камри"></div>
         <div class="title">Камри</div><div class="price"><span class="star">★</span> 629</div>
       </a>
