@@ -29,7 +29,7 @@ html, body {
   color: var(--text);
   font-family: "Futura PT", -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  padding-top: calc(env(safe-area-inset-top) + 22px);
+  padding-top: calc(env(safe-area-inset-top) + 30px);
 }
 
 img { display: block; max-width: 100%; }
