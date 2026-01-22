@@ -5,26 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Crash — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <style>
-    /* === Локальные стили ТОЛЬКО для игры Crash === */
-    :root{--green:#2ad06c;--red:#ff4d4d}
-    
-    /* Отступ снизу для контента, чтобы меню не перекрывало (90px) */
-    .page {
-      max-width: 520px; margin: 0 auto; padding: 14px 16px 90px;
+    /* === 1. FULLSCREEN INIT (Как в Кейсах) === */
+    html { background: #0b0d12; }
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden; /* Блокируем скролл страницы */
+      background: #0b0d12;
+      color: #f7f8fb;
+      font-family: system-ui, -apple-system, "Futura PT", sans-serif;
+      /* Отступ сверху под челку + шапку */
+      padding-top: calc(env(safe-area-inset-top) + 20px); 
     }
 
-    /* Верхняя панель */
-    .top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-bottom: 16px; }
-    .back { background: none; color: #fff; font-weight: 900; border: none; font-size: 24px; cursor: pointer; padding: 0; text-decoration: none; }
+    /* Контейнер скролла */
+    .page {
+      width: 100%; height: 100%;
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch;
+      max-width: 520px; margin: 0 auto;
+      padding: 0 16px 90px;
+      display: flex; flex-direction: column;
+    }
+
+    /* === 2. ШАПКА (1-в-1 как в Кейсах) === */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
+      margin-bottom: 10px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
     
+    .back-arrow {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      color: #fff; cursor: pointer;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .back-arrow:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
+    .back-arrow svg { width: 20px; height: 20px; fill: currentColor; }
+
+    .logo { height: clamp(30px, 6vw, 36px); }
+
+    .balance { 
+      background: var(--accent); color: #171a1f; 
+      font-weight: 900; border-radius: 999px; 
+      padding: 8px 14px; display: flex; gap: 8px; align-items: center; 
+      text-decoration: none; font-size: 14px;
+    }
+    .balance .star { font-size: 16px; }
+
+    /* === 3. СТИЛИ CRASH === */
+    :root{--green:#2ad06c;--red:#ff4d4d;--accent:#ffd400}
+
+    /* Заголовок игры */
+    .title-area { margin-bottom: 12px; text-align: center; }
+    .h1 { font-weight:900; font-size:32px; margin:0; line-height: 1; text-transform: uppercase; letter-spacing: 1px; }
+
     /* История */
     .history-bar {
       display: flex; gap: 6px; padding-bottom: 12px;
       overflow-x: auto; scrollbar-width: none;
       mask-image: linear-gradient(to right, black 85%, transparent 100%);
-      min-height: 34px;
+      min-height: 34px; flex-shrink: 0;
     }
     .hist-pill {
       background: #232838; padding: 6px 10px; border-radius: 8px;
@@ -35,10 +84,10 @@
 
     /* Игровая зона */
     .crash-area {
-      position: relative; height: 260px;
+      position: relative; height: 260px; width: 100%;
       background: #171b24; border-radius: 24px; border: 1px solid #232838;
       overflow: hidden; display: flex; align-items: center; justify-content: center;
-      margin-bottom: 16px;
+      margin-bottom: 16px; flex-shrink: 0;
     }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
     .crash-info { position: relative; z-index: 2; text-align: center; }
@@ -51,16 +100,16 @@
     .crash-status { font-size: 14px; font-weight: 700; color: #777; letter-spacing: 1px; margin-top: -5px; }
     .crash-counter.crashed { color: var(--red) !important; animation: shake 0.4s; }
 
-    /* Анимации игры */
+    /* Анимации */
     .countdown-num { font-size: 80px; font-weight: 900; color: var(--accent); opacity: 0; transform: scale(0.5); }
     .countdown-num.pop { animation: popIn 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     @keyframes popIn { 0% { opacity:0;transform:scale(0.5) } 20% { opacity:1;transform:scale(1.1) } 100% { opacity:0;transform:scale(1.2) } }
     @keyframes shake { 0%,100% {transform:translate(0,0)} 25% {transform:translate(-2px,2px)} 75% {transform:translate(2px,-2px)} }
 
-    /* Кнопки управления игрой (не путать с навигацией) */
+    /* Контроллеры */
     .controls {
       background: #1d212b; padding: 16px; border-radius: 24px; border: 1px solid #2a2f3d;
-      margin-bottom: 20px;
+      margin-bottom: 20px; flex-shrink: 0;
     }
     .input-row { display: flex; gap: 10px; margin-bottom: 12px; }
     .input-wrap {
@@ -88,6 +137,7 @@
     .btn-wait { background: #2c313f; color: #777; }
 
     /* Список игроков */
+    .bets-list { flex-shrink: 0; }
     .bets-header { display: flex; justify-content: space-between; color: #777; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
     .player-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -99,16 +149,28 @@
     .p-name { font-weight: 700; font-size: 14px; }
     .p-bet { color: var(--accent); font-weight: 700; font-size: 14px; }
     .p-profit { color: var(--green); font-weight: 800; font-size: 14px; }
+    
+    .nav-spacer { height: 90px; flex-shrink: 0; }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="top">
-      <a class="back" href="/">←</a>
-      <div style="font-weight:900; font-size:20px;">CRASH</div>
-      <a class="balance" href="/topup/" style="text-decoration:none">
-  ★ <span id="bal">...</span>
-</a>
+    
+    <header class="header">
+      <div class="header-left">
+        <a href="/" class="back-arrow">
+           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+        <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+      </div>
+      
+      <a class="balance" href="/topup/">
+        <span class="star">★</span> <span id="bal">...</span>
+      </a>
+    </header>
+
+    <div class="title-area">
+       <div class="h1">CRASH 🚀</div>
     </div>
 
     <div class="history-bar" id="historyBar"></div>
@@ -140,6 +202,8 @@
       <div class="bets-header"><span>ИГРОКИ</span> <span id="plCount">0</span></div>
       <div id="betsContainer"></div>
     </div>
+
+    <div class="nav-spacer"></div>
   </div>
 
   <nav class="nav">
@@ -148,10 +212,20 @@
     <a class="btn" href="/profile/">Профиль</a>
   </nav>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     const tg = window.Telegram.WebApp;
-    tg.ready(); tg.expand();
+
+    // === FULLSCREEN INIT ===
+    function initApp() {
+        tg.ready();
+        try {
+            if (tg.requestFullscreen) tg.requestFullscreen();
+            else tg.expand();
+        } catch (e) { tg.expand(); }
+        try { tg.setHeaderColor('#0b0d12'); tg.setBackgroundColor('#0b0d12'); } catch (e) {}
+    }
+    initApp();
+    setTimeout(initApp, 100);
 
     // Elements
     const canvas = document.getElementById('gameCanvas');
@@ -172,7 +246,8 @@
     let myBet = null;
     let myCashout = false;
     let lastSecond = -1;
-    let isActionLoading = false; // 
+    let isActionLoading = false;
+
     // === ГРАФИКА ===
     function resize() {
       width = canvas.parentElement.clientWidth;
@@ -334,13 +409,12 @@
     }
 
 function updateBtn() {
-      // Если прямо сейчас идет отправка запроса — не трогаем кнопку, пусть висит "Ждем..."
       if (isActionLoading) return; 
 
       if (serverPhase === 'BETTING') {
          if (myBet) {
             mainBtn.className = 'main-btn btn-wait'; 
-            mainBtn.textContent = 'СТАВКА ПРИНЯТА'; // Чуть понятнее текст
+            mainBtn.textContent = 'СТАВКА ПРИНЯТА';
             mainBtn.onclick = null;
          } else {
             mainBtn.className = 'main-btn btn-bet'; 
@@ -373,14 +447,12 @@ function updateBtn() {
     }
 
  async function doBet() {
-      // 1. Защита: если уже нажали, выходим
       if (isActionLoading) return;
       const amount = +document.getElementById('betAmount').value;
       if (!amount) return;
 
-      // 2. МГНОВЕННАЯ визуальная реакция
       isActionLoading = true;
-      tg.HapticFeedback.selectionChanged(); // Вибрация при нажатии
+      tg.HapticFeedback.selectionChanged();
       mainBtn.className = 'main-btn btn-wait';
       mainBtn.textContent = "Обработка...";
       
@@ -396,26 +468,23 @@ function updateBtn() {
             if(res.balance) balEl.textContent = res.balance; 
             tg.HapticFeedback.notificationOccurred('success');
         } else {
-            // Если ошибка (например, не хватает денег), возвращаем кнопку назад
             tg.showAlert(res.error || 'Ошибка ставки');
         }
       } catch(e){
           console.error(e);
       } finally {
-          // Снимаем блокировку и обновляем состояние
           isActionLoading = false;
-          pollState(); // Принудительно обновляем данные
+          pollState();
       }
     }
 
     async function doCashout() {
       if (!myBet || isActionLoading) return;
       
-      // 1. МГНОВЕННАЯ реакция
       isActionLoading = true;
-      tg.HapticFeedback.impactOccurred('medium'); // Резкая вибрация для адреналина
+      tg.HapticFeedback.impactOccurred('medium');
       mainBtn.className = 'main-btn btn-wait';
-      mainBtn.style.background = '#2ad06c'; // Сразу красим в зеленый
+      mainBtn.style.background = '#2ad06c';
       mainBtn.style.color = '#fff';
       mainBtn.textContent = "ЗАБИРАЕМ...";
 
@@ -432,7 +501,6 @@ function updateBtn() {
             tg.HapticFeedback.notificationOccurred('success');
         }
       } catch(e){
-         // Если не успели (крашнулось пока шел запрос)
       } finally {
          isActionLoading = false;
          pollState();
