@@ -4,93 +4,75 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Пополнить баланс</title>
-  <link rel="stylesheet" href="/styles.css?v=15">
+  <link rel="stylesheet" href="/styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    /* === ОБЩИЕ СТИЛИ (Dark Theme) === */
-    :root {
-        --bg: #0b0d12;
-        --card: #151921;
-        --text: #fff;
-        --accent: #ffd400;
-        --border: #232838;
-    }
+    /* === 1. FULLSCREEN INIT === */
+    html { background: #0b0d12; }
     body {
-        background: var(--bg);
-        color: var(--text);
-        margin: 0;
-        font-family: system-ui, -apple-system, sans-serif;
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden; /* Блокируем скролл страницы */
+      background: #0b0d12;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding-top: calc(env(safe-area-inset-top) - 23px); 
+      display: flex; flex-direction: column;
     }
     
-    .container {
-        padding: 12px 16px;
-        max-width: 480px;
-        margin: 0 auto;
-        width: 100%;
-        box-sizing: border-box;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+    .page {
+      width: 100%; height: 100%;
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch;
+      max-width: 520px; margin: 0 auto;
+      padding: 0 16px 90px;
+      display: flex; flex-direction: column;
     }
 
-    /* === ШАПКА (Как в профиле) === */
+    :root {
+        --bg: #0b0d12; --card: #151921; --text: #fff;
+        --accent: #ffd400; --border: #232838;
+    }
+
+    /* === 2. ШАПКА (Как везде) === */
     .header {
-        display: grid;
-        grid-template-columns: auto 1fr auto; /* Три колонки: Лево - Центр (тянется) - Право */
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 30px;
-        position: relative;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    
+    .back-arrow {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      color: #fff; cursor: pointer;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .back-arrow:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
+    .back-arrow svg { width: 20px; height: 20px; fill: currentColor; }
+
+    .logo { height: clamp(30px, 6vw, 36px); }
+
+    .balance { 
+      background: var(--accent); color: #171a1f; 
+      font-weight: 900; border-radius: 999px; 
+      padding: 8px 14px; display: flex; gap: 8px; align-items: center; 
+      text-decoration: none; font-size: 14px;
+    }
+    .balance .star { font-size: 16px; }
+
+    /* === 3. КОНТЕНТ ПОПОЛНЕНИЯ === */
+    .content-wrapper {
+        flex: 1; display: flex; flex-direction: column; 
+        justify-content: center; /* Центрируем форму по вертикали */
+        padding-bottom: 40px;
     }
 
-    /* Кнопка НАЗАД (Стиль как в профиле) */
-    .back-btn {
-        background: var(--accent);
-        color: #000;
-        text-decoration: none;
-        font-weight: 900;
-        font-size: 14px;
-        padding: 10px 18px;
-        border-radius: 14px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.1s;
-        border: none;
-        cursor: pointer;
-    }
-    .back-btn:active { transform: scale(0.95); }
-
-    /* Логотип по центру */
-    .header-center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    .logo { height: 28px; object-fit: contain; }
-
-    /* Баланс справа */
-    .balance-btn {
-        background: var(--accent);
-        color: #000;
-        text-decoration: none;
-        font-weight: 900;
-        font-size: 14px;
-        padding: 10px 14px;
-        border-radius: 50px; /* Овальная */
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    /* === КОНТЕНТ ПОПОЛНЕНИЯ === */
     .topup-hero {
-        display: flex;
-        justify-content: center;
-        margin: 10px 0 20px;
+        display: flex; justify-content: center; margin: 10px 0 20px;
     }
     .big-star {
         width: 100px; height: 100px;
@@ -102,24 +84,23 @@
     .topup-title { text-align: center; margin-bottom: 25px; }
     .topup-title h1 {
         font-size: 26px; font-weight: 900; margin: 0; text-transform: uppercase;
-        line-height: 1.1;
+        line-height: 1.1; letter-spacing: 0.5px;
     }
-    .topup-title span { color: #777; font-size: 14px; font-weight: 500; text-transform: none; }
+    .topup-title span { color: #777; font-size: 14px; font-weight: 500; }
 
-    /* Карточка ввода */
+    /* Карточка */
     .topup-card {
         background: var(--card);
         border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
 
-    .input-label { font-size: 12px; color: #777; margin-bottom: 8px; display: block; font-weight: 700; text-transform: uppercase; }
+    .input-label { font-size: 12px; color: #777; margin-bottom: 10px; display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .input-wrapper {
-        position: relative;
-        margin-bottom: 20px;
+        position: relative; margin-bottom: 20px;
     }
     .input-icon {
         position: absolute;
@@ -130,10 +111,10 @@
         width: 100%;
         background: #0b0d12;
         border: 1px solid #2a2f3d;
-        border-radius: 12px;
+        border-radius: 16px;
         color: #fff;
         font-size: 28px; font-weight: 800;
-        padding: 16px 16px 16px 45px;
+        padding: 18px 16px 18px 45px;
         outline: none; box-sizing: border-box;
         transition: border-color 0.2s;
     }
@@ -144,40 +125,37 @@
         background: var(--accent);
         color: #000;
         border: none;
-        padding: 16px;
-        border-radius: 14px;
-        font-size: 16px; font-weight: 900;
+        padding: 18px;
+        border-radius: 16px;
+        font-size: 18px; font-weight: 900;
         text-transform: uppercase; cursor: pointer;
-        box-shadow: 0 4px 15px rgba(255, 212, 0, 0.2);
+        box-shadow: 0 4px 20px rgba(255, 212, 0, 0.25);
         transition: transform 0.1s;
     }
     .btn-pay:active { transform: scale(0.97); }
     .btn-pay:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    /* Навигация (Отступы) */
-    .nav-spacer { height: 90px; }
+    .nav-spacer { height: 90px; flex-shrink: 0; }
   </style>
 </head>
 <body>
 
-  <div class="container">
+  <div class="page">
     <header class="header">
-        <a class="back-btn" href="/profile/">
-            ← Назад
+      <div class="header-left">
+        <a href="/profile/" class="back-arrow">
+           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </a>
-
-        <div class="header-center">
-            <img class="logo" src="/assets/logo.png" alt="LAMBO">
-        </div>
-
-        <a class="balance-btn" href="/topup/">
-            <span style="font-size:18px">★</span>
-            <span id="balanceValue">...</span>
-        </a>
+        <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+      </div>
+      
+      <a class="balance" href="/topup/">
+        <span class="star">★</span> <span id="balanceValue">...</span>
+      </a>
     </header>
 
 
-    <main style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+    <div class="content-wrapper">
         
         <div class="topup-hero">
             <img class="big-star" src="/assets/star-big.png" onerror="this.src='/assets/logo.png'" alt="★">
@@ -192,30 +170,42 @@
             <label class="input-label">Сумма пополнения</label>
             <div class="input-wrapper">
                 <span class="input-icon">★</span>
-                <input id="amountInput" class="amount-input" type="number" inputmode="numeric" value="50" min="1">
+                <input id="amountInput" class="amount-input" type="number" inputmode="numeric" value="50" min="1" placeholder="0">
             </div>
             
             <button id="payBtn" class="btn-pay">Купить Звезды</button>
-            <div style="text-align:center; color:#555; font-size:11px; margin-top:12px;">
+            
+            <div style="text-align:center; color:#555; font-size:11px; margin-top:16px; line-height: 1.4;">
                 Оплата через безопасную систему<br>Telegram Stars
             </div>
         </div>
 
-    </main>
+    </div>
     
     <div class="nav-spacer"></div>
-
-    <nav class="nav">
-      <a class="btn" href="/">Кейсы</a>
-      <a class="btn" href="/crash.html">Crash 🚀</a>
-      <a class="btn active" href="/profile/">Профиль</a>
-    </nav>
   </div>
+
+  <nav class="nav">
+    <a class="btn" href="/">Кейсы</a>
+    <a class="btn" href="/crash.html">Crash 🚀</a>
+    <a class="btn active" href="/profile/">Профиль</a>
+  </nav>
 
   <script>
     (async () => {
         const tg = window.Telegram.WebApp;
-        tg.ready(); tg.expand();
+        
+        // Fullscreen Init
+        function initApp() {
+            tg.ready();
+            try {
+                if (tg.requestFullscreen) tg.requestFullscreen();
+                else tg.expand();
+            } catch (e) { tg.expand(); }
+            try { tg.setHeaderColor('#0b0d12'); tg.setBackgroundColor('#0b0d12'); } catch (e) {}
+        }
+        initApp();
+        setTimeout(initApp, 100);
 
         const amountEl = document.getElementById('amountInput');
         const payBtn = document.getElementById('payBtn');
@@ -233,13 +223,17 @@
         // Оплата
         payBtn.onclick = async () => {
             const amount = parseInt(amountEl.value);
-            if(!amount || amount < 1) return tg.showAlert('Введите сумму!');
+            if(!amount || amount < 1) {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                return tg.showAlert('Введите сумму!');
+            }
+            
+            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
             
             payBtn.disabled = true;
             payBtn.textContent = '...';
 
             try {
-                // Создаем счет
                 const inv = await fetch('/api/create-stars-invoice', {
                     method:'POST',
                     headers:{'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
@@ -252,14 +246,15 @@
                     return;
                 }
 
-                // Открываем оплату
                 if(tg.openInvoice) {
                     tg.openInvoice(inv.invoice_url, (status) => {
                         if(status === 'paid') {
+                            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                             tg.showAlert(`Успешно! +${amount} ★`);
                             refreshBalance();
                             amountEl.value = '';
                         } else if(status === 'failed') {
+                            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                             tg.showAlert('Оплата не прошла');
                         }
                         resetBtn();
