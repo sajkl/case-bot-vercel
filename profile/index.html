@@ -2,33 +2,58 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Профиль — Lambo Drop</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    /* === ШАПКА И КНОПКА НАЗАД (НОВОЕ) === */
-    .header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 20px;
+    /* === 1. FULLSCREEN INIT === */
+    html { background: #0b0d12; }
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden; 
+      background: #0b0d12;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding-top: calc(env(safe-area-inset-top) + 20px); 
     }
     
+    .page {
+      width: 100%; height: 100%;
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch;
+      max-width: 520px; margin: 0 auto;
+      padding: 0 16px 90px;
+      display: flex; flex-direction: column;
+    }
+
+    :root { --accent: #ffd400; }
+
+    /* === ШАПКА === */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-shrink: 0;
+    }
     .back {
-      background: #000;          /* Черный фон */
-      color: var(--accent);      /* Желтый текст */
-      border: 1px solid #2a2f3d; /* Рамка */
-      text-decoration: none;
-      font-weight: 900;
-      border-radius: 14px;
-      padding: 10px 16px;
-      font-size: 14px;
-      transition: transform 0.1s;
+      background: #000; color: var(--accent); border: 1px solid #2a2f3d;
+      text-decoration: none; font-weight: 900; border-radius: 14px;
+      padding: 10px 16px; font-size: 14px; transition: transform 0.1s;
     }
     .back:active { transform: scale(0.95); }
+
+    .balance { 
+      background: var(--accent); color: #171a1f; 
+      font-weight: 900; border-radius: 999px; 
+      padding: 8px 14px; display: flex; gap: 8px; align-items: center; 
+      text-decoration: none; font-size: 14px;
+    }
+    .balance .star { font-size: 16px; }
 
     /* === ПРОФИЛЬ === */
     .profile-hero {
       display: flex; flex-direction: column; align-items: center;
-      margin-top: 10px; margin-bottom: 24px;
+      margin-top: 10px; margin-bottom: 24px; flex-shrink: 0;
     }
     .avatar {
       width: 88px; height: 88px; border-radius: 50%;
@@ -37,17 +62,13 @@
       box-shadow: 0 0 20px rgba(255,212,0,0.15);
       margin-bottom: 12px;
     }
-    .username {
-      font-size: 20px; font-weight: 900; color: #fff;
-    }
-    .user-id {
-      font-size: 13px; font-weight: 700; color: #777; margin-top: 4px;
-    }
+    .username { font-size: 20px; font-weight: 900; color: #fff; }
+    .user-id { font-size: 13px; font-weight: 700; color: #777; margin-top: 4px; }
 
     /* === ИНВЕНТАРЬ === */
     .inventory-section {
       background: #151921; border-radius: 24px; padding: 16px;
-      border: 1px solid #232838; margin-bottom: 80px;
+      border: 1px solid #232838; margin-bottom: 80px; flex-shrink: 0;
     }
     .section-title {
       font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px;
@@ -59,32 +80,54 @@
     
     .btn-sell-all {
       display: none;
-      background: rgba(255, 77, 77, 0.15);
-      color: #ff4d4d;
-      border: 1px solid #ff4d4d;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 10px; font-weight: 800;
-      cursor: pointer; text-transform: uppercase;
-      transition: transform 0.1s;
+      background: rgba(255, 77, 77, 0.15); color: #ff4d4d;
+      border: 1px solid #ff4d4d; border-radius: 8px;
+      padding: 4px 10px; font-size: 10px; font-weight: 800;
+      cursor: pointer; text-transform: uppercase; transition: transform 0.1s;
     }
     .btn-sell-all:active { transform: scale(0.95); background: rgba(255, 77, 77, 0.3); }
 
     .inv-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;
     }
+    
+    /* КАРТОЧКА ПРЕДМЕТА (Обновленный дизайн) */
     .inv-item {
       background: #0b0d12; border: 1px solid #232838; border-radius: 16px;
-      padding: 10px; text-align: center; cursor: pointer; position: relative;
+      padding: 10px 8px 8px; /* Чуть меньше паддинг снизу, чтобы цена была ближе к краю */
+      text-align: center; cursor: pointer; position: relative;
       transition: transform 0.1s;
+      display: flex; flex-direction: column; align-items: center;
+      overflow: hidden;
     }
     .inv-item:active { transform: scale(0.96); }
     .inv-item.rare { border-color: var(--accent); box-shadow: 0 0 10px rgba(255,212,0,0.1); }
     
     .inv-img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 8px; }
-    .inv-name { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.2; }
-    .inv-price { font-size: 10px; font-weight: 700; color: #777; margin-top: 4px; }
+    .inv-name { 
+        font-size: 11px; font-weight: 700; color: #fff; line-height: 1.2; 
+        margin-bottom: 8px; flex-grow: 1; /* Чтобы толкал цену вниз */
+    }
     
+    /* ЦЕНА (КАК НА СКРИНЕ) */
+    .inv-price-badge {
+        background: #ef4444; /* Красный фон по умолчанию для теста, скрипт поменяет если надо */
+        width: 100%;
+        border-radius: 6px;
+        padding: 4px 0;
+        font-size: 11px; font-weight: 900; 
+        color: #fff;
+        display: flex; align-items: center; justify-content: center; gap: 4px;
+        margin-top: auto; /* Прижимаем к низу */
+    }
+    /* Для обычных предметов делаем серый фон, для редких - можно цветной */
+    .inv-item .inv-price-badge { background: #1d212b; color: #a5abb8; }
+    /* Если редкий - делаем красный или желтый */
+    .inv-item.rare .inv-price-badge { background: #ef4444; color: #fff; } 
+    /* Или просто всегда красный как ты обвел */
+    .inv-item .inv-price-badge.highlight { background: #ef4444; color: #fff; }
+
+
     .empty-state {
       grid-column: 1 / -1; text-align: center; padding: 30px 0; color: #555; font-size: 14px;
     }
@@ -113,14 +156,16 @@
     .btn-sell { background: #2c313f; color: #fff; border: 1px solid #3e4554; }
     .btn-withdraw { background: var(--accent); color: #111; }
     .btn-close { background: transparent; color: #777; margin-top: 8px; font-size: 14px; }
+    
+    .nav-spacer { height: 90px; flex-shrink: 0; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="page">
     <header class="header">
       <a class="back" href="/">← Назад</a>
       <div style="font-weight:900; font-size:20px;">ПРОФИЛЬ</div>
-      <a class="balance" href="/topup/" style="text-decoration:none; color:#171a1f;">
+      <a class="balance" href="/topup/">
          <span class="star">★</span> <span id="balanceValue">...</span>
       </a>
     </header>
@@ -144,12 +189,14 @@
       </div>
     </section>
 
-    <nav class="nav">
-      <a class="btn" href="/">Кейсы</a>
-      <a class="btn" href="/crash.html">Crash 🚀</a>
-      <a class="btn active" href="/profile/">Профиль</a>
-    </nav>
+    <div class="nav-spacer"></div>
   </div>
+
+  <nav class="nav">
+    <a class="btn" href="/">Кейсы</a>
+    <a class="btn" href="/crash.html">Crash 🚀</a>
+    <a class="btn active" href="/profile/">Профиль</a>
+  </nav>
 
   <div class="modal-overlay" id="itemModal">
     <div class="modal-card">
@@ -165,10 +212,20 @@
     </div>
   </div>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     const tg = window.Telegram.WebApp;
-    tg.ready(); tg.expand();
+    
+    // FULLSCREEN INIT
+    function initApp() {
+        tg.ready();
+        try {
+            if (tg.requestFullscreen) tg.requestFullscreen();
+            else tg.expand();
+        } catch (e) { tg.expand(); }
+        try { tg.setHeaderColor('#0b0d12'); tg.setBackgroundColor('#0b0d12'); } catch (e) {}
+    }
+    initApp();
+    setTimeout(initApp, 100);
 
     // Элементы
     const els = {
@@ -232,10 +289,17 @@
             items.forEach(item => {
                const el = document.createElement('div');
                el.className = `inv-item ${item.is_rare ? 'rare' : ''}`;
+               
+               // ЛОГИКА ЦВЕТА ЦЕНЫ
+               // Если редкий - делаем красный фон, если обычный - темный
+               const badgeClass = item.is_rare ? 'inv-price-badge highlight' : 'inv-price-badge';
+
                el.innerHTML = `
                  <img class="inv-img" src="${item.image_url}">
                  <div class="inv-name">${item.name}</div>
-                 <div class="inv-price">${item.stars_cost} ★</div>
+                 <div class="${badgeClass}">
+                    ${item.stars_cost} ★
+                 </div>
                `;
                el.onclick = () => openModal(item);
                els.grid.appendChild(el);
@@ -286,7 +350,7 @@
        document.getElementById('mPrice').textContent = `Цена: ${item.stars_cost} ★`;
        document.getElementById('btnSellModal').textContent = `ПРОДАТЬ (+${item.stars_cost} ★)`;
        els.modal.classList.add('open');
-       tg.HapticFeedback.selectionChanged();
+       if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
     }
 
     function closeModal() {
