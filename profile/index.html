@@ -30,17 +30,27 @@
 
     :root { --accent: #ffd400; }
 
-    /* === ШАПКА === */
+    /* === ШАПКА (КАК В КЕЙСАХ) === */
     .header {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 20px; flex-shrink: 0;
+      padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
+      margin-bottom: 20px;
     }
-    .back {
-      background: #000; color: var(--accent); border: 1px solid #2a2f3d;
-      text-decoration: none; font-weight: 900; border-radius: 14px;
-      padding: 10px 16px; font-size: 14px; transition: transform 0.1s;
+    .header-left { display: flex; align-items: center; gap: 8px; }
+
+    .back-arrow {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      color: #fff; cursor: pointer;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+      transition: background 0.2s;
+      text-decoration: none;
     }
-    .back:active { transform: scale(0.95); }
+    .back-arrow:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
+    .back-arrow svg { width: 20px; height: 20px; fill: currentColor; }
+
+    .logo { height: clamp(30px, 6vw, 36px); }
 
     .balance { 
       background: var(--accent); color: #171a1f; 
@@ -91,10 +101,10 @@
       display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;
     }
     
-    /* КАРТОЧКА ПРЕДМЕТА (Обновленный дизайн) */
+    /* КАРТОЧКА ПРЕДМЕТА */
     .inv-item {
       background: #0b0d12; border: 1px solid #232838; border-radius: 16px;
-      padding: 10px 8px 8px; /* Чуть меньше паддинг снизу, чтобы цена была ближе к краю */
+      padding: 10px 8px 8px;
       text-align: center; cursor: pointer; position: relative;
       transition: transform 0.1s;
       display: flex; flex-direction: column; align-items: center;
@@ -106,26 +116,26 @@
     .inv-img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 8px; }
     .inv-name { 
         font-size: 11px; font-weight: 700; color: #fff; line-height: 1.2; 
-        margin-bottom: 8px; flex-grow: 1; /* Чтобы толкал цену вниз */
+        margin-bottom: 8px; flex-grow: 1; 
     }
     
-    /* ЦЕНА (КАК НА СКРИНЕ) */
+    /* ЦЕНА (ЖЕЛТАЯ) */
     .inv-price-badge {
-        background: #ef4444; /* Красный фон по умолчанию для теста, скрипт поменяет если надо */
+        background: #1d212b; /* Темный фон для обычных */
+        color: var(--accent); /* Желтый текст для обычных */
         width: 100%;
         border-radius: 6px;
         padding: 4px 0;
         font-size: 11px; font-weight: 900; 
-        color: #fff;
         display: flex; align-items: center; justify-content: center; gap: 4px;
-        margin-top: auto; /* Прижимаем к низу */
+        margin-top: auto;
     }
-    /* Для обычных предметов делаем серый фон, для редких - можно цветной */
-    .inv-item .inv-price-badge { background: #1d212b; color: #a5abb8; }
-    /* Если редкий - делаем красный или желтый */
-    .inv-item.rare .inv-price-badge { background: #ef4444; color: #fff; } 
-    /* Или просто всегда красный как ты обвел */
-    .inv-item .inv-price-badge.highlight { background: #ef4444; color: #fff; }
+    /* Если редкий - желтый фон, черный текст */
+    .inv-item.rare .inv-price-badge,
+    .inv-item .inv-price-badge.highlight { 
+        background: var(--accent); 
+        color: #000; 
+    }
 
 
     .empty-state {
@@ -163,10 +173,15 @@
 <body>
   <div class="page">
     <header class="header">
-      <a class="back" href="/">← Назад</a>
-      <div style="font-weight:900; font-size:20px;">ПРОФИЛЬ</div>
+      <div class="header-left">
+        <a href="/" class="back-arrow">
+           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+        <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+      </div>
+      
       <a class="balance" href="/topup/">
-         <span class="star">★</span> <span id="balanceValue">...</span>
+        <span class="star">★</span> <span id="balanceValue">...</span>
       </a>
     </header>
 
@@ -291,7 +306,6 @@
                el.className = `inv-item ${item.is_rare ? 'rare' : ''}`;
                
                // ЛОГИКА ЦВЕТА ЦЕНЫ
-               // Если редкий - делаем красный фон, если обычный - темный
                const badgeClass = item.is_rare ? 'inv-price-badge highlight' : 'inv-price-badge';
 
                el.innerHTML = `
