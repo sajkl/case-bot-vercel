@@ -2,7 +2,7 @@ const { query } = require('../db');
 
 // === НАСТРОЙКИ ===
 const BETTING_TIME_MS = 10000; // 10 секунд на ставки
-const HOUSE_EDGE = 0.27;   
+const HOUSE_EDGE = 0.23;   
 
 // Генератор краша
 // --- НОВАЯ ЛОГИКА ГЕНЕРАЦИИ ---
