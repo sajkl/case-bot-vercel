@@ -201,8 +201,25 @@
                     address: MY_WALLET_ADDRESS,
                     amount: amountNano,
                     payload: payload
-                }]
-            };
+          // 4. Отправляем в кошелек
+        // Если тут зависнет — значит проблема в connectUI или манифесте
+        await tonConnectUI.sendTransaction(transaction);
+        
+        // 5. Если дошли сюда — значит юзер нажал "Подтвердить" в кошельке
+        btn.textContent = "ПРОВЕРКА...";
+        btn.style.background = "#ffd400";
+        startLongPolling();
+
+    } catch (e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.textContent = "ОПЛАТИТЬ TON";
+        
+        // ВАЖНО: Выводим ошибку на экран телефона
+        // Если e.message нет, выводим весь объект
+        tg.showAlert("Ошибка: " + (e.message || JSON.stringify(e)));
+    }
+};
 
             // C. Отправка (ОПТИМИСТИЧНЫЙ ВАРИАНТ)
             // Мы не ждем await, чтобы не виснуть, если сокет отвалится
