@@ -265,16 +265,14 @@
     let particles = [];
     
     function createSmoke(x, y) {
-        // Спавним дым прямо в точке (заднее колесо)
         for(let i=0; i<1; i++) { 
             particles.push({
                 x: x, 
                 y: y,
-                // Летит назад и чуть вниз
-                vx: -3 - Math.random() * 2, 
-                vy: 0.5 + Math.random(),
+                vx: -2 - Math.random() * 2.5, 
+                vy: -0.5 + Math.random(),
                 life: 1.0, 
-                size: 3 + Math.random() * 4
+                size: 2 + Math.random() * 3
             });
         }
     }
@@ -285,13 +283,13 @@
             p.x += p.vx;
             p.y += p.vy;
             p.life -= 0.04; 
-            p.size += 0.2; 
+            p.size += 0.25; 
 
             if (p.life <= 0) {
                 particles.splice(i, 1);
             } else {
                 ctx.globalAlpha = p.life * 0.3;
-                ctx.fillStyle = '#bbb'; 
+                ctx.fillStyle = '#aaa'; 
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
                 ctx.fill();
@@ -309,15 +307,9 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- ГЛАВНАЯ ФУНКЦИЯ РАСЧЕТА КООРДИНАТ КРИВОЙ ---
-    // Возвращает {x, y} для заданного прогресса t (0..1)
+    // --- ФУНКЦИЯ РАСЧЕТА КРИВОЙ (X, Y) ---
     function getPointOnCurve(t) {
-       // "Интересная" кривая: не просто квадрат, а чуть более резкая экспонента
-       // X растет линейно, Y растет с ускорением
-       // Начальная точка: (0, height)
-       // Конечная точка: (width, 0)
-       
-       // Сделаем так: машина едет 10% отступа слева и до 90% ширины
+       // Границы отрисовки
        const startX = width * 0.05;
        const targetX = width * 0.95;
        const startY = height * 0.95;
@@ -325,8 +317,8 @@
 
        const x = startX + (targetX - startX) * t;
        
-       // Easing функция: t^2.2 (дает плавный старт и резкий взлет)
-       const easeT = Math.pow(t, 2.2);
+       // Степень 1.65 (вместо 2.2) делает взлет более ранним и резким
+       const easeT = Math.pow(t, 1.65);
        const y = startY - (startY - targetY) * easeT;
        
        return {x, y};
@@ -350,13 +342,12 @@
           }
           if (mult <= 1.00) return; 
 
-          // 1. Вычисляем текущий прогресс
-          const progress = Math.min(1, Math.log(mult) / 4); // 0.0 -> 1.0
+          const progress = Math.min(1, Math.log(mult) / 4);
 
-          // 2. Рисуем "Интересную" линию (Градиент)
+          // Градиент линии
           const grad = ctx.createLinearGradient(0, height, width, 0);
-          grad.addColorStop(0, "#2ad06c"); // Зеленый внизу
-          grad.addColorStop(1, "#ffd400"); // Желтый вверху
+          grad.addColorStop(0, "#2ad06c"); 
+          grad.addColorStop(1, "#ffd400"); 
 
           ctx.beginPath();
           ctx.lineWidth = 6;
@@ -364,59 +355,51 @@
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
 
-          // Рисуем всю пройденную кривую
           const currentPos = getPointOnCurve(progress);
           const startPos = getPointOnCurve(0);
           
           ctx.moveTo(startPos.x, startPos.y);
           
-          // Разбиваем линию на сегменты для плавности
-          const steps = 50; 
+          // Рисуем линию
+          const steps = 60; 
           for(let i=1; i<=steps * progress; i++) {
               const t = i / steps;
               const p = getPointOnCurve(t);
               ctx.lineTo(p.x, p.y);
           }
-          // Дорисовываем до точного текущего положения
           ctx.lineTo(currentPos.x, currentPos.y);
           ctx.stroke();
 
-          // Тень линии (Glow)
+          // Свечение
           ctx.shadowBlur = 15;
           ctx.shadowColor = "rgba(255, 212, 0, 0.4)";
           ctx.stroke();
-          ctx.shadowBlur = 0; // Сброс
+          ctx.shadowBlur = 0; 
 
           if (serverPhase === 'FLYING') {
-             // 3. Вычисляем УГОЛ МАШИНЫ (Тангенс)
-             // Берем точку немного позади текущей, чтобы узнать наклон линии
+             // 3. Вычисляем УГОЛ (Тангенс)
+             // Берем точку немного назад, чтобы понять текущий наклон
              const prevT = Math.max(0, progress - 0.02);
              const prevPos = getPointOnCurve(prevT);
              
-             // Угол = арктангенс разницы координат
+             // Вычисляем реальный угол между двумя точками
              const angle = Math.atan2(currentPos.y - prevPos.y, currentPos.x - prevPos.x);
 
-             // 4. Дым (спавним в точке currentPos - это "хвост" линии и заднее колесо)
+             // 4. Дым
              createSmoke(currentPos.x, currentPos.y);
              drawSmoke();
 
              // 5. Машина
-             // currentPos - это точка соприкосновения ЗАДНЕГО колеса с линией
+             // Размер (уменьшенный)
              const carW = 48; 
              const carH = 24; 
              
              if (isCarLoaded) {
                  ctx.save();
-                 // Переносим холст в точку на линии
                  ctx.translate(currentPos.x, currentPos.y);
-                 // Поворачиваем холст на угол линии
                  ctx.rotate(angle);
                  
-                 // Рисуем машину. 
-                 // Смещение по X: машина должна быть СПРАВА от точки (ехать вперед).
-                 // Смещение по Y: колеса должны быть на линии (сдвигаем вверх на высоту машины).
-                 // -10px по X: чтобы заднее колесо было примерно в точке (0,0)
-                 // -carH + 3px: точная подгонка высоты
+                 // Сдвиг вправо (-10) и вверх (-carH + 3), чтобы колеса были на линии
                  ctx.drawImage(currentCarImg, -10, -carH + 3, carW, carH);
                  
                  ctx.restore();
