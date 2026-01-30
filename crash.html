@@ -62,7 +62,7 @@
     }
     .balance .star { font-size: 16px; }
 
-    /* === CRASH GAME STYLES === */
+    /* === CRASH STYLES === */
     :root{--green:#2ad06c;--red:#ff4d4d}
 
     .title-area { margin-bottom: 12px; text-align: center; }
@@ -150,7 +150,6 @@
 </head>
 <body>
   <div class="page">
-    
     <header class="header">
       <div class="header-left">
         <a href="/" class="back-arrow">
@@ -158,7 +157,6 @@
         </a>
         <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
       </div>
-      
       <a class="balance" href="/topup/">
         <span class="star">★</span> <span id="bal">...</span>
       </a>
@@ -243,7 +241,7 @@
     let lastSecond = -1;
     let isActionLoading = false;
 
-    // === АВТОМОБИЛИ ===
+    // === АВТОМОБИЛИ (PNG, маленькие буквы) ===
     const CAR_ASSETS = [
         '/assets/cars/lm002.png',
         '/assets/cars/countach.png',
@@ -251,26 +249,44 @@
         '/assets/cars/huracan.png'
     ];
     let currentCarImg = new Image();
-    
-    // Выбираем случайную машину при загрузке
-    function pickRandomCar() {
-        const path = CAR_ASSETS[Math.floor(Math.random() * CAR_ASSETS.length)];
-        currentCarImg.src = path;
-    }
-    pickRandomCar(); // Запускаем выбор
+    let isCarLoaded = false;
 
-    // === СИСТЕМА ДЫМА (Particles) ===
+    function pickRandomCar() {
+        // Рандомная машина
+        const path = CAR_ASSETS[Math.floor(Math.random() * CAR_ASSETS.length)];
+        currentCarImg = new Image();
+        currentCarImg.src = path;
+        
+        currentCarImg.onload = () => { isCarLoaded = true; };
+        // Если ошибка - флаг false, нарисуется точка (чтобы не зависло)
+        currentCarImg.onerror = () => { isCarLoaded = false; console.error('Car img error:', path); };
+    }
+    pickRandomCar(); 
+
+    // === СИСТЕМА ДЫМА ===
     let particles = [];
-    function createSmoke(x, y) {
-        // Создаем несколько частиц
+    
+    // Функция создания дыма в конкретной точке
+    function createSmoke(x, y, angle) {
+        // Смещаем точку спавна дыма НАЗАД относительно машины
+        // angle - это угол, куда смотрит машина. Нам нужен обратный вектор.
+        // Смещение от центра машины к заднему колесу (примерно -25px назад и +8px вниз)
+        const offsetBack = -28; 
+        const offsetDown = 8;
+
+        // Поворачиваем смещение на угол машины
+        const smokeX = x + (Math.cos(angle) * offsetBack) - (Math.sin(angle) * offsetDown);
+        const smokeY = y + (Math.sin(angle) * offsetBack) + (Math.cos(angle) * offsetDown);
+
         for(let i=0; i<2; i++) {
             particles.push({
-                x: x,
-                y: y + 10, // Чуть ниже центра
-                vx: -2 - Math.random() * 2, // Летит назад
-                vy: -1 + Math.random() * 2, // Немного вверх/вниз
-                life: 1.0, // Жизнь от 1 до 0
-                size: 5 + Math.random() * 5
+                x: smokeX, 
+                y: smokeY,
+                // Скорость дыма: летит назад и чуть вниз
+                vx: (Math.cos(angle + Math.PI) * (2 + Math.random()*2)), 
+                vy: (Math.sin(angle + Math.PI) * (1 + Math.random())) + 0.5,
+                life: 1.0, 
+                size: 3 + Math.random() * 4
             });
         }
     }
@@ -280,14 +296,14 @@
             let p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
-            p.life -= 0.03; // Угасание
-            p.size += 0.3; // Растет
+            p.life -= 0.05; // Быстро исчезает
+            p.size += 0.3;  // Растет
 
             if (p.life <= 0) {
                 particles.splice(i, 1);
             } else {
-                ctx.globalAlpha = p.life * 0.4; // Полупрозрачный
-                ctx.fillStyle = '#888';
+                ctx.globalAlpha = p.life * 0.4;
+                ctx.fillStyle = '#bbb'; 
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
                 ctx.fill();
@@ -306,66 +322,74 @@
     window.addEventListener('resize', resize); resize();
 
     function drawGraph(mult) {
-      ctx.clearRect(0, 0, width, height);
-      
-      // Сетка
-      ctx.strokeStyle = '#232838'; ctx.lineWidth = 1; ctx.beginPath();
-      for(let i=1; i<5; i++) {
-        const y = height - (i * height / 5);
-        ctx.moveTo(0, y); ctx.lineTo(width, y);
-      }
-      ctx.stroke();
+      try {
+          ctx.clearRect(0, 0, width, height);
+          
+          // Сетка
+          ctx.strokeStyle = '#232838'; ctx.lineWidth = 1; ctx.beginPath();
+          for(let i=1; i<5; i++) {
+            const y = height - (i * height / 5);
+            ctx.moveTo(0, y); ctx.lineTo(width, y);
+          }
+          ctx.stroke();
 
-      if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') {
-          // Очищаем дым если игра не идет
-          particles = [];
-          return;
-      }
-      if (mult <= 1.00) return; 
+          if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') {
+              particles = [];
+              return;
+          }
+          if (mult <= 1.00) return; 
 
-      // Линия графика
-      ctx.beginPath();
-      ctx.lineWidth = 4;
-      
-      if(mult < 2.0) ctx.strokeStyle = '#fff';
-      else if(mult < 5.0) ctx.strokeStyle = '#2ad06c'; 
-      else ctx.strokeStyle = '#ffd400'; 
+          // Линия
+          ctx.beginPath();
+          ctx.lineWidth = 4;
+          
+          if(mult < 2.0) ctx.strokeStyle = '#fff';
+          else if(mult < 5.0) ctx.strokeStyle = '#2ad06c'; 
+          else ctx.strokeStyle = '#ffd400'; 
 
-      // Кривая Безье
-      const progress = Math.min(1, Math.log(mult) / 4);
-      const endX = width * 0.1 + (width * 0.8 * progress);
-      const endY = height * 0.9 - (height * 0.8 * progress);
+          // Вычисляем координаты конца линии
+          const progress = Math.min(1, Math.log(mult) / 4);
+          const endX = width * 0.1 + (width * 0.8 * progress);
+          const endY = height * 0.9 - (height * 0.8 * progress);
 
-      ctx.moveTo(0, height);
-      ctx.quadraticCurveTo(width * 0.1, height, endX, endY);
-      ctx.stroke();
+          // Рисуем кривую
+          ctx.moveTo(0, height);
+          ctx.quadraticCurveTo(width * 0.1, height, endX, endY);
+          ctx.stroke();
 
-      if (serverPhase === 'FLYING') {
-         // Рисуем дым
-         createSmoke(endX, endY);
-         drawSmoke();
+          if (serverPhase === 'FLYING') {
+             // 1. Вычисляем угол наклона машины (Касательная)
+             // Вектор от контрольной точки кривой (width*0.1, height) к текущей точке
+             // Это дает очень плавный и естественный угол для такого графика
+             const controlX = width * 0.1;
+             const controlY = height;
+             const angle = Math.atan2(endY - controlY, endX - controlX);
 
-         // Рисуем машинку
-         // Сохраняем контекст для поворота (опционально, если машина должна наклоняться)
-         ctx.save();
-         ctx.translate(endX, endY);
-         
-         // Вычисляем угол наклона (касательная)
-         // Упрощенно: чем выше летим, тем больше наклон (до 45 градусов)
-         const angle = -Math.min(Math.PI / 4, progress * Math.PI / 2);
-         ctx.rotate(angle);
+             // 2. Рисуем дым (сзади машины)
+             createSmoke(endX, endY, angle);
+             drawSmoke();
 
-         // Рисуем картинку (центр машинки в точке графика)
-         const carW = 60; // Ширина машинки
-         const carH = 30; // Высота машинки
-         if (currentCarImg.complete) {
-             ctx.drawImage(currentCarImg, -carW/2, -carH/2, carW, carH);
-         } else {
-             // Фолбек (белая точка, если картинка не загрузилась)
-             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
-         }
-         
-         ctx.restore();
+             // 3. Рисуем машину
+             const carW = 70; // Чуть побольше машинка
+             const carH = 35; 
+             
+             if (isCarLoaded) {
+                 ctx.save();
+                 // Перемещаем "холст" в точку конца линии
+                 ctx.translate(endX, endY);
+                 // Поворачиваем
+                 ctx.rotate(angle);
+                 // Рисуем машину так, чтобы центр низа был на линии
+                 // (смещаем по Y вверх на половину высоты машины + небольшой зазор)
+                 ctx.drawImage(currentCarImg, -carW/2, -carH + 5, carW, carH);
+                 ctx.restore();
+             } else {
+                 // Если картинка не загрузилась - рисуем точку, чтобы не крашнулось
+                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI*2); ctx.fill();
+             }
+          }
+      } catch (e) {
+          console.error("Render error:", e);
       }
     }
 
@@ -408,8 +432,7 @@
            counterEl.style.color = 'var(--accent)'; 
            statusEl.textContent = "ПРИЕМ СТАВОК";
            ctx.clearRect(0, 0, width, height); 
-           particles = []; // Сброс дыма
-           // Можно тут менять машину на каждый раунд
+           particles = [];
            if(timeLeft === 5) pickRandomCar(); 
         }
       } 
