@@ -4,10 +4,10 @@ const crypto = require('crypto');
 
 // === НАСТРОЙКИ ===
 const CASE_PRICES = {
-  'jiga': 209,
-  'camry': 629,
-  'bmw': 1499,
-  'lambo': 3899
+  'jiga': 270,
+  'camry': 620,
+  'bmw': 1750,
+  'lambo': 4900
 };
 
 // [FIX] СПИСОК КЕЙСОВ С ГАРАНТОМ
