@@ -2,6 +2,6 @@
   "url": "https://lambodrop.vercel.app",
   "name": "Lambo Drop",
   "iconUrl": "https://lambodrop.vercel.app/assets/logo.png",
-  "termsOfUseUrl": "https://telegram.org/tos/mini-apps",
-  "privacyPolicyUrl": "https://telegram.org/privacy-tpa/ru"
+ "termsOfUseUrl": "https://case-bot-vercel.vercel.app/terms.txt",
+  "privacyPolicyUrl": "https://case-bot-vercel.vercel.app/privacy.txt"
 }
