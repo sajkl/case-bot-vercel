@@ -1,12 +1,235 @@
-<script>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Пополнение баланса</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+  <script src="https://unpkg.com/tonweb@0.0.66/dist/tonweb.js"></script>
+  
+  <style>
+    /* === 1. FULLSCREEN INIT === */
+    html { background: #0b0d12; }
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden; 
+      background: #0b0d12;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding-top: calc(env(safe-area-inset-top) + 20px); 
+      display: flex; flex-direction: column;
+    }
+    
+    .page {
+      width: 100%; height: 100%;
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch;
+      max-width: 520px; margin: 0 auto;
+      padding: 0 16px 90px;
+      display: flex; flex-direction: column;
+    }
+
+    :root {
+        --bg: #0b0d12; --card: #151921; --text: #fff;
+        --accent: #ffd400; --border: #232838; --ton-blue: #0098ea;
+    }
+
+    /* === ШАПКА === */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
+      margin-bottom: 10px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    
+    .back-arrow {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      color: #fff; cursor: pointer;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%; text-decoration: none;
+    }
+    .logo { height: clamp(30px, 6vw, 36px); }
+    .balance { 
+      background: var(--accent); color: #171a1f; 
+      font-weight: 900; border-radius: 999px; 
+      padding: 8px 14px; display: flex; gap: 8px; align-items: center; 
+      text-decoration: none; font-size: 14px;
+    }
+    .balance .star { font-size: 16px; }
+
+    /* === ГЕРОЙ === */
+    .content-wrapper { flex: 1; display: flex; flex-direction: column; padding-bottom: 20px; }
+
+    .topup-hero { display: flex; flex-direction: column; align-items: center; margin: 10px 0 20px; }
+    .big-icon {
+        width: 120px; height: 120px; object-fit: contain;
+        filter: drop-shadow(0 0 30px rgba(255, 212, 0, 0.2));
+        margin-bottom: 10px;
+        animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    
+    .topup-title h1 { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; text-align: center; }
+    .topup-title span { color: #777; font-size: 13px; display: block; text-align: center; margin-top: 4px; }
+
+    /* === ТАБЫ (Stars / TON) === */
+    .tabs {
+        display: flex; background: #11141b; border-radius: 16px; padding: 4px;
+        margin-bottom: 20px; border: 1px solid var(--border);
+    }
+    .tab {
+        flex: 1; text-align: center; padding: 10px; border-radius: 12px;
+        font-weight: 800; font-size: 14px; color: #777; cursor: pointer;
+        transition: 0.2s;
+    }
+    .tab.active { background: #2c313f; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .tab.active.ton-tab { background: rgba(0, 152, 234, 0.15); color: var(--ton-blue); }
+
+    /* === КАРТОЧКА === */
+    .pay-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 24px; padding: 24px; position: relative;
+        overflow: hidden;
+    }
+    .input-label { font-size: 12px; color: #777; margin-bottom: 10px; display: block; font-weight: 700; text-transform: uppercase; }
+    
+    .input-wrapper { position: relative; margin-bottom: 20px; }
+    .input-icon {
+        position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+        color: var(--accent); font-size: 20px; pointer-events: none; font-weight: 900;
+    }
+    .ton-icon { color: var(--ton-blue); }
+
+    .amount-input {
+        width: 100%; background: #0b0d12; border: 1px solid #2a2f3d;
+        border-radius: 16px; color: #fff; font-size: 28px; font-weight: 800;
+        padding: 18px 16px 18px 45px; outline: none; transition: border-color 0.2s;
+    }
+    .amount-input:focus { border-color: var(--accent); }
+    .amount-input.ton-mode:focus { border-color: var(--ton-blue); }
+
+    .calc-info {
+        display: flex; justify-content: space-between; font-size: 13px; font-weight: 700;
+        color: #777; margin-bottom: 20px; padding: 0 4px;
+    }
+    .calc-val { color: #fff; }
+    .ton-bonus { color: #2ad06c; font-weight: 800; }
+
+    /* КНОПКИ */
+    .btn-pay {
+        width: 100%; background: var(--accent); color: #000; border: none;
+        padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 900;
+        text-transform: uppercase; cursor: pointer; transition: transform 0.1s;
+    }
+    .btn-pay:active { transform: scale(0.97); }
+    
+    .btn-ton {
+        background: var(--ton-blue); color: #fff; 
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-ton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* TON CONNECT CONTAINER */
+    #ton-connect-ui { display: flex; justify-content: center; margin-bottom: 15px; }
+
+    .nav-spacer { height: 90px; flex-shrink: 0; }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <header class="header">
+      <div class="header-left">
+        <a href="/profile/" class="back-arrow">
+           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+        <img class="logo" src="/assets/logo.png" alt="LAMBO DROP">
+      </div>
+      <a class="balance" href="/topup/">
+        <span class="star">★</span> <span id="balanceValue">...</span>
+      </a>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="topup-hero">
+            <img class="big-icon" src="/assets/topup.png" onerror="this.src='/assets/logo.png'">
+            <div class="topup-title">
+                <h1>Пополнение</h1>
+                <span>Выбери способ оплаты</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('stars')">Telegram Stars</div>
+            <div class="tab ton-tab" onclick="switchTab('ton')">TON (Crypto)</div>
+        </div>
+
+        <div id="starsForm" class="pay-card">
+            <label class="input-label">Количество звезд</label>
+            <div class="input-wrapper">
+                <span class="input-icon">★</span>
+                <input id="starsInput" class="amount-input" type="number" value="50" min="1" placeholder="0">
+            </div>
+            <button id="payStarsBtn" class="btn-pay">Купить Звезды</button>
+            <div style="text-align:center; color:#555; font-size:11px; margin-top:16px;">
+                Оплата картой через Telegram
+            </div>
+        </div>
+
+        <div id="tonForm" class="pay-card hidden">
+            <div id="ton-connect-ui"></div>
+
+            <div id="tonInputs" class="hidden">
+                <label class="input-label">Сумма в TON</label>
+                <div class="input-wrapper">
+                    <span class="input-icon ton-icon">💎</span>
+                    <input id="tonInput" class="amount-input ton-mode" type="number" value="1" min="0.1" step="0.1" placeholder="0">
+                </div>
+
+                <div class="calc-info">
+                    <span class="ton-bonus">⚡️ +10% к балансу</span>
+                    <span>Получишь: <span id="calcStars" class="calc-val">110</span> ★</span>
+                </div>
+
+                <button id="payTonBtn" class="btn-pay btn-ton">
+                    ОПЛАТИТЬ TON
+                </button>
+                <div style="text-align:center; color:#555; font-size:11px; margin-top:16px;">
+                    Транзакция через Tonkeeper / Wallet
+                </div>
+            </div>
+            
+            <div id="connectHint" style="text-align:center; color:#777; font-size:13px;">
+                Подключи кошелек, чтобы оплатить
+            </div>
+        </div>
+
+    </div>
+    
+    <div class="nav-spacer"></div>
+  </div>
+
+  <nav class="nav">
+    <a class="btn" href="/">Кейсы</a>
+    <a class="btn" href="/crash.html">Crash 🚀</a>
+    <a class="btn active" href="/profile/">Профиль</a>
+  </nav>
+
+  <script>
     const tg = window.Telegram.WebApp;
     
-    // === НАСТРОЙКИ ===
-    // Вставь сюда СВОЙ кошелек!
+    // === НАСТРОЙКИ КОШЕЛЬКА ===
     const MY_WALLET_ADDRESS = "UQAWibvuLtk2ftlol9ep9YbL_fK1sKeV3HMFObsVfpHIo86W"; 
-    const TON_RATE = 110; 
+      const APP_BOT_LINK = "https://t.me/LamboLuckBot/app";
+    const TON_RATE = 110; // Курс для расчетов остался, но скрыт из UI
 
-    // Init
+    // Init App
     function initApp() {
         tg.ready();
         try { tg.expand(); } catch (e) {}
@@ -18,146 +241,24 @@
     const starsForm = document.getElementById('starsForm');
     const tonForm = document.getElementById('tonForm');
     const tabs = document.querySelectorAll('.tab');
-    const tonInp = document.getElementById('tonInput');
-    const calcVal = document.getElementById('calcStars');
-
-    // === TON CONNECT ===
+    
+    // === TON CONNECT SETUP ===
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-        manifestUrl: window.location.origin + '/tonconnect-manifest.json',
+        manifestUrl: 'https://lambodrop.vercel.app/tonconnect-manifest.json',
         buttonRootId: 'ton-connect-ui'
     });
 
     tonConnectUI.onStatusChange(wallet => {
-        const tonInputs = document.getElementById('tonInputs');
-        const connectHint = document.getElementById('connectHint');
         if (wallet) {
-            tonInputs.classList.remove('hidden');
-            connectHint.classList.add('hidden');
+            document.getElementById('tonInputs').classList.remove('hidden');
+            document.getElementById('connectHint').classList.add('hidden');
         } else {
-            tonInputs.classList.add('hidden');
-            connectHint.classList.remove('hidden');
+            document.getElementById('tonInputs').classList.add('hidden');
+            document.getElementById('connectHint').classList.remove('hidden');
         }
     });
 
-    // === ЛОГИКА ОПЛАТЫ TON (ИСПРАВЛЕННАЯ) ===
-    let checkInterval = null;
-
-    document.getElementById('payTonBtn').onclick = async () => {
-        const amount = parseFloat(tonInp.value);
-        if(!amount || amount < 0.1) return tg.showAlert("Минимум 0.1 TON");
-
-        const btn = document.getElementById('payTonBtn');
-        
-        try {
-            // 1. Готовим Payload
-            const userId = tg.initDataUnsafe?.user?.id || '0';
-            const comment = `user_${userId}`;
-            
-            const tonweb = new TonWeb();
-            const cell = new TonWeb.boc.Cell();
-            cell.bits.writeUint(0, 32); 
-            cell.bits.writeString(comment);
-            const payload = TonWeb.utils.bytesToBase64(await cell.toBoc());
-
-            // 2. Готовим транзакцию
-            const amountNano = Math.floor(amount * 1000000000).toString();
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 1200, // 20 минут валидности
-                messages: [{
-                    address: MY_WALLET_ADDRESS,
-                    amount: amountNano,
-                    payload: payload
-                }]
-            };
-
-            // 3. Блокируем кнопку
-            btn.disabled = true;
-            btn.textContent = "ОТКРЫВАЕМ КОШЕЛЕК...";
-
-            // 4. ЗАПУСК ОТПРАВКИ (Без await, чтобы не блочить наш UI)
-            const sendPromise = tonConnectUI.sendTransaction(transaction);
-
-            // 5. ФОРСИРОВАННЫЙ ПЕРЕХОД В РЕЖИМ ПРОВЕРКИ
-            // Если через 4 секунды TonConnect не вернул ошибку/успех, 
-            // мы считаем, что юзер ушел в кошелек, и меняем интерфейс.
-            setTimeout(() => {
-                btn.textContent = "ПРОВЕРЯЕМ ОПЛАТУ... ⏳";
-                btn.style.background = "#ffd400"; // Желтый цвет ожидания
-                btn.style.color = "#000";
-                
-                // Запускаем долгую проверку
-                startLongPolling();
-            }, 4000);
-
-            // Обработка ответа от кошелька (если он придет)
-            sendPromise.then(() => {
-                // Если кошелек быстро ответил "ОК"
-                tg.showAlert("Транзакция подписана! Ждем блокчейн...");
-            }).catch((e) => {
-                // Если юзер нажал "Отмена" в кошельке или ошибка
-                console.warn(e);
-                // Но мы не отменяем проверку сразу, вдруг он все-таки отправил?
-                // (Оставляем проверку работать в фоне, но кнопку можно разблокировать через время)
-            });
-
-        } catch (e) {
-            console.error(e);
-            tg.showAlert("Ошибка подготовки");
-            btn.disabled = false;
-            btn.textContent = "ОПЛАТИТЬ TON";
-        }
-    };
-
-    function startLongPolling() {
-        if (checkInterval) clearInterval(checkInterval);
-        
-        let attempts = 0;
-        const maxAttempts = 60; // 60 раз * 5 сек = 5 минут ожидания
-
-        checkInterval = setInterval(async () => {
-            attempts++;
-            
-            // Если прошло 5 минут и ничего нет
-            if (attempts > maxAttempts) {
-                clearInterval(checkInterval);
-                tg.showAlert("Время вышло. Если списались деньги — напиши в поддержку.");
-                
-                const btn = document.getElementById('payTonBtn');
-                btn.disabled = false;
-                btn.textContent = "Я ОПЛАТИЛ (ПРОВЕРИТЬ ЕЩЕ)";
-                btn.style.background = "";
-                btn.style.color = "";
-                return;
-            }
-
-            try {
-                // Стучимся на сервер
-                const res = await fetch('/api/bot', { 
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
-                    body: JSON.stringify({ action: 'check_ton' }) 
-                }).then(r => r.json());
-
-                if (res.success) {
-                    clearInterval(checkInterval);
-                    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    
-                    tg.showAlert(`УСПЕХ! +${res.addedStars} звезд!`);
-                    refreshBalance();
-                    
-                    const btn = document.getElementById('payTonBtn');
-                    btn.textContent = "УСПЕХ ✅";
-                    btn.style.background = "#2ad06c";
-                    btn.style.color = "#fff";
-                    btn.disabled = true;
-                }
-            } catch(e) { 
-                console.error("Check error", e); 
-            }
-        }, 5000); // Каждые 5 секунд
-    }
-
-    // === ОСТАЛЬНОЙ JS (Табы, Stars и т.д.) ===
+    // === TABS ===
     window.switchTab = (mode) => {
         if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         if (mode === 'stars') {
@@ -173,19 +274,106 @@
         }
     };
 
+    // === CALCULATOR ===
+    const tonInp = document.getElementById('tonInput');
+    const calcVal = document.getElementById('calcStars');
+    
     tonInp.addEventListener('input', () => {
         const val = parseFloat(tonInp.value) || 0;
         calcVal.textContent = Math.floor(val * TON_RATE);
     });
 
+    // === PAYMENT: TON (С проверкой) ===
+    document.getElementById('payTonBtn').onclick = async () => {
+        const amount = parseFloat(tonInp.value);
+        if(!amount || amount < 0.1) return tg.showAlert("Минимум 0.1 TON");
+
+        const btn = document.getElementById('payTonBtn');
+        btn.disabled = true;
+        btn.textContent = "ПОДПИСАНИЕ...";
+
+        try {
+            // 1. Формируем Payload с ID юзера
+            const userId = tg.initDataUnsafe?.user?.id || '0';
+            const comment = `user_${userId}`;
+
+            const tonweb = new TonWeb();
+            const cell = new TonWeb.boc.Cell();
+            cell.bits.writeUint(0, 32); 
+            cell.bits.writeString(comment);
+            const payload = TonWeb.utils.bytesToBase64(await cell.toBoc());
+
+            // 2. Создаем транзакцию
+            const amountNano = Math.floor(amount * 1000000000).toString();
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 600,
+                messages: [{
+                    address: MY_WALLET_ADDRESS,
+                    amount: amountNano,
+                    payload: payload
+                }]
+            };
+
+            // 3. Отправляем
+            await tonConnectUI.sendTransaction(transaction);
+            
+            btn.textContent = "ПРОВЕРКА...";
+            btn.style.background = "#ffd400";
+            btn.style.color = "#000";
+            tg.showAlert(`Отправлено! Проверяем поступление...`);
+
+            // 4. Запускаем цикл проверки
+            checkPaymentLoop();
+
+        } catch (e) {
+            console.error(e);
+            tg.showAlert("Отмена оплаты");
+            btn.disabled = false;
+            btn.textContent = "ОПЛАТИТЬ TON";
+            btn.style.background = "";
+        }
+    };
+
+    function checkPaymentLoop() {
+        let attempts = 0;
+        const interval = setInterval(async () => {
+            attempts++;
+            if(attempts > 30) { // Ждем 2.5 минуты
+                clearInterval(interval);
+                tg.showAlert("Пока не видим оплату. Проверь баланс позже.");
+                return;
+            }
+
+            try {
+                // Стучимся в наш единый эндпоинт
+                const res = await fetch('/api/bot', { 
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
+                    body: JSON.stringify({ action: 'check_ton' }) 
+                }).then(r => r.json());
+
+                if (res.success) {
+                    clearInterval(interval);
+                    tg.showAlert(`УСПЕХ! +${res.addedStars} звезд!`);
+                    refreshBalance();
+                    document.getElementById('payTonBtn').textContent = "УСПЕХ ✅";
+                    document.getElementById('payTonBtn').style.background = "#2ad06c";
+                }
+            } catch(e) {}
+        }, 5000);
+    }
+
+    // === PAYMENT: STARS ===
     document.getElementById('payStarsBtn').onclick = async () => {
         const inp = document.getElementById('starsInput');
         const btn = document.getElementById('payStarsBtn');
         const amount = parseInt(inp.value);
+        
         if(!amount || amount < 1) return tg.showAlert('Введите сумму!');
         
         btn.disabled = true;
         btn.textContent = '...';
+
         try {
             const inv = await fetch('/api/create-stars-invoice', {
                 method:'POST',
@@ -208,13 +396,18 @@
                 btn.disabled = false;
             }
         } catch(e) {
+            tg.showAlert('Ошибка');
             btn.disabled = false;
             btn.textContent = 'Купить Звезды';
         }
     };
 
+    // Баланс
     async function refreshBalance() {
         fetch('/api/profile', {headers:{'X-Telegram-Data':tg.initData}}).then(r=>r.json()).then(d=>{if(d.stars!==undefined) balEl.textContent=d.stars});
     }
     refreshBalance();
-</script>
+
+  </script>
+</body>
+</html>
