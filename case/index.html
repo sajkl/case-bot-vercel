@@ -465,7 +465,7 @@ grid.addEventListener('click', async (e)=>{
   }
 });
 
-// === ЛОГИКА РУЛЕТКИ (ИСПРАВЛЕНА МАТЕМАТИКА) ===
+// === ЛОГИКА РУЛЕТКИ (ИСПРАВЛЕНА МАТЕМАТИКА И ПУТИ КАРТИНОК) ===
 const overlay = qs('#overlay');
 const track = qs('#rouletteTrack');
 const cardResult = qs('#cardResult');
@@ -490,9 +490,10 @@ function startRoulette(winner) {
        } else {
            item = pool[Math.floor(Math.random() * pool.length)];
        }
+       // ИСПРАВЛЕНИЕ ЗДЕСЬ: используем item.image ИЛИ item.image_url
        html += `
          <div class="roulette-item ${item.is_rare?'rare':''}">
-            <img src="${item.image_url}" onerror="this.src='/assets/logo.png'">
+            <img src="${item.image || item.image_url}" onerror="this.src='/assets/logo.png'">
             <div class="name">${item.name || item.title}</div>
          </div>
        `;
