@@ -8,20 +8,18 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <style>
-    /* === 1. FULLSCREEN INIT (Как в Кейсах) === */
+    /* === 1. FULLSCREEN INIT === */
     html { background: #0b0d12; }
     body {
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
-      overflow: hidden; /* Блокируем скролл страницы */
+      overflow: hidden; 
       background: #0b0d12;
       color: #f7f8fb;
       font-family: system-ui, -apple-system, "Futura PT", sans-serif;
-      /* Отступ сверху под челку + шапку */
-      padding-top: calc(env(safe-area-inset-top) - 23px); 
+      padding-top: calc(env(safe-area-inset-top) + 20px); 
     }
 
-    /* Контейнер скролла */
     .page {
       width: 100%; height: 100%;
       overflow-y: auto; 
@@ -31,7 +29,10 @@
       display: flex; flex-direction: column;
     }
 
-    /* === 2. ШАПКА (1-в-1 как в Кейсах) === */
+    :root{--bg:#0b0d12;--text:#f7f8fb;--accent:#ffd400}
+    *{box-sizing:border-box}
+
+    /* === HEADER === */
     .header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 0; z-index: 2; position: relative; flex-shrink: 0;
@@ -61,14 +62,12 @@
     }
     .balance .star { font-size: 16px; }
 
-    /* === 3. СТИЛИ CRASH === */
-    :root{--green:#2ad06c;--red:#ff4d4d;--accent:#ffd400}
+    /* === CRASH GAME STYLES === */
+    :root{--green:#2ad06c;--red:#ff4d4d}
 
-    /* Заголовок игры */
     .title-area { margin-bottom: 12px; text-align: center; }
     .h1 { font-weight:900; font-size:32px; margin:0; line-height: 1; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* История */
     .history-bar {
       display: flex; gap: 6px; padding-bottom: 12px;
       overflow-x: auto; scrollbar-width: none;
@@ -82,7 +81,6 @@
     .hist-pill.high { color: var(--green); background: rgba(42, 208, 108, 0.15); }
     .hist-pill.low { color: var(--red); background: rgba(255, 77, 77, 0.15); }
 
-    /* Игровая зона */
     .crash-area {
       position: relative; height: 260px; width: 100%;
       background: #171b24; border-radius: 24px; border: 1px solid #232838;
@@ -90,7 +88,7 @@
       margin-bottom: 16px; flex-shrink: 0;
     }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
-    .crash-info { position: relative; z-index: 2; text-align: center; }
+    .crash-info { position: relative; z-index: 2; text-align: center; pointer-events: none; }
     
     .crash-counter {
       font-size: 64px; font-weight: 900; color: #fff;
@@ -100,13 +98,11 @@
     .crash-status { font-size: 14px; font-weight: 700; color: #777; letter-spacing: 1px; margin-top: -5px; }
     .crash-counter.crashed { color: var(--red) !important; animation: shake 0.4s; }
 
-    /* Анимации */
     .countdown-num { font-size: 80px; font-weight: 900; color: var(--accent); opacity: 0; transform: scale(0.5); }
     .countdown-num.pop { animation: popIn 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     @keyframes popIn { 0% { opacity:0;transform:scale(0.5) } 20% { opacity:1;transform:scale(1.1) } 100% { opacity:0;transform:scale(1.2) } }
     @keyframes shake { 0%,100% {transform:translate(0,0)} 25% {transform:translate(-2px,2px)} 75% {transform:translate(2px,-2px)} }
 
-    /* Контроллеры */
     .controls {
       background: #1d212b; padding: 16px; border-radius: 24px; border: 1px solid #2a2f3d;
       margin-bottom: 20px; flex-shrink: 0;
@@ -136,7 +132,6 @@
     .btn-cashout { background: #ff9f00; color: #111; box-shadow: 0 0 20px rgba(255, 159, 0, 0.4); }
     .btn-wait { background: #2c313f; color: #777; }
 
-    /* Список игроков */
     .bets-list { flex-shrink: 0; }
     .bets-header { display: flex; justify-content: space-between; color: #777; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
     .player-row {
@@ -248,6 +243,59 @@
     let lastSecond = -1;
     let isActionLoading = false;
 
+    // === АВТОМОБИЛИ ===
+    const CAR_ASSETS = [
+        '/assets/cars/lm002.png',
+        '/assets/cars/countach.png',
+        '/assets/cars/urus.png',
+        '/assets/cars/huracan.png'
+    ];
+    let currentCarImg = new Image();
+    
+    // Выбираем случайную машину при загрузке
+    function pickRandomCar() {
+        const path = CAR_ASSETS[Math.floor(Math.random() * CAR_ASSETS.length)];
+        currentCarImg.src = path;
+    }
+    pickRandomCar(); // Запускаем выбор
+
+    // === СИСТЕМА ДЫМА (Particles) ===
+    let particles = [];
+    function createSmoke(x, y) {
+        // Создаем несколько частиц
+        for(let i=0; i<2; i++) {
+            particles.push({
+                x: x,
+                y: y + 10, // Чуть ниже центра
+                vx: -2 - Math.random() * 2, // Летит назад
+                vy: -1 + Math.random() * 2, // Немного вверх/вниз
+                life: 1.0, // Жизнь от 1 до 0
+                size: 5 + Math.random() * 5
+            });
+        }
+    }
+
+    function drawSmoke() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.03; // Угасание
+            p.size += 0.3; // Растет
+
+            if (p.life <= 0) {
+                particles.splice(i, 1);
+            } else {
+                ctx.globalAlpha = p.life * 0.4; // Полупрозрачный
+                ctx.fillStyle = '#888';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+    }
+
     // === ГРАФИКА ===
     function resize() {
       width = canvas.parentElement.clientWidth;
@@ -260,6 +308,7 @@
     function drawGraph(mult) {
       ctx.clearRect(0, 0, width, height);
       
+      // Сетка
       ctx.strokeStyle = '#232838'; ctx.lineWidth = 1; ctx.beginPath();
       for(let i=1; i<5; i++) {
         const y = height - (i * height / 5);
@@ -267,16 +316,22 @@
       }
       ctx.stroke();
 
-      if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') return;
+      if (serverPhase !== 'FLYING' && serverPhase !== 'CRASHED') {
+          // Очищаем дым если игра не идет
+          particles = [];
+          return;
+      }
       if (mult <= 1.00) return; 
 
+      // Линия графика
       ctx.beginPath();
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 4;
       
       if(mult < 2.0) ctx.strokeStyle = '#fff';
       else if(mult < 5.0) ctx.strokeStyle = '#2ad06c'; 
       else ctx.strokeStyle = '#ffd400'; 
 
+      // Кривая Безье
       const progress = Math.min(1, Math.log(mult) / 4);
       const endX = width * 0.1 + (width * 0.8 * progress);
       const endY = height * 0.9 - (height * 0.8 * progress);
@@ -286,7 +341,31 @@
       ctx.stroke();
 
       if (serverPhase === 'FLYING') {
-         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI*2); ctx.fill();
+         // Рисуем дым
+         createSmoke(endX, endY);
+         drawSmoke();
+
+         // Рисуем машинку
+         // Сохраняем контекст для поворота (опционально, если машина должна наклоняться)
+         ctx.save();
+         ctx.translate(endX, endY);
+         
+         // Вычисляем угол наклона (касательная)
+         // Упрощенно: чем выше летим, тем больше наклон (до 45 градусов)
+         const angle = -Math.min(Math.PI / 4, progress * Math.PI / 2);
+         ctx.rotate(angle);
+
+         // Рисуем картинку (центр машинки в точке графика)
+         const carW = 60; // Ширина машинки
+         const carH = 30; // Высота машинки
+         if (currentCarImg.complete) {
+             ctx.drawImage(currentCarImg, -carW/2, -carH/2, carW, carH);
+         } else {
+             // Фолбек (белая точка, если картинка не загрузилась)
+             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
+         }
+         
+         ctx.restore();
       }
     }
 
@@ -329,6 +408,9 @@
            counterEl.style.color = 'var(--accent)'; 
            statusEl.textContent = "ПРИЕМ СТАВОК";
            ctx.clearRect(0, 0, width, height); 
+           particles = []; // Сброс дыма
+           // Можно тут менять машину на каждый раунд
+           if(timeLeft === 5) pickRandomCar(); 
         }
       } 
       else if (serverPhase === 'FLYING') {
@@ -408,7 +490,7 @@
       if(historyBar.children.length > 20) historyBar.lastChild.remove();
     }
 
-function updateBtn() {
+    function updateBtn() {
       if (isActionLoading) return; 
 
       if (serverPhase === 'BETTING') {
@@ -446,7 +528,7 @@ function updateBtn() {
       }
     }
 
- async function doBet() {
+    async function doBet() {
       if (isActionLoading) return;
       const amount = +document.getElementById('betAmount').value;
       if (!amount) return;
