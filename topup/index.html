@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+  <script src="https://unpkg.com/tonweb@0.0.66/dist/tonweb.js"></script>
   
   <style>
     /* === 1. FULLSCREEN INIT === */
@@ -116,6 +117,7 @@
         color: #777; margin-bottom: 20px; padding: 0 4px;
     }
     .calc-val { color: #fff; }
+    .ton-bonus { color: #2ad06c; font-weight: 800; }
 
     /* КНОПКИ */
     .btn-pay {
@@ -191,7 +193,7 @@
                 </div>
 
                 <div class="calc-info">
-                    <span>Курс: 1 TON ≈ 110 ★</span>
+                    <span class="ton-bonus">⚡️ +10% к балансу</span>
                     <span>Получишь: <span id="calcStars" class="calc-val">110</span> ★</span>
                 </div>
 
@@ -222,9 +224,9 @@
   <script>
     const tg = window.Telegram.WebApp;
     
-    // === 1. НАСТРОЙКИ КОШЕЛЬКА (ВСТАВЬ СВОЙ АДРЕС!) ===
+    // === НАСТРОЙКИ КОШЕЛЬКА ===
     const MY_WALLET_ADDRESS = "UQAWibvuLtk2ftlol9ep9YbL_fK1sKeV3HMFObsVfpHIo86W"; 
-    const TON_RATE = 110; // 1 TON = 110 Звезд
+    const TON_RATE = 110; // Курс для расчетов остался, но скрыт из UI
 
     // Init App
     function initApp() {
@@ -234,19 +236,17 @@
     }
     initApp();
 
-    // Elements
     const balEl = document.getElementById('balanceValue');
     const starsForm = document.getElementById('starsForm');
     const tonForm = document.getElementById('tonForm');
     const tabs = document.querySelectorAll('.tab');
     
-    // === 2. TON CONNECT SETUP ===
+    // === TON CONNECT SETUP ===
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
         manifestUrl: window.location.origin + '/tonconnect-manifest.json',
         buttonRootId: 'ton-connect-ui'
     });
 
-    // Логика отображения полей TON при подключении
     tonConnectUI.onStatusChange(wallet => {
         if (wallet) {
             document.getElementById('tonInputs').classList.remove('hidden');
@@ -257,10 +257,9 @@
         }
     });
 
-    // === 3. ПЕРЕКЛЮЧЕНИЕ ТАБОВ ===
+    // === TABS ===
     window.switchTab = (mode) => {
         if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-        
         if (mode === 'stars') {
             starsForm.classList.remove('hidden');
             tonForm.classList.add('hidden');
@@ -274,7 +273,7 @@
         }
     };
 
-    // === 4. КАЛЬКУЛЯТОР TON ===
+    // === CALCULATOR ===
     const tonInp = document.getElementById('tonInput');
     const calcVal = document.getElementById('calcStars');
     
@@ -283,7 +282,7 @@
         calcVal.textContent = Math.floor(val * TON_RATE);
     });
 
-    // === 5. ОПЛАТА TON ===
+    // === PAYMENT: TON (С проверкой) ===
     document.getElementById('payTonBtn').onclick = async () => {
         const amount = parseFloat(tonInp.value);
         if(!amount || amount < 0.1) return tg.showAlert("Минимум 0.1 TON");
@@ -292,29 +291,38 @@
         btn.disabled = true;
         btn.textContent = "ПОДПИСАНИЕ...";
 
-        // Конвертация в нанотоны
-        const amountNano = Math.floor(amount * 1000000000).toString();
+        try {
+            // 1. Формируем Payload с ID юзера
+            const userId = tg.initDataUnsafe?.user?.id || '0';
+            const comment = `user_${userId}`;
 
-        const transaction = {
-            validUntil: Math.floor(Date.now() / 1000) + 600,
-            messages: [
-                {
+            const tonweb = new TonWeb();
+            const cell = new TonWeb.boc.Cell();
+            cell.bits.writeUint(0, 32); 
+            cell.bits.writeString(comment);
+            const payload = TonWeb.utils.bytesToBase64(await cell.toBoc());
+
+            // 2. Создаем транзакцию
+            const amountNano = Math.floor(amount * 1000000000).toString();
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 600,
+                messages: [{
                     address: MY_WALLET_ADDRESS,
                     amount: amountNano,
-                    // Здесь в идеале нужно payload с user_id, но для простоты шлем так
-                }
-            ]
-        };
+                    payload: payload
+                }]
+            };
 
-        try {
+            // 3. Отправляем
             await tonConnectUI.sendTransaction(transaction);
             
-            tg.showAlert(`Отправлено! Начислим ${Math.floor(amount*TON_RATE)} звезд после подтверждения сети.`);
-            btn.textContent = "УСПЕХ ✅";
-            btn.style.background = "#2ad06c";
-            
-            // Тут можно отправить запрос на свой бэкенд, что юзер нажал оплатить
-            // fetch('/api/notify-ton-payment', ...)
+            btn.textContent = "ПРОВЕРКА...";
+            btn.style.background = "#ffd400";
+            btn.style.color = "#000";
+            tg.showAlert(`Отправлено! Проверяем поступление...`);
+
+            // 4. Запускаем цикл проверки
+            checkPaymentLoop();
 
         } catch (e) {
             console.error(e);
@@ -325,7 +333,36 @@
         }
     };
 
-    // === 6. ОПЛАТА STARS (Старая логика) ===
+    function checkPaymentLoop() {
+        let attempts = 0;
+        const interval = setInterval(async () => {
+            attempts++;
+            if(attempts > 30) { // Ждем 2.5 минуты
+                clearInterval(interval);
+                tg.showAlert("Пока не видим оплату. Проверь баланс позже.");
+                return;
+            }
+
+            try {
+                // Стучимся в наш единый эндпоинт
+                const res = await fetch('/api/bot', { 
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json', 'X-Telegram-Data':tg.initData},
+                    body: JSON.stringify({ action: 'check_ton' }) 
+                }).then(r => r.json());
+
+                if (res.success) {
+                    clearInterval(interval);
+                    tg.showAlert(`УСПЕХ! +${res.addedStars} звезд!`);
+                    refreshBalance();
+                    document.getElementById('payTonBtn').textContent = "УСПЕХ ✅";
+                    document.getElementById('payTonBtn').style.background = "#2ad06c";
+                }
+            } catch(e) {}
+        }, 5000);
+    }
+
+    // === PAYMENT: STARS ===
     document.getElementById('payStarsBtn').onclick = async () => {
         const inp = document.getElementById('starsInput');
         const btn = document.getElementById('payStarsBtn');
